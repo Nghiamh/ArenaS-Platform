@@ -7,7 +7,7 @@ export const Header: React.FC = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
+          <Link to="/home" className="flex items-center gap-2">
             <div className="bg-blue-500 rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg">
               A
             </div>
@@ -50,13 +50,16 @@ export const Header: React.FC = () => {
 
           {/* Right Side Actions */}
           <div className="flex items-center gap-4">
-            <button className="hidden md:flex items-center gap-2 hover:text-blue-400 transition">
+            <Link to="/login" className="hidden md:flex items-center gap-2 hover:text-blue-400 transition">
               🔔
               <span className="text-sm font-medium">Đăng Nhập</span>
-            </button>
-            <button className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg transition duration-300">
+            </Link>
+            <Link
+              to="/login"
+              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg transition duration-300"
+            >
               Đăng Ký Miễn Phí
-            </button>
+            </Link>
           </div>
         </div>
       </div>

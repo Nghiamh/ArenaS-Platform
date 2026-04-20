@@ -27,6 +27,22 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.login-input:-webkit-autofill,
+.login-input:-webkit-autofill:hover,
+.login-input:-webkit-autofill:focus,
+.login-input:-webkit-autofill:active {
+  -webkit-text-fill-color: #ffffff;
+  caret-color: #ffffff;
+  box-shadow: 0 0 0 1000px rgba(15, 23, 42, 0.12) inset !important;
+  -webkit-box-shadow: 0 0 0 1000px rgba(15, 23, 42, 0.12) inset !important;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+.login-input:-webkit-autofill::first-line {
+  font-family: 'Be Vietnam Pro', 'Segoe UI', sans-serif;
+  font-size: 1rem;
+}
+
 .glass-panel {
   border: 1px solid rgba(148, 163, 184, 0.2);
   background: linear-gradient(
