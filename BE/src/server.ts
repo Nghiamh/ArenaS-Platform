@@ -3,7 +3,7 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import mongoose from "mongoose";
-import authRoutes from "./routes/authRoutes";
+import authRoutes from "./routes/authRoutes.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;

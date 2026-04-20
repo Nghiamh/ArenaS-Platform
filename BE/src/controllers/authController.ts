@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import User from "../models/userModel";
-import { generateAccessToken } from "../utils/token";
+import User from "../models/userModel.js";
+import { generateAccessToken } from "../utils/token.js";
 
 function normalizeEmail(email: string): string {
 	return email.trim().toLowerCase();
