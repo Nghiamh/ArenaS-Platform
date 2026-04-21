@@ -1,6 +1,36 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { login as loginApi } from '../../Axios/Axios';
+import { login as loginApi, loginWithGoogle as loginWithGoogleApi } from '../../Axios/Axios';
+
+declare global {
+  interface Window {
+    google?: {
+      accounts?: {
+        oauth2?: {
+          initCodeClient: (config: GoogleCodeClientConfig) => GoogleCodeClient;
+        };
+      };
+    };
+  }
+}
+
+type GoogleCodeResponse = {
+  code?: string;
+  error?: string;
+  error_description?: string;
+};
+
+type GoogleCodeClientConfig = {
+  client_id: string;
+  scope: string;
+  ux_mode?: 'popup';
+  prompt?: string;
+  callback: (response: GoogleCodeResponse) => void;
+};
+
+type GoogleCodeClient = {
+  requestCode: () => void;
+};
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
@@ -72,11 +102,111 @@ const StarIcon = () => (
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const googleClientRef = useRef<GoogleCodeClient | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
+  const [isGoogleReady, setIsGoogleReady] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+
+    if (!clientId) {
+      setErrorMessage('Thiếu VITE_GOOGLE_CLIENT_ID trong FE/.env');
+      return;
+    }
+
+    let cancelled = false;
+
+    const initGoogleClient = () => {
+      if (cancelled) {
+        return;
+      }
+
+      if (!window.google?.accounts?.oauth2) {
+        setErrorMessage('Google Identity Services chưa sẵn sàng.');
+        return;
+      }
+
+      googleClientRef.current = window.google.accounts.oauth2.initCodeClient({
+        client_id: clientId,
+        scope: 'openid email profile',
+        ux_mode: 'popup',
+        callback: async (response) => {
+          if (response.error) {
+            setErrorMessage(response.error_description ?? response.error);
+            return;
+          }
+
+          if (!response.code) {
+            setErrorMessage('Không nhận được mã xác thực từ Google.');
+            return;
+          }
+
+          try {
+            setIsGoogleSubmitting(true);
+            setErrorMessage('');
+
+            const authResponse = await loginWithGoogleApi({ code: response.code });
+
+            localStorage.setItem('accessToken', authResponse.token);
+            localStorage.setItem('currentUser', JSON.stringify(authResponse.user));
+            navigate('/home', {
+              state: {
+                toastMessage: `Đăng nhập Google thành công. Xin chào ${authResponse.user.userName}!`,
+              },
+            });
+          } catch (error: unknown) {
+            setErrorMessage(error instanceof Error ? error.message : 'Đăng nhập Google thất bại.');
+          } finally {
+            setIsGoogleSubmitting(false);
+          }
+        },
+      });
+
+      setIsGoogleReady(true);
+    };
+
+    if (window.google?.accounts?.oauth2) {
+      initGoogleClient();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const scriptId = 'google-identity-services';
+    let script = document.getElementById(scriptId) as HTMLScriptElement | null;
+
+    const handleLoad = () => {
+      initGoogleClient();
+    };
+
+    if (!script) {
+      script = document.createElement('script');
+      script.id = scriptId;
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.addEventListener('load', handleLoad);
+      script.addEventListener('error', () => {
+        setErrorMessage('Không tải được Google Identity Services.');
+      });
+      document.body.appendChild(script);
+    } else {
+      script.addEventListener('load', handleLoad);
+      if (window.google?.accounts?.oauth2) {
+        initGoogleClient();
+      }
+    }
+
+    return () => {
+      cancelled = true;
+      script?.removeEventListener('load', handleLoad);
+    };
+  }, [navigate]);
 
   const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -106,6 +236,17 @@ export const LoginPage: React.FC = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleGoogleLogin = () => {
+    setErrorMessage('');
+
+    if (!isGoogleReady || !googleClientRef.current) {
+      setErrorMessage('Google chưa sẵn sàng, vui lòng thử lại sau vài giây.');
+      return;
+    }
+
+    googleClientRef.current.requestCode();
   };
 
   return (
@@ -217,13 +358,16 @@ export const LoginPage: React.FC = () => {
               <div className="mt-8 grid gap-4 sm:grid-cols-2">
                 <button
                   type="button"
+                  onClick={handleGoogleLogin}
+                  disabled={isGoogleSubmitting || !isGoogleReady}
                   className="flex h-14 items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 text-base font-semibold text-slate-200 shadow-[0_18px_35px_-24px_rgba(0,0,0,0.9)] transition hover:border-white/20 hover:bg-white/[0.08]"
                 >
                   <GoogleIcon />
-                  Google
+                  {isGoogleSubmitting ? 'Đang kết nối...' : 'Google'}
                 </button>
                 <button
                   type="button"
+                  disabled={isGoogleSubmitting}
                   className="flex h-14 items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 text-base font-semibold text-slate-200 shadow-[0_18px_35px_-24px_rgba(0,0,0,0.9)] transition hover:border-white/20 hover:bg-white/[0.08]"
                 >
                   <FacebookIcon />

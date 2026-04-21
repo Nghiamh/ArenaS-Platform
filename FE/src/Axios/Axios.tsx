@@ -32,6 +32,10 @@ export type RegisterPayload = {
 	password: string;
 };
 
+export type GoogleLoginPayload = {
+	code: string;
+};
+
 type ApiErrorPayload = {
 	message?: string;
 	error?: string;
@@ -58,6 +62,15 @@ export async function login(payload: LoginPayload): Promise<AuthResponse> {
 export async function register(payload: RegisterPayload): Promise<AuthResponse> {
 	try {
 		const { data } = await axiosClient.post<AuthResponse>('/auth/register', payload);
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function loginWithGoogle(payload: GoogleLoginPayload): Promise<AuthResponse> {
+	try {
+		const { data } = await axiosClient.post<AuthResponse>('/auth/google', payload);
 		return data;
 	} catch (error: unknown) {
 		throw new Error(toErrorMessage(error));
