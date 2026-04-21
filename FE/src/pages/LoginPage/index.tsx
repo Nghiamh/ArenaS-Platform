@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { login as loginApi } from '../../Axios/Axios';
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
@@ -70,7 +71,38 @@ const StarIcon = () => (
 );
 
 export const LoginPage: React.FC = () => {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage('');
+
+    if (!identifier.trim() || !password) {
+      setErrorMessage('Vui long nhap email/ten dang nhap va mat khau.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const response = await loginApi({
+        identifier: identifier.trim(),
+        password,
+      });
+
+      localStorage.setItem('accessToken', response.token);
+      localStorage.setItem('currentUser', JSON.stringify(response.user));
+      navigate('/home');
+    } catch (error: unknown) {
+      setErrorMessage(error instanceof Error ? error.message : 'Dang nhap that bai.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#050816] text-white">
@@ -201,7 +233,7 @@ export const LoginPage: React.FC = () => {
                 <span className="h-px flex-1 bg-white/10" />
               </div>
 
-              <form className="space-y-5">
+              <form className="space-y-5" onSubmit={handleLogin}>
                 <label className="block space-y-2">
                   <span className="text-sm font-semibold text-blue-200/90">Địa chỉ Email</span>
                   <div className="flex h-14 items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 text-slate-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition focus-within:border-blue-400/70 focus-within:bg-white/[0.07]">
@@ -210,7 +242,10 @@ export const LoginPage: React.FC = () => {
                     </span>
                     <input
                       type="email"
-                      placeholder="you@example.com"
+                      placeholder="Email hoặc username"
+                      value={identifier}
+                      onChange={(event) => setIdentifier(event.target.value)}
+                      autoComplete="username"
                       className="login-input h-full w-full border-0 bg-transparent p-0 text-base text-white placeholder:text-slate-500 focus:outline-none focus:ring-0"
                     />
                   </div>
@@ -225,6 +260,9 @@ export const LoginPage: React.FC = () => {
                     <input
                       type={showPassword ? 'text' : 'password'}
                       placeholder="Enter your password"
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      autoComplete="current-password"
                       className="login-input h-full w-full border-0 bg-transparent p-0 text-base text-white placeholder:text-slate-500 focus:outline-none focus:ring-0"
                     />
                     <button
@@ -251,11 +289,18 @@ export const LoginPage: React.FC = () => {
                   </Link>
                 </div>
 
+                {errorMessage && (
+                  <p className="rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                    {errorMessage}
+                  </p>
+                )}
+
                 <button
                   type="submit"
+                  disabled={isSubmitting}
                   className="mt-2 h-14 w-full rounded-2xl bg-[#1560ff] text-base font-bold text-white shadow-[0_18px_38px_-14px_rgba(21,96,255,0.95)] transition hover:-translate-y-0.5 hover:brightness-110"
                 >
-                  Đăng Nhập ArenaS
+                  {isSubmitting ? 'Dang dang nhap...' : 'Đăng Nhập ArenaS'}
                 </button>
               </form>
 

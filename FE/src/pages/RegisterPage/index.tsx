@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { register as registerApi } from '../../Axios/Axios';
 
 const EnvelopeIcon = () => (
   <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
@@ -47,8 +48,50 @@ const BackArrowIcon = () => (
 );
 
 export const RegisterPage: React.FC = () => {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [userName, setUserName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+
+  const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    if (!userName.trim() || !email.trim() || !password) {
+      setErrorMessage('Vui long nhap day du ten, email va mat khau.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setErrorMessage('Mat khau xac nhan khong khop.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const response = await registerApi({
+        userName: userName.trim(),
+        email: email.trim(),
+        password,
+      });
+
+      localStorage.setItem('accessToken', response.token);
+      localStorage.setItem('currentUser', JSON.stringify(response.user));
+      setSuccessMessage('Dang ky thanh cong, dang chuyen huong...');
+      navigate('/home');
+    } catch (error: unknown) {
+      setErrorMessage(error instanceof Error ? error.message : 'Dang ky that bai.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#050816] text-white">
@@ -110,7 +153,7 @@ export const RegisterPage: React.FC = () => {
                 Điền thông tin để bắt đầu hành trình cùng ArenaS
               </p>
 
-              <form className="mt-8 space-y-5">
+              <form className="mt-8 space-y-5" onSubmit={handleRegister}>
                 <label className="block space-y-2">
                   <span className="text-sm font-semibold text-blue-200/90">Họ Và Tên</span>
                   <div className="flex h-14 items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 text-slate-200 transition focus-within:border-blue-400/70 focus-within:bg-white/[0.07]">
@@ -120,6 +163,9 @@ export const RegisterPage: React.FC = () => {
                     <input
                       type="text"
                       placeholder="Nguyễn Văn A"
+                      value={userName}
+                      onChange={(event) => setUserName(event.target.value)}
+                      autoComplete="name"
                       className="login-input h-full w-full border-0 bg-transparent p-0 text-base text-white placeholder:text-slate-500 focus:outline-none focus:ring-0"
                     />
                   </div>
@@ -134,6 +180,9 @@ export const RegisterPage: React.FC = () => {
                     <input
                       type="email"
                       placeholder="you@example.com"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      autoComplete="email"
                       className="login-input h-full w-full border-0 bg-transparent p-0 text-base text-white placeholder:text-slate-500 focus:outline-none focus:ring-0"
                     />
                   </div>
@@ -148,6 +197,9 @@ export const RegisterPage: React.FC = () => {
                     <input
                       type={showPassword ? 'text' : 'password'}
                       placeholder="Tạo mật khẩu"
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      autoComplete="new-password"
                       className="login-input h-full w-full border-0 bg-transparent p-0 text-base text-white placeholder:text-slate-500 focus:outline-none focus:ring-0"
                     />
                     <button
@@ -170,6 +222,9 @@ export const RegisterPage: React.FC = () => {
                     <input
                       type={showConfirmPassword ? 'text' : 'password'}
                       placeholder="Nhập lại mật khẩu"
+                      value={confirmPassword}
+                      onChange={(event) => setConfirmPassword(event.target.value)}
+                      autoComplete="new-password"
                       className="login-input h-full w-full border-0 bg-transparent p-0 text-base text-white placeholder:text-slate-500 focus:outline-none focus:ring-0"
                     />
                     <button
@@ -193,11 +248,24 @@ export const RegisterPage: React.FC = () => {
                   </span>
                 </label>
 
+                {errorMessage && (
+                  <p className="rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                    {errorMessage}
+                  </p>
+                )}
+
+                {successMessage && (
+                  <p className="rounded-xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+                    {successMessage}
+                  </p>
+                )}
+
                 <button
                   type="submit"
+                  disabled={isSubmitting}
                   className="mt-2 h-14 w-full rounded-2xl bg-[#1560ff] text-base font-bold text-white shadow-[0_18px_38px_-14px_rgba(21,96,255,0.95)] transition hover:-translate-y-0.5 hover:brightness-110"
                 >
-                  Tạo Tài Khoản ArenaS
+                  {isSubmitting ? 'Dang tao tai khoan...' : 'Tạo Tài Khoản ArenaS'}
                 </button>
               </form>
 
