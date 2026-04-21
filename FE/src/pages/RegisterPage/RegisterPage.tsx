@@ -51,19 +51,33 @@ export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [fullName, setFullName] = useState('');
   const [userName, setUserName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
   const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMessage('');
 
     if (!userName.trim() || !email.trim() || !password) {
-      setErrorMessage('Vui lòng nhập đầy đủ tên, email và mật khẩu.');
+      setErrorMessage('Vui lòng nhập đầy đủ username, email và mật khẩu.');
+      return;
+    }
+
+    if (!isValidEmail(email.trim())) {
+      setErrorMessage('Email không đúng định dạng. Vui lòng kiểm tra lại.');
+      return;
+    }
+
+    if (!hasAcceptedTerms) {
+      setErrorMessage('Bạn cần đồng ý Điều khoản dịch vụ và Chính sách bảo mật để tiếp tục.');
       return;
     }
 
@@ -164,9 +178,26 @@ export const RegisterPage: React.FC = () => {
                     <input
                       type="text"
                       placeholder="Nguyễn Văn A"
+                      value={fullName}
+                      onChange={(event) => setFullName(event.target.value)}
+                      autoComplete="name"
+                      className="login-input h-full w-full border-0 bg-transparent p-0 text-base text-white placeholder:text-slate-500 focus:outline-none focus:ring-0"
+                    />
+                  </div>
+                </label>
+
+                <label className="block space-y-2">
+                  <span className="text-sm font-semibold text-blue-200/90">Username</span>
+                  <div className="flex h-14 items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 text-slate-200 transition focus-within:border-blue-400/70 focus-within:bg-white/[0.07]">
+                    <span className="text-slate-500">
+                      <UserIcon />
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="ten_dang_nhap"
                       value={userName}
                       onChange={(event) => setUserName(event.target.value)}
-                      autoComplete="name"
+                      autoComplete="username"
                       className="login-input h-full w-full border-0 bg-transparent p-0 text-base text-white placeholder:text-slate-500 focus:outline-none focus:ring-0"
                     />
                   </div>
@@ -242,6 +273,8 @@ export const RegisterPage: React.FC = () => {
                 <label className="flex cursor-pointer items-start gap-3 pt-1 text-sm text-slate-400">
                   <input
                     type="checkbox"
+                    checked={hasAcceptedTerms}
+                    onChange={(event) => setHasAcceptedTerms(event.target.checked)}
                     className="mt-0.5 h-5 w-5 rounded border-white/15 bg-white/5 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
                   />
                   <span>

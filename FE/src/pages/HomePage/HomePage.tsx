@@ -202,6 +202,7 @@ export const HomePage: React.FC = () => {
   const location = useLocation();
   const [activeHeroWordIndex, setActiveHeroWordIndex] = useState(0);
   const [toastMessage, setToastMessage] = useState('');
+  const [lastToastLocationKey, setLastToastLocationKey] = useState<string | null>(null);
   const [form, setForm] = useState({
     sport: 'Bóng Đá',
     location: 'Tất cả khu vực',
@@ -219,20 +220,26 @@ export const HomePage: React.FC = () => {
   useEffect(() => {
     const state = location.state as HomeLocationState | null;
 
-    if (!state?.toastMessage) {
+    if (!state?.toastMessage || lastToastLocationKey === location.key) {
       return;
     }
 
     setToastMessage(state.toastMessage);
-
+    setLastToastLocationKey(location.key);
     navigate(location.pathname, { replace: true, state: null });
+  }, [lastToastLocationKey, location.key, location.pathname, location.state, navigate]);
+
+  useEffect(() => {
+    if (!toastMessage) {
+      return;
+    }
 
     const timeout = window.setTimeout(() => {
       setToastMessage('');
-    }, 2800);
+    }, 3000);
 
     return () => window.clearTimeout(timeout);
-  }, [location.pathname, location.state, navigate]);
+  }, [toastMessage]);
 
   const handleSearch = (event: React.FormEvent) => {
     event.preventDefault();
