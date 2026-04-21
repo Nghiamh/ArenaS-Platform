@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 type SportCategory = {
   name: string;
@@ -192,8 +193,15 @@ const heroRotatingWords = ['Đặt Sân', 'Nhanh Chóng', 'Tiện Lợi'];
 
 const sectionTitleClass = 'text-3xl md:text-5xl font-extrabold tracking-tight text-white';
 
+type HomeLocationState = {
+  toastMessage?: string;
+};
+
 export const HomePage: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [activeHeroWordIndex, setActiveHeroWordIndex] = useState(0);
+  const [toastMessage, setToastMessage] = useState('');
   const [form, setForm] = useState({
     sport: 'Bóng Đá',
     location: 'Tất cả khu vực',
@@ -208,12 +216,44 @@ export const HomePage: React.FC = () => {
     return () => window.clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    const state = location.state as HomeLocationState | null;
+
+    if (!state?.toastMessage) {
+      return;
+    }
+
+    setToastMessage(state.toastMessage);
+
+    navigate(location.pathname, { replace: true, state: null });
+
+    const timeout = window.setTimeout(() => {
+      setToastMessage('');
+    }, 2800);
+
+    return () => window.clearTimeout(timeout);
+  }, [location.pathname, location.state, navigate]);
+
   const handleSearch = (event: React.FormEvent) => {
     event.preventDefault();
   };
 
   return (
     <div className="relative overflow-x-clip bg-[radial-gradient(circle_at_15%_10%,rgba(37,99,235,0.22),transparent_30%),radial-gradient(circle_at_90%_10%,rgba(14,165,233,0.18),transparent_28%),linear-gradient(180deg,#020617_0%,#061136_45%,#030712_100%)] text-slate-100">
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.96 }}
+            transition={{ duration: 0.25 }}
+            className="fixed right-4 top-24 z-[70] rounded-2xl border border-emerald-300/40 bg-emerald-500/20 px-5 py-3 text-sm font-semibold text-emerald-100 shadow-[0_16px_42px_-20px_rgba(16,185,129,0.9)] backdrop-blur md:right-8"
+          >
+            {toastMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="pointer-events-none absolute inset-0 bg-grid-pattern opacity-40" />
 
       <section

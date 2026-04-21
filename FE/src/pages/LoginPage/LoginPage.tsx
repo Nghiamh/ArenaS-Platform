@@ -83,7 +83,7 @@ export const LoginPage: React.FC = () => {
     setErrorMessage('');
 
     if (!identifier.trim() || !password) {
-      setErrorMessage('Vui long nhap email/ten dang nhap va mat khau.');
+      setErrorMessage('Vui lòng nhập email/tên đăng nhập và mật khẩu.');
       return;
     }
 
@@ -96,9 +96,13 @@ export const LoginPage: React.FC = () => {
 
       localStorage.setItem('accessToken', response.token);
       localStorage.setItem('currentUser', JSON.stringify(response.user));
-      navigate('/home');
+      navigate('/home', {
+        state: {
+          toastMessage: `Đăng nhập thành công. Xin chào ${response.user.userName}!`,
+        },
+      });
     } catch (error: unknown) {
-      setErrorMessage(error instanceof Error ? error.message : 'Dang nhap that bai.');
+      setErrorMessage(error instanceof Error ? error.message : 'Đăng nhập thất bại.');
     } finally {
       setIsSubmitting(false);
     }
@@ -300,7 +304,7 @@ export const LoginPage: React.FC = () => {
                   disabled={isSubmitting}
                   className="mt-2 h-14 w-full rounded-2xl bg-[#1560ff] text-base font-bold text-white shadow-[0_18px_38px_-14px_rgba(21,96,255,0.95)] transition hover:-translate-y-0.5 hover:brightness-110"
                 >
-                  {isSubmitting ? 'Dang dang nhap...' : 'Đăng Nhập ArenaS'}
+                  {isSubmitting ? 'Đang đăng nhập...' : 'Đăng Nhập ArenaS'}
                 </button>
               </form>
 

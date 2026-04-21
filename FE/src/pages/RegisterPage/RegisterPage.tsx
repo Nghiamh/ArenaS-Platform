@@ -57,20 +57,18 @@ export const RegisterPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
 
   const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMessage('');
-    setSuccessMessage('');
 
     if (!userName.trim() || !email.trim() || !password) {
-      setErrorMessage('Vui long nhap day du ten, email va mat khau.');
+      setErrorMessage('Vui lòng nhập đầy đủ tên, email và mật khẩu.');
       return;
     }
 
     if (password !== confirmPassword) {
-      setErrorMessage('Mat khau xac nhan khong khop.');
+      setErrorMessage('Mật khẩu xác nhận không khớp.');
       return;
     }
 
@@ -84,10 +82,13 @@ export const RegisterPage: React.FC = () => {
 
       localStorage.setItem('accessToken', response.token);
       localStorage.setItem('currentUser', JSON.stringify(response.user));
-      setSuccessMessage('Dang ky thanh cong, dang chuyen huong...');
-      navigate('/home');
+      navigate('/home', {
+        state: {
+          toastMessage: `Đăng ký thành công. Chào mừng ${response.user.userName}!`,
+        },
+      });
     } catch (error: unknown) {
-      setErrorMessage(error instanceof Error ? error.message : 'Dang ky that bai.');
+      setErrorMessage(error instanceof Error ? error.message : 'Đăng ký thất bại.');
     } finally {
       setIsSubmitting(false);
     }
@@ -254,18 +255,12 @@ export const RegisterPage: React.FC = () => {
                   </p>
                 )}
 
-                {successMessage && (
-                  <p className="rounded-xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-                    {successMessage}
-                  </p>
-                )}
-
                 <button
                   type="submit"
                   disabled={isSubmitting}
                   className="mt-2 h-14 w-full rounded-2xl bg-[#1560ff] text-base font-bold text-white shadow-[0_18px_38px_-14px_rgba(21,96,255,0.95)] transition hover:-translate-y-0.5 hover:brightness-110"
                 >
-                  {isSubmitting ? 'Dang tao tai khoan...' : 'Tạo Tài Khoản ArenaS'}
+                  {isSubmitting ? 'Đang tạo tài khoản...' : 'Tạo Tài Khoản ArenaS'}
                 </button>
               </form>
 

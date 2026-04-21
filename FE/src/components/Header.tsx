@@ -1,7 +1,64 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+
+type StoredUser = {
+  userName?: string;
+  email?: string;
+};
 
 export const Header: React.FC = () => {
+  const navigate = useNavigate();
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
+  const [currentUser, setCurrentUser] = useState<StoredUser | null>(null);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const syncUser = () => {
+      const storedUser = localStorage.getItem('currentUser');
+
+      if (!storedUser) {
+        setCurrentUser(null);
+        return;
+      }
+
+      try {
+        setCurrentUser(JSON.parse(storedUser) as StoredUser);
+      } catch {
+        setCurrentUser(null);
+      }
+    };
+
+    syncUser();
+    window.addEventListener('storage', syncUser);
+    return () => window.removeEventListener('storage', syncUser);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const isLoggedIn = currentUser !== null;
+  const profileInitial = currentUser?.userName?.trim().charAt(0).toUpperCase() || 'U';
+
+  const handleLogout = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('currentUser');
+    setCurrentUser(null);
+    setIsProfileMenuOpen(false);
+    navigate('/home', {
+      state: {
+        toastMessage: 'Đăng xuất thành công.',
+      },
+    });
+  };
+
   return (
     <header className="sticky top-0 z-50 border-b border-blue-400/15 bg-slate-950/90 text-white shadow-lg backdrop-blur-md">
       <div className="container mx-auto px-4">
@@ -50,16 +107,58 @@ export const Header: React.FC = () => {
 
           {/* Right Side Actions */}
           <div className="flex items-center gap-4">
-            <Link to="/login" className="hidden md:flex items-center gap-2 hover:text-blue-400 transition">
-              🔔
-              <span className="text-sm font-medium">Đăng Nhập</span>
-            </Link>
-            <Link
-              to="/login"
-              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg transition duration-300"
-            >
-              Đăng Ký Miễn Phí
-            </Link>
+            {isLoggedIn ? (
+              <div className="relative" ref={profileMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsProfileMenuOpen((prev) => !prev)}
+                  className="flex items-center gap-3 rounded-full border border-blue-300/35 bg-blue-500/10 px-2 py-1.5 text-left transition hover:border-blue-300/60 hover:bg-blue-500/20"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-cyan-400 text-base font-black text-slate-950">
+                    {profileInitial}
+                  </span>
+                  <span className="hidden pr-2 md:block">
+                    <span className="block text-sm font-bold text-white">{currentUser?.userName ?? 'Tài khoản'}</span>
+                    <span className="block text-xs text-blue-200/80">Hồ sơ</span>
+                  </span>
+                </button>
+
+                {isProfileMenuOpen && (
+                  <div className="absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-2xl border border-blue-300/30 bg-slate-900/95 p-1.5 shadow-[0_16px_40px_-20px_rgba(2,6,23,0.95)] backdrop-blur">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        navigate('/profile');
+                      }}
+                      className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-blue-100 transition hover:bg-blue-500/20"
+                    >
+                      Trang cá nhân
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-red-200 transition hover:bg-red-500/20"
+                    >
+                      Đăng xuất
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <Link to="/login" className="hidden md:flex items-center gap-2 hover:text-blue-400 transition">
+                  🔔
+                  <span className="text-sm font-medium">Đăng Nhập</span>
+                </Link>
+                <Link
+                  to="/register"
+                  className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg transition duration-300"
+                >
+                  Đăng Ký Miễn Phí
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>
