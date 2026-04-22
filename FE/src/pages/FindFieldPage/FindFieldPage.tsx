@@ -1,10 +1,22 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 type FindFieldLocationState = {
   toastMessage?: string;
 };
+
+type SortOption = 'distanceAsc' | 'priceAsc' | 'priceDesc' | 'ratingDesc';
+
+const sortOptions: Array<{ value: SortOption; label: string }> = [
+  { value: 'distanceAsc', label: 'Gần Nhất' },
+  { value: 'priceAsc', label: 'Giá: Thấp Đến Cao' },
+  { value: 'priceDesc', label: 'Giá: Cao Đến Thấp' },
+  { value: 'ratingDesc', label: 'Đánh Giá Cao' },
+];
+
+const formatVnd = (priceK: number) => `${new Intl.NumberFormat('vi-VN').format(priceK * 1000)} VND`;
+const formatVndInput = (value: number) => new Intl.NumberFormat('vi-VN').format(value);
 
 type SportName = 'Bóng Đá' | 'Tennis' | 'Cầu Lông' | 'Pickleball';
 
@@ -30,10 +42,10 @@ type Venue = {
 const sports: SportName[] = ['Bóng Đá', 'Tennis', 'Cầu Lông', 'Pickleball'];
 
 const sportFilters: Record<SportName, string[]> = {
-  'Bóng Đá': ['5 Người', '7 Người', 'Có Nhân Tạo', 'Trong Nhà', 'Dưới 400K', 'Có Chỗ Trống'],
-  Tennis: ['Sân Cứng', 'Sân Đất Nện', 'Có Đèn', 'Trong Nhà', 'Dưới 350K', 'Có Chỗ Trống'],
-  'Cầu Lông': ['Sàn Thảm', 'Sàn Gỗ', 'Có Máy Lạnh', 'Trong Nhà', 'Dưới 200K', 'Có Chỗ Trống'],
-  Pickleball: ['Trong Nhà', 'Ngoài Trời', 'Có Huấn Luyện', 'Cho Thuê Vợt', 'Dưới 300K', 'Có Chỗ Trống'],
+  'Bóng Đá': ['5 Người', '7 Người', 'Có Nhân Tạo', 'Trong Nhà', 'Có Chỗ Trống'],
+  Tennis: ['Sân Cứng', 'Sân Đất Nện', 'Có Đèn', 'Trong Nhà', 'Có Chỗ Trống'],
+  'Cầu Lông': ['Sàn Thảm', 'Sàn Gỗ', 'Có Máy Lạnh', 'Trong Nhà', 'Có Chỗ Trống'],
+  Pickleball: ['Trong Nhà', 'Ngoài Trời', 'Có Huấn Luyện', 'Cho Thuê Vợt', 'Có Chỗ Trống'],
 };
 
 const venues: Venue[] = [
@@ -273,7 +285,6 @@ const sportFilterPredicates: Record<SportName, Record<string, (venue: Venue) => 
     '7 Người': (venue) => venue.formatLabel === '7 Người',
     'Có Nhân Tạo': (venue) => venue.amenities.includes('Có Nhân Tạo'),
     'Trong Nhà': (venue) => venue.indoor,
-    'Dưới 400K': (venue) => venue.priceK < 400,
     'Có Chỗ Trống': (venue) => venue.hasSlot,
   },
   Tennis: {
@@ -281,7 +292,6 @@ const sportFilterPredicates: Record<SportName, Record<string, (venue: Venue) => 
     'Sân Đất Nện': (venue) => venue.amenities.includes('Sân Đất Nện'),
     'Có Đèn': (venue) => venue.amenities.includes('Có Đèn'),
     'Trong Nhà': (venue) => venue.indoor,
-    'Dưới 350K': (venue) => venue.priceK < 350,
     'Có Chỗ Trống': (venue) => venue.hasSlot,
   },
   'Cầu Lông': {
@@ -289,7 +299,6 @@ const sportFilterPredicates: Record<SportName, Record<string, (venue: Venue) => 
     'Sàn Gỗ': (venue) => venue.amenities.includes('Sàn Gỗ'),
     'Có Máy Lạnh': (venue) => venue.amenities.includes('Có Máy Lạnh'),
     'Trong Nhà': (venue) => venue.indoor,
-    'Dưới 200K': (venue) => venue.priceK < 200,
     'Có Chỗ Trống': (venue) => venue.hasSlot,
   },
   Pickleball: {
@@ -297,7 +306,6 @@ const sportFilterPredicates: Record<SportName, Record<string, (venue: Venue) => 
     'Ngoài Trời': (venue) => !venue.indoor,
     'Có Huấn Luyện': (venue) => venue.amenities.includes('Có Huấn Luyện'),
     'Cho Thuê Vợt': (venue) => venue.amenities.includes('Cho Thuê Vợt'),
-    'Dưới 300K': (venue) => venue.priceK < 300,
     'Có Chỗ Trống': (venue) => venue.hasSlot,
   },
 };
@@ -309,8 +317,17 @@ export const FindFieldPage: React.FC = () => {
   const [toastMessage, setToastMessage] = useState('');
   const [lastToastLocationKey, setLastToastLocationKey] = useState<string | null>(null);
   const [activeSport, setActiveSport] = useState<SportName>('Bóng Đá');
-  const [activeFilter, setActiveFilter] = useState<string>(sportFilters['Bóng Đá'][0]);
+  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<SortOption>('distanceAsc');
+  const [maxPriceFilter, setMaxPriceFilter] = useState<number>(400);
+  const [priceInputValue, setPriceInputValue] = useState<string>('400.000');
   const [selectedVenueId, setSelectedVenueId] = useState<number>(1);
+  const [isSportDropdownOpen, setIsSportDropdownOpen] = useState(false);
+  const [isExtraFilterOpen, setIsExtraFilterOpen] = useState(false);
+  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
+  const sportDropdownRef = useRef<HTMLDivElement | null>(null);
+  const extraFilterRef = useRef<HTMLDivElement | null>(null);
+  const sortDropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const state = location.state as FindFieldLocationState | null;
@@ -337,20 +354,114 @@ export const FindFieldPage: React.FC = () => {
   }, [toastMessage]);
 
   useEffect(() => {
-    setActiveFilter(sportFilters[activeSport][0]);
+    setSelectedFilters([]);
+    setIsExtraFilterOpen(false);
   }, [activeSport]);
 
   const sportVenues = useMemo(() => venues.filter((venue) => venue.sport === activeSport), [activeSport]);
-
-  const filteredVenues = useMemo(() => {
-    const filterPredicate = sportFilterPredicates[activeSport][activeFilter];
-
-    if (!filterPredicate) {
-      return sportVenues;
+  const maxSportPrice = useMemo(
+    () => Math.max(...sportVenues.map((venue) => venue.priceK), 100),
+    [sportVenues],
+  );
+  const minSportPrice = useMemo(
+    () => Math.min(...sportVenues.map((venue) => venue.priceK), 0),
+    [sportVenues],
+  );
+  const quickFilters = useMemo(() => sportFilters[activeSport].slice(0, 3), [activeSport]);
+  const extraFilters = useMemo(() => sportFilters[activeSport].slice(3), [activeSport]);
+  const priceFillPercent = useMemo(() => {
+    if (maxSportPrice === minSportPrice) {
+      return 100;
     }
 
-    return sportVenues.filter(filterPredicate);
-  }, [activeFilter, activeSport, sportVenues]);
+    return ((maxPriceFilter - minSportPrice) / (maxSportPrice - minSportPrice)) * 100;
+  }, [maxPriceFilter, maxSportPrice, minSportPrice]);
+  const selectedSortLabel = useMemo(
+    () => sortOptions.find((option) => option.value === sortBy)?.label ?? 'Gần Nhất',
+    [sortBy],
+  );
+
+  useEffect(() => {
+    setMaxPriceFilter(maxSportPrice);
+    setPriceInputValue(formatVndInput(maxSportPrice * 1000));
+  }, [maxSportPrice]);
+
+  const toggleFilter = (filter: string) => {
+    setSelectedFilters((prev) =>
+      prev.includes(filter) ? prev.filter((selectedFilter) => selectedFilter !== filter) : [...prev, filter],
+    );
+  };
+
+  const filteredVenues = useMemo(() => {
+    const byFilters = sportVenues.filter((venue) => {
+      if (selectedFilters.length === 0) {
+        return true;
+      }
+
+      return selectedFilters.every((filter) => {
+        const filterPredicate = sportFilterPredicates[activeSport][filter];
+
+        if (!filterPredicate) {
+          return true;
+        }
+
+        return filterPredicate(venue);
+      });
+    });
+
+    const byPrice = byFilters.filter((venue) => venue.priceK <= maxPriceFilter);
+
+    return [...byPrice].sort((a, b) => {
+      if (sortBy === 'priceAsc') {
+        return a.priceK - b.priceK;
+      }
+
+      if (sortBy === 'priceDesc') {
+        return b.priceK - a.priceK;
+      }
+
+      if (sortBy === 'ratingDesc') {
+        return b.rating - a.rating;
+      }
+
+      return a.distanceKm - b.distanceKm;
+    });
+  }, [activeSport, maxPriceFilter, selectedFilters, sortBy, sportVenues]);
+
+  const handlePriceSliderChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(event.target.value);
+    setMaxPriceFilter(value);
+    setPriceInputValue(formatVndInput(value * 1000));
+  };
+
+  const handlePriceInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextValue = event.target.value.replace(/[^\d]/g, '');
+
+    if (!nextValue) {
+      setPriceInputValue('');
+      return;
+    }
+
+    const numericValueInVnd = Number(nextValue);
+    const numericValueInK = Math.round(numericValueInVnd / 1000);
+    const clampedValue = Math.min(Math.max(numericValueInK, minSportPrice), maxSportPrice);
+    setMaxPriceFilter(clampedValue);
+    setPriceInputValue(formatVndInput(clampedValue * 1000));
+  };
+
+  const handlePriceInputBlur = () => {
+    if (!priceInputValue) {
+      setMaxPriceFilter(maxSportPrice);
+      setPriceInputValue(formatVndInput(maxSportPrice * 1000));
+      return;
+    }
+
+    const numericValueInVnd = Number(priceInputValue.replace(/[^\d]/g, ''));
+    const numericValueInK = Math.round(numericValueInVnd / 1000);
+    const clampedValue = Math.min(Math.max(numericValueInK, minSportPrice), maxSportPrice);
+    setMaxPriceFilter(clampedValue);
+    setPriceInputValue(formatVndInput(clampedValue * 1000));
+  };
 
   useEffect(() => {
     const hasSelectedVenue = filteredVenues.some((venue) => venue.id === selectedVenueId);
@@ -359,6 +470,28 @@ export const FindFieldPage: React.FC = () => {
       setSelectedVenueId(filteredVenues[0].id);
     }
   }, [filteredVenues, selectedVenueId]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!sportDropdownRef.current?.contains(event.target as Node)) {
+        setIsSportDropdownOpen(false);
+      }
+
+      if (!extraFilterRef.current?.contains(event.target as Node)) {
+        setIsExtraFilterOpen(false);
+      }
+
+      if (!sortDropdownRef.current?.contains(event.target as Node)) {
+        setIsSortDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const selectedVenue = filteredVenues.find((venue) => venue.id === selectedVenueId) ?? filteredVenues[0];
 
@@ -385,28 +518,76 @@ export const FindFieldPage: React.FC = () => {
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-2 sm:w-[360px]">
             <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Môn Thể Thao</label>
-            <select
-              value={activeSport}
-              onChange={(event) => setActiveSport(event.target.value as SportName)}
-              className="h-12 rounded-xl border border-blue-400/45 bg-slate-900/80 px-4 text-lg font-bold text-white outline-none transition focus:border-blue-300"
-            >
-              {sports.map((sport) => (
-                <option key={sport} value={sport}>
-                  {sport}
-                </option>
-              ))}
-            </select>
+            <div ref={sportDropdownRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setIsSportDropdownOpen((prev) => !prev)}
+                className="group flex h-12 w-full items-center justify-between rounded-xl border border-blue-400/45 bg-gradient-to-br from-slate-900/90 to-[#0b1838]/90 px-4 text-lg font-extrabold text-white outline-none transition hover:border-blue-300/70 focus-visible:border-blue-300 focus-visible:ring-2 focus-visible:ring-blue-300/40"
+                aria-haspopup="listbox"
+                aria-expanded={isSportDropdownOpen}
+                aria-label="Chọn môn thể thao"
+              >
+                <span className="tracking-tight">{activeSport}</span>
+                <motion.span
+                  animate={{ rotate: isSportDropdownOpen ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-sm text-blue-200"
+                >
+                  ▼
+                </motion.span>
+              </button>
+
+              <AnimatePresence>
+                {isSportDropdownOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute left-0 top-[calc(100%+10px)] z-40 w-full overflow-hidden rounded-2xl border border-blue-300/35 bg-slate-900/95 p-1.5 shadow-[0_18px_44px_-22px_rgba(37,99,235,0.95)] backdrop-blur-xl"
+                  >
+                    <ul role="listbox" aria-label="Danh sách môn thể thao" className="space-y-1">
+                      {sports.map((sport) => {
+                        const isSelected = sport === activeSport;
+
+                        return (
+                          <li key={sport}>
+                            <button
+                              type="button"
+                              role="option"
+                              aria-selected={isSelected}
+                              onClick={() => {
+                                setActiveSport(sport);
+                                setIsSportDropdownOpen(false);
+                              }}
+                              className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-lg font-bold transition ${
+                                isSelected
+                                  ? 'bg-blue-500/20 text-blue-100'
+                                  : 'text-slate-200 hover:bg-slate-800/80 hover:text-white'
+                              }`}
+                            >
+                              <span>{sport}</span>
+                              {isSelected && <span className="text-xs font-black uppercase tracking-wider text-blue-200">Đang chọn</span>}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="arena-scroll flex gap-2 overflow-x-auto pb-1">
-              {sportFilters[activeSport].map((filter) => {
-                const isActive = filter === activeFilter;
+              {quickFilters.map((filter) => {
+                const isActive = selectedFilters.includes(filter);
 
                 return (
                   <button
                     key={filter}
-                    onClick={() => setActiveFilter(filter)}
+                    onClick={() => toggleFilter(filter)}
                     className={`rounded-xl border px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition ${
                       isActive
                         ? 'border-blue-400/75 bg-blue-500/20 text-blue-100 shadow-[0_10px_26px_-18px_rgba(59,130,246,0.95)]'
@@ -417,15 +598,159 @@ export const FindFieldPage: React.FC = () => {
                   </button>
                 );
               })}
+
+              <div ref={extraFilterRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsExtraFilterOpen((prev) => !prev)}
+                  className={`rounded-xl border px-4 py-2 text-sm font-semibold whitespace-nowrap transition ${
+                    isExtraFilterOpen || selectedFilters.some((filter) => extraFilters.includes(filter))
+                      ? 'border-blue-400/70 bg-blue-500/18 text-blue-100'
+                      : 'border-white/10 bg-slate-900/75 text-slate-300 hover:border-white/25 hover:text-white'
+                  }`}
+                >
+                  Bộ Lọc Thêm {extraFilters.length > 0 ? `(${extraFilters.length})` : ''}
+                </button>
+
+                <AnimatePresence>
+                  {isExtraFilterOpen && extraFilters.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                      transition={{ duration: 0.18 }}
+                      className="absolute left-0 top-[calc(100%+8px)] z-40 min-w-[260px] rounded-2xl border border-white/12 bg-slate-900/95 p-2 shadow-[0_20px_48px_-24px_rgba(15,23,42,0.9)] backdrop-blur"
+                    >
+                      <div className="flex flex-wrap gap-2">
+                        {extraFilters.map((filter) => {
+                          const isActive = selectedFilters.includes(filter);
+
+                          return (
+                            <button
+                              key={filter}
+                              type="button"
+                              onClick={() => toggleFilter(filter)}
+                              className={`rounded-xl border px-3 py-2 text-sm font-semibold whitespace-nowrap transition ${
+                                isActive
+                                  ? 'border-blue-400/75 bg-blue-500/20 text-blue-100'
+                                  : 'border-white/10 bg-slate-900/70 text-slate-300 hover:border-white/25 hover:text-white'
+                              }`}
+                            >
+                              {filter}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button className="rounded-xl border border-white/10 bg-slate-900/75 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:border-white/25 hover:text-white">
-                Bộ Lọc Thêm
-              </button>
-              <button className="rounded-xl border border-white/10 bg-slate-900/75 px-4 py-2 text-sm font-semibold text-slate-100">
-                Sắp Xếp: Gần Nhất
-              </button>
+            <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+              <div className="rounded-2xl border border-blue-300/25 bg-gradient-to-br from-slate-900/92 to-[#0b1736]/90 px-3.5 py-2.5 shadow-[0_16px_34px_-24px_rgba(37,99,235,0.75)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Giá Tối Đa (VND)</p>
+                <div className="mt-2.5 flex items-center gap-2">
+                  <input
+                    type="range"
+                    min={minSportPrice}
+                    max={maxSportPrice}
+                    step={10}
+                    value={maxPriceFilter}
+                    onChange={handlePriceSliderChange}
+                    className="h-1.5 w-28 cursor-pointer appearance-none rounded-full bg-slate-600/40 accent-blue-500"
+                    style={{
+                      background: `linear-gradient(90deg, rgba(59,130,246,0.95) ${priceFillPercent}%, rgba(100,116,139,0.35) ${priceFillPercent}%)`,
+                    }}
+                    aria-label="Lọc giá tối đa"
+                  />
+                  <div className="flex items-center rounded-xl border border-blue-300/25 bg-slate-950/85 px-2 py-1 shadow-inner shadow-blue-400/10">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={priceInputValue}
+                      onChange={handlePriceInputChange}
+                      onBlur={handlePriceInputBlur}
+                      className="w-[92px] bg-transparent text-right text-[0.95rem] font-bold tracking-tight text-slate-100 outline-none"
+                      aria-label="Nhập giá tối đa"
+                    />
+                    <span className="ml-1 text-[11px] font-black uppercase tracking-[0.12em] text-blue-200">VND</span>
+                  </div>
+                </div>
+              </div>
+
+              {selectedFilters.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedFilters([])}
+                  className="rounded-xl border border-rose-300/40 bg-rose-500/15 px-4 py-2 text-sm font-semibold text-rose-100 transition hover:border-rose-200/70 hover:bg-rose-500/25"
+                >
+                  Xóa lựa chọn ({selectedFilters.length})
+                </button>
+              )}
+
+              <div ref={sortDropdownRef} className="relative">
+                <div className="rounded-2xl border border-blue-300/25 bg-gradient-to-br from-slate-900/92 to-[#0b1736]/90 px-3.5 py-2.5 shadow-[0_16px_34px_-24px_rgba(37,99,235,0.75)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Sắp Xếp</p>
+                  <button
+                    type="button"
+                    onClick={() => setIsSortDropdownOpen((prev) => !prev)}
+                    className="mt-1.5 flex min-w-[170px] items-center justify-between rounded-xl border border-blue-300/35 bg-slate-950/80 px-3 py-2 text-sm font-bold text-white transition hover:border-blue-300/60"
+                    aria-haspopup="listbox"
+                    aria-expanded={isSortDropdownOpen}
+                    aria-label="Sắp xếp sân"
+                  >
+                    <span>{selectedSortLabel}</span>
+                    <motion.span
+                      animate={{ rotate: isSortDropdownOpen ? 180 : 0 }}
+                      transition={{ duration: 0.18 }}
+                      className="text-[10px] text-blue-200"
+                    >
+                      ▼
+                    </motion.span>
+                  </button>
+                </div>
+
+                <AnimatePresence>
+                  {isSortDropdownOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                      transition={{ duration: 0.18 }}
+                      className="absolute right-0 top-[calc(100%+8px)] z-40 min-w-[220px] rounded-2xl border border-blue-300/25 bg-slate-900/95 p-1.5 shadow-[0_20px_48px_-24px_rgba(15,23,42,0.9)] backdrop-blur"
+                    >
+                      <ul role="listbox" aria-label="Các tuỳ chọn sắp xếp" className="space-y-1">
+                        {sortOptions.map((option) => {
+                          const isSelected = option.value === sortBy;
+
+                          return (
+                            <li key={option.value}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSortBy(option.value);
+                                  setIsSortDropdownOpen(false);
+                                }}
+                                className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-semibold transition ${
+                                  isSelected
+                                    ? 'bg-blue-500/20 text-blue-100'
+                                    : 'text-slate-200 hover:bg-slate-800/80 hover:text-white'
+                                }`}
+                              >
+                                <span>{option.label}</span>
+                                {isSelected && (
+                                  <span className="text-[10px] font-black uppercase tracking-wider text-blue-200">Đang chọn</span>
+                                )}
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
           </div>
         </div>
@@ -485,8 +810,10 @@ export const FindFieldPage: React.FC = () => {
 
                           <div className="text-right">
                             <p className="text-sm text-slate-400">từ</p>
-                            <p className="text-[2.2rem] font-black leading-none text-blue-400">{venue.priceK}K</p>
-                            <p className="text-base text-slate-400">/giờ</p>
+                            <p className="text-[2.2rem] font-black leading-none text-blue-400">
+                              {new Intl.NumberFormat('vi-VN').format(venue.priceK * 1000)}
+                            </p>
+                            <p className="text-base text-slate-400">VND/giờ</p>
                           </div>
                         </div>
 
@@ -575,11 +902,11 @@ export const FindFieldPage: React.FC = () => {
                       className={`absolute inset-0 rounded-full ${isSelected ? 'opacity-100' : 'opacity-50'}`}
                     />
                     <span
-                      className={`relative block rounded-full px-4 py-2 text-base font-black leading-none text-white ${
+                      className={`relative block rounded-full px-3 py-2 text-sm font-black leading-none text-white ${
                         isSelected ? 'bg-blue-600' : 'bg-slate-600/90'
                       }`}
                     >
-                      {venue.priceK}K /giờ
+                      {formatVnd(venue.priceK)}
                     </span>
                   </motion.button>
                 );
@@ -593,7 +920,7 @@ export const FindFieldPage: React.FC = () => {
                   className="absolute left-[50%] top-[29%] min-w-[228px] -translate-x-1/2 rounded-2xl border border-slate-300/55 bg-white px-4 py-3 text-slate-900 shadow-xl"
                 >
                   <p className="text-2xl font-black leading-tight">{selectedVenue.name}</p>
-                  <p className="mt-1 text-base font-semibold text-slate-600">{selectedVenue.priceK}K /giờ</p>
+                  <p className="mt-1 text-base font-semibold text-slate-600">{formatVnd(selectedVenue.priceK)} /giờ</p>
                 </motion.div>
               )}
 
