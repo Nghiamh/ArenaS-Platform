@@ -25,7 +25,7 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2">
               <li>
                 <Link
-                  to="#"
+                  to="/tim-san"
                   className="hover:text-blue-400 transition duration-300 text-sm"
                 >
                   Tìm Sân

@@ -80,7 +80,7 @@ export const Header: React.FC = () => {
               Môn Thể Thao
             </Link>
             <Link
-              to="#"
+              to="/tim-san"
               className="hover:text-blue-400 transition duration-300 font-medium"
             >
               Tìm Sân

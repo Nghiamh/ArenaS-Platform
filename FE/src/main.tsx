@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { HomePage } from './pages/HomePage/HomePage';
+import { FindFieldPage } from './pages/FindFieldPage/FindFieldPage';
 import { LoginPage } from './pages/LoginPage/LoginPage';
 import { RegisterPage } from './pages/Customer/RegisterPage';
 import { ForgotPasswordPage } from './pages/Customer/ForgotPasswordPage';
@@ -39,6 +40,14 @@ function App() {
           element={
             <Layout>
               <HomePage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/tim-san"
+          element={
+            <Layout>
+              <FindFieldPage />
             </Layout>
           }
         />
