@@ -7,6 +7,8 @@ export interface IUser extends Document {
 	password?: string;
 	googleId?: string;
 	authProvider: "local" | "google";
+	resetPasswordTokenHash?: string;
+	resetPasswordExpiresAt?: Date;
 	comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -43,6 +45,14 @@ const userSchema = new Schema<IUser, IUserModel>(
 			required: true,
 			default: "local",
 			enum: ["local", "google"],
+		},
+		resetPasswordTokenHash: {
+			type: String,
+			required: false,
+		},
+		resetPasswordExpiresAt: {
+			type: Date,
+			required: false,
 		},
 	},
 	{

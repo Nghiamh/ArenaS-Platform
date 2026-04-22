@@ -133,7 +133,34 @@ PORT=5000
 MONGODB_URI=mongodb://localhost:27017/arena
 JWT_SECRET=your_secret_key
 CORS_ORIGIN=http://localhost:3000
+FRONTEND_URL=http://localhost:5173
+
+# Gmail API OAuth2
+GMAIL_CLIENT_ID=your_google_oauth_client_id
+GMAIL_CLIENT_SECRET=your_google_oauth_client_secret
+GMAIL_REFRESH_TOKEN=your_google_oauth_refresh_token
+GMAIL_SENDER_EMAIL=your_gmail_address@gmail.com
 ```
+
+## 🔐 Authentication Endpoints
+
+- `POST /api/auth/forgot-password`
+  - Body: `{ "email": "user@example.com" }`
+  - Response: thông báo đã gửi email nếu email tồn tại
+
+- `POST /api/auth/reset-password`
+  - Body: `{ "token": "reset_token_from_email", "password": "new_password" }`
+  - Response: đặt lại mật khẩu thành công
+
+## 🛡 Rate Limit (Forgot/Reset Password)
+
+- `POST /api/auth/forgot-password`: tối đa 5 request / 15 phút / IP
+- `POST /api/auth/reset-password`: tối đa 10 request / 15 phút / IP
+
+## 📄 Env Example Files
+
+- File mẫu backend: `BE/.env.example`
+- File mẫu frontend: `FE/.env.example`
 
 ## 🛠 Debugging
 

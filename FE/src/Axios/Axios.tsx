@@ -36,6 +36,19 @@ export type GoogleLoginPayload = {
 	code: string;
 };
 
+export type ForgotPasswordPayload = {
+	email: string;
+};
+
+export type ResetPasswordPayload = {
+	token: string;
+	password: string;
+};
+
+export type BasicMessageResponse = {
+	message: string;
+};
+
 type ApiErrorPayload = {
 	message?: string;
 	error?: string;
@@ -71,6 +84,24 @@ export async function register(payload: RegisterPayload): Promise<AuthResponse> 
 export async function loginWithGoogle(payload: GoogleLoginPayload): Promise<AuthResponse> {
 	try {
 		const { data } = await axiosClient.post<AuthResponse>('/auth/google', payload);
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function forgotPassword(payload: ForgotPasswordPayload): Promise<BasicMessageResponse> {
+	try {
+		const { data } = await axiosClient.post<BasicMessageResponse>('/auth/forgot-password', payload);
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function resetPassword(payload: ResetPasswordPayload): Promise<BasicMessageResponse> {
+	try {
+		const { data } = await axiosClient.post<BasicMessageResponse>('/auth/reset-password', payload);
 		return data;
 	} catch (error: unknown) {
 		throw new Error(toErrorMessage(error));

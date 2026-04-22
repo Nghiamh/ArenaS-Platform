@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { forgotPassword as forgotPasswordApi } from '../../Axios/Axios';
 
 const EnvelopeIcon = () => (
   <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
@@ -15,6 +16,40 @@ const BackArrowIcon = () => (
 );
 
 export const ForgotPasswordPage: React.FC = () => {
+  const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+
+  const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setErrorMessage('Vui lòng nhập email đã đăng ký.');
+      return;
+    }
+
+    if (!isValidEmail(trimmedEmail)) {
+      setErrorMessage('Email không đúng định dạng. Vui lòng kiểm tra lại.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const response = await forgotPasswordApi({ email: trimmedEmail });
+      setSuccessMessage(response.message);
+    } catch (error: unknown) {
+      setErrorMessage(error instanceof Error ? error.message : 'Không thể gửi email đặt lại mật khẩu.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#050816] text-white">
       <div className="grid min-h-screen lg:grid-cols-[1.08fr_0.92fr]">
@@ -74,7 +109,7 @@ export const ForgotPasswordPage: React.FC = () => {
                 Nhập email để nhận liên kết đặt lại mật khẩu
               </p>
 
-              <form className="mt-8 space-y-5">
+              <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
                 <label className="block space-y-2">
                   <span className="text-sm font-semibold text-blue-200/90">Địa Chỉ Email</span>
                   <div className="flex h-14 items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 text-slate-200 transition focus-within:border-blue-400/70 focus-within:bg-white/[0.07]">
@@ -84,16 +119,32 @@ export const ForgotPasswordPage: React.FC = () => {
                     <input
                       type="email"
                       placeholder="you@example.com"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      autoComplete="email"
                       className="login-input h-full w-full border-0 bg-transparent p-0 text-base text-white placeholder:text-slate-500 focus:outline-none focus:ring-0"
                     />
                   </div>
                 </label>
 
+                {errorMessage && (
+                  <p className="rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                    {errorMessage}
+                  </p>
+                )}
+
+                {successMessage && (
+                  <p className="rounded-xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+                    {successMessage}
+                  </p>
+                )}
+
                 <button
                   type="submit"
+                  disabled={isSubmitting}
                   className="mt-2 h-14 w-full rounded-2xl bg-[#1560ff] text-base font-bold text-white shadow-[0_18px_38px_-14px_rgba(21,96,255,0.95)] transition hover:-translate-y-0.5 hover:brightness-110"
                 >
-                  Gửi Liên Kết Đặt Lại
+                  {isSubmitting ? 'Đang gửi...' : 'Gửi Liên Kết Đặt Lại'}
                 </button>
               </form>
 

@@ -1,6 +1,10 @@
 import { Request, Response } from "express";
+import crypto from "crypto";
 import User from "../models/userModel.js";
 import { generateAccessToken } from "../utils/token.js";
+import { sendResetPasswordEmail } from "../utils/gmail.js";
+
+const RESET_PASSWORD_TOKEN_EXPIRES_IN_MS = 15 * 60 * 1000;
 
 type GoogleTokenInfo = {
 	aud?: string;
@@ -171,6 +175,10 @@ function buildAuthResponse(user: { _id: unknown; email: string; userName: string
 			userName: user.userName,
 		},
 	};
+}
+
+function hashResetToken(token: string): string {
+	return crypto.createHash("sha256").update(token).digest("hex");
 }
 
 export async function register(req: Request, res: Response): Promise<void> {
@@ -395,6 +403,109 @@ export async function loginWithGoogle(req: Request, res: Response): Promise<void
 			message:
 				statusCode === 401 ? "invalid google credential" : "failed to login with google",
 			error: errorMessage,
+		});
+	}
+}
+
+export async function forgotPassword(req: Request, res: Response): Promise<void> {
+	try {
+		const { email } = req.body as { email?: string };
+
+		if (!email) {
+			res.status(400).json({ message: "email is required" });
+			return;
+		}
+
+		const normalizedEmail = normalizeEmail(email);
+		const user = await User.findOne({ email: normalizedEmail });
+
+		if (!user) {
+			res.status(404).json({
+				message: "Email không tồn tại trong hệ thống.",
+			});
+			return;
+		}
+
+		if (!user.password) {
+			res.status(400).json({
+				message: "Tài khoản này không sử dụng mật khẩu. Vui lòng đăng nhập bằng Google.",
+			});
+			return;
+		}
+
+		const rawToken = crypto.randomBytes(32).toString("hex");
+		const tokenHash = hashResetToken(rawToken);
+		const expiresAt = new Date(Date.now() + RESET_PASSWORD_TOKEN_EXPIRES_IN_MS);
+
+		user.resetPasswordTokenHash = tokenHash;
+		user.resetPasswordExpiresAt = expiresAt;
+		await user.save();
+
+		const resetBaseUrl =
+			process.env.RESET_PASSWORD_BASE_URL?.trim() ||
+			process.env.FRONTEND_URL?.trim() ||
+			"http://localhost:5173";
+
+		const resetUrl = `${resetBaseUrl.replace(/\/$/, "")}/reset-password?token=${rawToken}`;
+		const preferredLanguage = req.headers["accept-language"];
+		const locale = typeof preferredLanguage === "string" && preferredLanguage.toLowerCase().startsWith("en") ? "en" : "vi";
+
+		await sendResetPasswordEmail({
+			toEmail: user.email,
+			toName: user.userName,
+			resetUrl,
+			locale,
+		});
+
+		res.status(200).json({
+			message: "Gửi email đặt lại mật khẩu thành công. Vui lòng kiểm tra hộp thư của bạn.",
+		});
+	} catch (error: unknown) {
+		res.status(500).json({
+			message: "failed to send reset email",
+			error: error instanceof Error ? error.message : "unknown error",
+		});
+	}
+}
+
+export async function resetPassword(req: Request, res: Response): Promise<void> {
+	try {
+		const { token, password } = req.body as {
+			token?: string;
+			password?: string;
+		};
+
+		if (!token || !password) {
+			res.status(400).json({ message: "token and password are required" });
+			return;
+		}
+
+		if (password.length < 6) {
+			res.status(400).json({ message: "password must be at least 6 characters" });
+			return;
+		}
+
+		const tokenHash = hashResetToken(token);
+		const user = await User.findOne({
+			resetPasswordTokenHash: tokenHash,
+			resetPasswordExpiresAt: { $gt: new Date() },
+		});
+
+		if (!user) {
+			res.status(400).json({ message: "invalid or expired reset token" });
+			return;
+		}
+
+		user.password = password;
+		user.resetPasswordTokenHash = undefined;
+		user.resetPasswordExpiresAt = undefined;
+		await user.save();
+
+		res.status(200).json({ message: "password reset successful" });
+	} catch (error: unknown) {
+		res.status(500).json({
+			message: "failed to reset password",
+			error: error instanceof Error ? error.message : "unknown error",
 		});
 	}
 }
