@@ -4,9 +4,9 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { HomePage } from './pages/HomePage/HomePage';
 import { LoginPage } from './pages/LoginPage/LoginPage';
-import { RegisterPage } from './pages/RegisterPage/RegisterPage';
-import { ForgotPasswordPage } from './pages/ForgotPasswordPage/ForgotPasswordPage';
-import { ResetPasswordPage } from './pages/ResetPasswordPage/ResetPasswordPage';
+import { RegisterPage } from './pages/Customer/RegisterPage';
+import { ForgotPasswordPage } from './pages/Customer/ForgotPasswordPage';
+import { ResetPasswordPage } from './pages/Customer/ResetPasswordPage';
 import { ProfilePage } from './pages/Customer/ProfilePage';
 import './index.css';
 
