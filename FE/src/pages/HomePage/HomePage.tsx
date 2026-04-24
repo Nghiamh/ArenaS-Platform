@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { createSearchParams, useLocation, useNavigate } from 'react-router-dom';
 
 type SportCategory = {
   name: string;
@@ -193,6 +193,32 @@ const heroRotatingWords = ['Đặt Sân', 'Nhanh Chóng', 'Tiện Lợi'];
 
 const sectionTitleClass = 'text-3xl md:text-5xl font-extrabold tracking-tight text-white';
 
+const hcmcLocationOptions = [
+  'Gần đây',
+  'Quận 1',
+  'Quận 3',
+  'Quận 4',
+  'Quận 5',
+  'Quận 6',
+  'Quận 7',
+  'Quận 8',
+  'Quận 10',
+  'Quận 11',
+  'Quận 12',
+  'Bình Thạnh',
+  'Phú Nhuận',
+  'Tân Bình',
+  'Tân Phú',
+  'Gò Vấp',
+  'Thủ Đức',
+  'Bình Tân',
+  'Hóc Môn',
+  'Bình Chánh',
+  'Nhà Bè',
+  'Củ Chi',
+  'Cần Giờ',
+];
+
 type HomeLocationState = {
   toastMessage?: string;
 };
@@ -203,10 +229,11 @@ export const HomePage: React.FC = () => {
   const [activeHeroWordIndex, setActiveHeroWordIndex] = useState(0);
   const [toastMessage, setToastMessage] = useState('');
   const [lastToastLocationKey, setLastToastLocationKey] = useState<string | null>(null);
+  const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
     sport: 'Bóng Đá',
-    location: 'Tất cả khu vực',
-    date: new Date().toISOString().slice(0, 10),
+    location: 'Gần đây',
+    date: today,
   });
 
   useEffect(() => {
@@ -243,6 +270,15 @@ export const HomePage: React.FC = () => {
 
   const handleSearch = (event: React.FormEvent) => {
     event.preventDefault();
+
+    navigate({
+      pathname: '/tim-san',
+      search: `?${createSearchParams({
+        sport: form.sport,
+        location: form.location,
+        date: form.date,
+      })}`,
+    });
   };
 
   return (
@@ -340,17 +376,24 @@ export const HomePage: React.FC = () => {
 
             <label className="space-y-2 text-xs uppercase tracking-[0.14em] text-slate-400">
               Khu vực
-              <input
+              <select
                 value={form.location}
                 onChange={(event) => setForm((prev) => ({ ...prev, location: event.target.value }))}
                 className="h-12 w-full rounded-xl border border-white/10 bg-slate-900/70 px-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-blue-400/70"
-              />
+              >
+                {hcmcLocationOptions.map((option) => (
+                  <option key={option} value={option} className="bg-slate-950 text-white">
+                    {option}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label className="space-y-2 text-xs uppercase tracking-[0.14em] text-slate-400">
               Ngày
               <input
                 type="date"
+                min={today}
                 value={form.date}
                 onChange={(event) => setForm((prev) => ({ ...prev, date: event.target.value }))}
                 className="h-12 w-full rounded-xl border border-white/10 bg-slate-900/70 px-4 text-sm text-white outline-none transition focus:border-blue-400/70"

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 type FindFieldLocationState = {
   toastMessage?: string;
@@ -313,6 +313,7 @@ const sportFilterPredicates: Record<SportName, Record<string, (venue: Venue) => 
 export const FindFieldPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
 
   const [toastMessage, setToastMessage] = useState('');
   const [lastToastLocationKey, setLastToastLocationKey] = useState<string | null>(null);
@@ -340,6 +341,16 @@ export const FindFieldPage: React.FC = () => {
     setLastToastLocationKey(location.key);
     navigate(location.pathname, { replace: true, state: null });
   }, [lastToastLocationKey, location.key, location.pathname, location.state, navigate]);
+
+  useEffect(() => {
+    const sportParam = searchParams.get('sport');
+
+    if (!sportParam || !sports.includes(sportParam as SportName)) {
+      return;
+    }
+
+    setActiveSport(sportParam as SportName);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!toastMessage) {
