@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { OwnerSidebar } from './OwnerSidebar';
 
@@ -169,14 +169,26 @@ const buildLinePath = (points: RevenuePoint[]): string => {
 
 export const OwnerDashboardScreen: React.FC = () => {
   const path = buildLinePath(revenueSeries);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => localStorage.getItem('ownerSidebarCollapsed') === '1');
+
+  useEffect(() => {
+    localStorage.setItem('ownerSidebarCollapsed', sidebarCollapsed ? '1' : '0');
+  }, [sidebarCollapsed]);
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-[#020B1F] text-slate-100">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_18%,rgba(37,99,235,0.2),transparent_34%),radial-gradient(circle_at_75%_0%,rgba(14,165,233,0.12),transparent_28%),radial-gradient(circle_at_50%_100%,rgba(59,130,246,0.08),transparent_40%)]" />
       <div className="pointer-events-none absolute inset-0 opacity-[0.25] [background-image:linear-gradient(rgba(71,85,105,0.2)_1px,transparent_1px),linear-gradient(90deg,rgba(71,85,105,0.2)_1px,transparent_1px)] [background-size:70px_70px]" />
 
-      <div className="relative z-10 grid min-h-screen w-full grid-cols-1 xl:grid-cols-[300px_minmax(0,1fr)]">
-        <OwnerSidebar activeKey="overview" />
+      <div
+        className="relative z-10 grid min-h-screen w-full grid-cols-1 transition-[grid-template-columns] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[grid-template-columns] xl:[grid-template-columns:var(--owner-sidebar-width)_minmax(0,1fr)]"
+        style={{ ['--owner-sidebar-width' as string]: sidebarCollapsed ? '92px' : '300px' } as React.CSSProperties}
+      >
+        <OwnerSidebar
+          activeKey="overview"
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
+        />
 
         <main className="arena-scroll min-h-screen px-4 py-6 md:px-6 lg:px-8 xl:max-h-screen xl:overflow-y-auto">
           <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-6">
