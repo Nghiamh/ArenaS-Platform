@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import crypto from "crypto";
-import User from "../models/userModel.js";
+import User, { IUserRole } from "../models/userModel.js";
 import { generateAccessToken } from "../utils/token.js";
 import { sendResetPasswordEmail } from "../utils/gmail.js";
 
@@ -55,6 +55,16 @@ function createLegacyBaseUserName(displayName: string, email: string): string {
 
 	const emailPrefix = email.split("@")[0]?.trim().toLowerCase() ?? "user";
 	return emailPrefix.replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "user";
+}
+
+const ROLE_REDIRECT_PATHS: Record<IUserRole, string> = {
+	user: "/home",
+	owner: "/owner/dashboard",
+	admin: "/admin/dashboard",
+};
+
+function resolveRedirectPathByRole(role: IUserRole): string {
+	return ROLE_REDIRECT_PATHS[role];
 }
 
 async function ensureUniqueUserName(baseUserName: string): Promise<string> {
@@ -164,15 +174,24 @@ async function exchangeGoogleAuthorizationCode(code: string): Promise<GoogleUser
 	return userInfo;
 }
 
-function buildAuthResponse(user: { _id: unknown; email: string; userName: string }) {
+function buildAuthResponse(user: {
+	_id: unknown;
+	email: string;
+	userName: string;
+	role?: IUserRole;
+}) {
 	const userId = String(user._id);
+	const role = user.role ?? "user";
+	const redirectPath = resolveRedirectPathByRole(role);
 
 	return {
-		token: generateAccessToken(userId),
+		token: generateAccessToken(userId, role),
+		redirectPath,
 		user: {
 			id: userId,
 			email: user.email,
 			userName: user.userName,
+			role,
 		},
 	};
 }

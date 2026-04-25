@@ -13,11 +13,13 @@ export type AuthUser = {
 	id: string;
 	email: string;
 	userName: string;
+	role: 'user' | 'owner' | 'admin';
 };
 
 export type AuthResponse = {
 	message: string;
 	token: string;
+	redirectPath: string;
 	user: AuthUser;
 };
 

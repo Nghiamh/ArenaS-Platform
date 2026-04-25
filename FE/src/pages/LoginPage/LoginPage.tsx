@@ -111,6 +111,22 @@ export const LoginPage: React.FC = () => {
   const [isGoogleReady, setIsGoogleReady] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  const resolvePostLoginPath = (role: 'user' | 'owner' | 'admin', redirectPath?: string): string => {
+    if (redirectPath?.trim()) {
+      return redirectPath;
+    }
+
+    if (role === 'owner') {
+      return '/owner/dashboard';
+    }
+
+    if (role === 'admin') {
+      return '/admin/dashboard';
+    }
+
+    return '/home';
+  };
+
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
@@ -154,7 +170,7 @@ export const LoginPage: React.FC = () => {
 
             localStorage.setItem('accessToken', authResponse.token);
             localStorage.setItem('currentUser', JSON.stringify(authResponse.user));
-            navigate('/home', {
+            navigate(resolvePostLoginPath(authResponse.user.role, authResponse.redirectPath), {
               state: {
                 toastMessage: `Đăng nhập Google thành công. Xin chào ${authResponse.user.userName}!`,
               },
@@ -226,7 +242,7 @@ export const LoginPage: React.FC = () => {
 
       localStorage.setItem('accessToken', response.token);
       localStorage.setItem('currentUser', JSON.stringify(response.user));
-      navigate('/home', {
+      navigate(resolvePostLoginPath(response.user.role, response.redirectPath), {
         state: {
           toastMessage: `Đăng nhập thành công. Xin chào ${response.user.userName}!`,
         },

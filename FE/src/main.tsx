@@ -14,6 +14,7 @@ import { OwnerManageCourtScreen } from './pages/Owner/OwnerManageCourtScreen';
 import { OwnerRevenueScreen } from './pages/Owner/OwnerRevenueScreen';
 import { OwnerBookingScheduleScreen } from './pages/Owner/OwnerBookingScheduleScreen';
 import { OwnerSettingsScreen } from './pages/Owner/OwnerSettingsScreen';
+import { AdminDashboardPage } from './pages/Admin/AdminDashboardPage';
 import './index.css';
 
 function App() {
@@ -37,6 +38,7 @@ function App() {
         <Route path="/owner/revenue" element={<OwnerRevenueScreen />} />
         <Route path="/owner/bookings" element={<OwnerBookingScheduleScreen />} />
         <Route path="/owner/settings" element={<OwnerSettingsScreen />} />
+        <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
         <Route
           path="/profile"
           element={

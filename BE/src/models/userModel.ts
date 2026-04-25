@@ -1,9 +1,12 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 import bcrypt from "bcryptjs";
 
+export type IUserRole = "user" | "owner" | "admin";
+
 export interface IUser extends Document {
 	email: string;
 	userName: string;
+	role: IUserRole;
 	password?: string;
 	googleId?: string;
 	authProvider: "local" | "google";
@@ -28,6 +31,12 @@ const userSchema = new Schema<IUser, IUserModel>(
 			required: true,
 			unique: true,
 			trim: true,
+		},
+		role: {
+			type: String,
+			required: true,
+			default: "user",
+			enum: ["user", "owner", "admin"],
 		},
 		password: {
 			type: String,
