@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { OwnerSidebar } from './OwnerSidebar';
 
 type StatCard = {
   title: string;
@@ -122,13 +123,6 @@ const recentBookings: RecentBooking[] = [
   },
 ];
 
-const menuItems = [
-  { name: 'Tổng Quan', count: undefined },
-  { name: 'Quản Lý Sân', count: 3 },
-  { name: 'Doanh Thu', count: undefined },
-  { name: 'Lịch Đặt Sân', count: 8 },
-];
-
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
   visible: {
@@ -181,79 +175,8 @@ export const OwnerDashboardScreen: React.FC = () => {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_18%,rgba(37,99,235,0.2),transparent_34%),radial-gradient(circle_at_75%_0%,rgba(14,165,233,0.12),transparent_28%),radial-gradient(circle_at_50%_100%,rgba(59,130,246,0.08),transparent_40%)]" />
       <div className="pointer-events-none absolute inset-0 opacity-[0.25] [background-image:linear-gradient(rgba(71,85,105,0.2)_1px,transparent_1px),linear-gradient(90deg,rgba(71,85,105,0.2)_1px,transparent_1px)] [background-size:70px_70px]" />
 
-      <div className="relative z-10 mx-auto grid min-h-screen w-full max-w-[1600px] grid-cols-1 xl:grid-cols-[300px_minmax(0,1fr)]">
-        <motion.aside
-          initial={{ x: -20, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="arena-scroll relative border-b border-white/10 bg-gradient-to-b from-[#020A1B]/95 to-[#010819]/95 px-5 py-6 backdrop-blur-xl xl:sticky xl:top-0 xl:h-screen xl:overflow-y-auto xl:border-b-0 xl:border-r"
-        >
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-blue-300/35 to-transparent" />
-
-          <div className="flex h-full flex-col">
-            <div className="mb-8 flex items-center gap-3 rounded-2xl border border-blue-200/15 bg-[#081734]/75 px-3 py-3 shadow-[0_18px_45px_-28px_rgba(59,130,246,0.65)]">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600 font-extrabold text-white shadow-[0_10px_30px_-16px_rgba(37,99,235,1)]">A</div>
-              <div>
-                <p className="text-[1.35rem] font-extrabold leading-none tracking-tight text-white">ArenaS</p>
-                <p className="mt-1 text-xs font-medium text-blue-300">Dashboard Chủ Sân</p>
-              </div>
-            </div>
-
-            <p className="mb-3 px-2 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Quản Lý</p>
-            <nav className="space-y-2">
-              {menuItems.map((item, index) => {
-                const isActive = index === 0;
-                return (
-                  <motion.button
-                    whileHover={{ x: 4 }}
-                    whileTap={{ scale: 0.98 }}
-                    key={item.name}
-                    className={`group flex w-full items-center justify-between rounded-xl px-3 py-3 text-left transition ${
-                      isActive
-                        ? 'border border-blue-200/65 bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-[0_12px_34px_-18px_rgba(59,130,246,0.95)]'
-                        : 'border border-transparent text-slate-300 hover:border-white/10 hover:bg-white/5 hover:text-white'
-                    }`}
-                  >
-                    <span className="font-semibold">{item.name}</span>
-                    {typeof item.count === 'number' ? (
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-bold ${
-                          isActive ? 'bg-white/20 text-white' : 'bg-white/10 text-slate-200'
-                        }`}
-                      >
-                        {item.count}
-                      </span>
-                    ) : (
-                      <span className="text-sm opacity-80 transition group-hover:translate-x-0.5">›</span>
-                    )}
-                  </motion.button>
-                );
-              })}
-            </nav>
-
-            <div className="mt-8 border-t border-white/10 pt-6">
-              <p className="mb-4 px-2 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Hệ Thống</p>
-              <div className="space-y-1 px-2 text-slate-300">
-                <button className="block w-full rounded-lg px-2 py-2 text-left transition hover:bg-white/5">Về Trang Chủ</button>
-                <button className="block w-full rounded-lg px-2 py-2 text-left transition hover:bg-white/5">Cài Đặt</button>
-                <button className="block w-full rounded-lg px-2 py-2 text-left text-red-300 transition hover:bg-red-500/10">Đăng Xuất</button>
-              </div>
-            </div>
-
-            <div className="mt-auto pt-8">
-              <div className="rounded-2xl border border-white/10 bg-[#0A1B3E]/75 p-3 shadow-[0_20px_45px_-30px_rgba(2,6,23,1)]">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600 font-black text-white">MT</div>
-                  <div>
-                    <p className="text-sm font-bold text-white">Minh Tuấn</p>
-                    <p className="text-xs text-slate-300">minhtuan@arenas.vn</p>
-                  </div>
-                  <span className="ml-auto rounded-lg bg-blue-500/25 px-2 py-1 text-xs font-bold text-blue-200">Pro</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </motion.aside>
+      <div className="relative z-10 grid min-h-screen w-full grid-cols-1 xl:grid-cols-[300px_minmax(0,1fr)]">
+        <OwnerSidebar activeKey="overview" />
 
         <main className="arena-scroll min-h-screen px-4 py-6 md:px-6 lg:px-8 xl:max-h-screen xl:overflow-y-auto">
           <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-6">
@@ -265,9 +188,6 @@ export const OwnerDashboardScreen: React.FC = () => {
               <div className="flex items-center gap-3">
                 <button className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-slate-300 transition hover:bg-white/10 hover:text-white">
                   🔔
-                </button>
-                <button className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 font-bold text-white shadow-[0_12px_30px_-14px_rgba(37,99,235,0.9)]">
-                  MT
                 </button>
               </div>
             </motion.header>

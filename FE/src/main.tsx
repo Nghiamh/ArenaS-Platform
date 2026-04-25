@@ -10,6 +10,10 @@ import { ForgotPasswordPage } from './pages/Customer/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/Customer/ResetPasswordPage';
 import { ProfilePage } from './pages/Customer/ProfilePage';
 import { OwnerDashboardScreen } from './pages/Owner/OwnerDashboardScreen';
+import { OwnerManageCourtScreen } from './pages/Owner/OwnerManageCourtScreen';
+import { OwnerRevenueScreen } from './pages/Owner/OwnerRevenueScreen';
+import { OwnerBookingScheduleScreen } from './pages/Owner/OwnerBookingScheduleScreen';
+import { OwnerSettingsScreen } from './pages/Owner/OwnerSettingsScreen';
 import './index.css';
 
 function App() {
@@ -29,6 +33,10 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/owner/dashboard" element={<OwnerDashboardScreen />} />
+        <Route path="/owner/manage-courts" element={<OwnerManageCourtScreen />} />
+        <Route path="/owner/revenue" element={<OwnerRevenueScreen />} />
+        <Route path="/owner/bookings" element={<OwnerBookingScheduleScreen />} />
+        <Route path="/owner/settings" element={<OwnerSettingsScreen />} />
         <Route
           path="/profile"
           element={
