@@ -9,6 +9,7 @@ import { RegisterPage } from './pages/Customer/RegisterPage';
 import { ForgotPasswordPage } from './pages/Customer/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/Customer/ResetPasswordPage';
 import { ProfilePage } from './pages/Customer/ProfilePage';
+import { OwnerDashboardScreen } from './pages/Owner/OwnerDashboardScreen';
 import './index.css';
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/owner/dashboard" element={<OwnerDashboardScreen />} />
         <Route
           path="/profile"
           element={
