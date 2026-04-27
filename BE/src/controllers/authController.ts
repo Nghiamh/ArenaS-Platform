@@ -176,22 +176,33 @@ async function exchangeGoogleAuthorizationCode(code: string): Promise<GoogleUser
 
 function buildAuthResponse(user: {
 	_id: unknown;
+	name?: string;
+	dateOfBirth?: Date;
+	avatarUrl?: string;
 	email: string;
+	phone?: string;
 	userName: string;
 	role?: IUserRole;
+	createdAt?: Date;
 }) {
 	const userId = String(user._id);
 	const role = user.role ?? "user";
 	const redirectPath = resolveRedirectPathByRole(role);
+	const name = user.name?.trim() || user.userName;
 
 	return {
 		token: generateAccessToken(userId, role),
 		redirectPath,
 		user: {
 			id: userId,
+			name,
+			dateOfBirth: user.dateOfBirth?.toISOString(),
+			avatarUrl: user.avatarUrl?.trim() || "",
 			email: user.email,
+			phone: user.phone?.trim() || "",
 			userName: user.userName,
 			role,
+			createdAt: user.createdAt?.toISOString() ?? new Date().toISOString(),
 		},
 	};
 }
@@ -222,8 +233,14 @@ export async function register(req: Request, res: Response): Promise<void> {
 			return;
 		}
 
+		const { name, phone } = req.body as {
+			name?: string;
+			phone?: string;
+		};
 		const normalizedEmail = normalizeEmail(email);
 		const normalizedUserName = normalizeUserName(userName);
+		const normalizedName = normalizeUserName(name ?? userName);
+		const normalizedPhone = phone?.trim() ?? "";
 
 		const existedUser = await User.findOne({
 			$or: [{ email: normalizedEmail }, { userName: normalizedUserName }],
@@ -239,7 +256,9 @@ export async function register(req: Request, res: Response): Promise<void> {
 		}
 
 		const createdUser = await User.create({
+			name: normalizedName,
 			email: normalizedEmail,
+			phone: normalizedPhone || undefined,
 			userName: normalizedUserName,
 			password,
 			authProvider: "local",
@@ -361,8 +380,11 @@ export async function loginWithGoogle(req: Request, res: Response): Promise<void
 			const uniqueUserName = await ensureUniqueUserName(baseUserName);
 
 			user = await User.create({
+				name: displayName,
 				email: normalizedEmail,
 				userName: uniqueUserName,
+				phone: undefined,
+				avatarUrl: googleProfile.picture,
 				googleId: googleProfile.sub,
 				authProvider: "google",
 			});
@@ -383,6 +405,16 @@ export async function loginWithGoogle(req: Request, res: Response): Promise<void
 
 			if (user.email !== normalizedEmail) {
 				user.email = normalizedEmail;
+				shouldSave = true;
+			}
+
+			if (!user.name || user.name.trim() !== displayName) {
+				user.name = displayName;
+				shouldSave = true;
+			}
+
+			if (googleProfile.picture && user.avatarUrl !== googleProfile.picture) {
+				user.avatarUrl = googleProfile.picture;
 				shouldSave = true;
 			}
 

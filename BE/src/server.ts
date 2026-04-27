@@ -4,6 +4,9 @@ import express from "express";
 import helmet from "helmet";
 import mongoose from "mongoose";
 import authRoutes from "./routes/authRoutes.js";
+import UserSkill from "./models/userSkillModel.js";
+import userProfileRoutes from "./routes/userProfileRoutes.js";
+import userSkillRoutes from "./routes/userSkillRoutes.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
@@ -14,7 +17,8 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
-
+app.use("/api/profile", userProfileRoutes);
+app.use("/api/profile/skills", userSkillRoutes);
 app.get("/api/health", (_req, res) => {
 	res.status(200).json({ status: "ok", service: "arena-backend" });
 });
@@ -25,10 +29,36 @@ async function startServer(): Promise<void> {
 	}
 
 	await mongoose.connect(MONGODB_URI);
+
+	try {
+		await UserSkill.createCollection();
+	} catch (error: unknown) {
+		const mongooseError = error as { code?: number };
+		if (mongooseError.code !== 48) {
+			throw error;
+		}
+	}
+
 	console.log("MongoDB connected successfully");
 
-	app.listen(PORT, () => {
-		console.log(`Server is running at http://localhost:${PORT}`);
+	await new Promise<void>((resolve, reject) => {
+		const server = app.listen(PORT, () => {
+			console.log(`Server is running at http://localhost:${PORT}`);
+			resolve();
+		});
+
+		server.on("error", (error: NodeJS.ErrnoException) => {
+			if (error.code === "EADDRINUSE") {
+				reject(
+					new Error(
+						`Port ${PORT} is already in use. Stop the running backend process or change PORT in BE/.env.`
+					)
+				);
+				return;
+			}
+
+			reject(error);
+		});
 	});
 }
 
