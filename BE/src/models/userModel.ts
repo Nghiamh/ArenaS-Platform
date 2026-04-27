@@ -4,7 +4,11 @@ import bcrypt from "bcryptjs";
 export type IUserRole = "user" | "owner" | "admin";
 
 export interface IUser extends Document {
+	name?: string;
+	dateOfBirth?: Date;
+	avatarUrl?: string;
 	email: string;
+	phone?: string;
 	userName: string;
 	role: IUserRole;
 	password?: string;
@@ -19,11 +23,30 @@ interface IUserModel extends Model<IUser> {}
 
 const userSchema = new Schema<IUser, IUserModel>(
 	{
+		name: {
+			type: String,
+			required: false,
+			trim: true,
+		},
+		dateOfBirth: {
+			type: Date,
+			required: false,
+		},
+		avatarUrl: {
+			type: String,
+			required: false,
+			trim: true,
+		},
 		email: {
 			type: String,
 			required: true,
 			unique: true,
 			lowercase: true,
+			trim: true,
+		},
+		phone: {
+			type: String,
+			required: false,
 			trim: true,
 		},
 		userName: {
