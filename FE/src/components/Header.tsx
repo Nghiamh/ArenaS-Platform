@@ -2,8 +2,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 type StoredUser = {
+  name?: string;
   userName?: string;
   email?: string;
+  role?: 'user' | 'owner' | 'admin';
+  avatarUrl?: string;
 };
 
 export const Header: React.FC = () => {
@@ -30,7 +33,11 @@ export const Header: React.FC = () => {
 
     syncUser();
     window.addEventListener('storage', syncUser);
-    return () => window.removeEventListener('storage', syncUser);
+    window.addEventListener('currentUserUpdated', syncUser);
+    return () => {
+      window.removeEventListener('storage', syncUser);
+      window.removeEventListener('currentUserUpdated', syncUser);
+    };
   }, []);
 
   useEffect(() => {
@@ -45,7 +52,9 @@ export const Header: React.FC = () => {
   }, []);
 
   const isLoggedIn = currentUser !== null;
-  const profileInitial = currentUser?.userName?.trim().charAt(0).toUpperCase() || 'U';
+  const profileInitial = currentUser?.name?.trim().charAt(0).toUpperCase() || currentUser?.userName?.trim().charAt(0).toUpperCase() || 'U';
+  const profileAvatarUrl = (currentUser?.avatarUrl ?? '').trim();
+  const isPlayerAccount = currentUser?.role === 'user';
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
@@ -89,20 +98,24 @@ export const Header: React.FC = () => {
               to="#"
               className="hover:text-blue-400 transition duration-300 font-medium"
             >
-              Cộng Đông
+              Cộng Đồng
             </Link>
-            <Link
-              to="#"
-              className="hover:text-blue-400 transition duration-300 font-medium"
-            >
-              Bảng Giá
-            </Link>
-            <Link
-              to="#"
-              className="hover:text-blue-400 transition duration-300 font-medium"
-            >
-              Dành Cho Chủ Sân
-            </Link>
+            {!isPlayerAccount && (
+              <>
+                <Link
+                  to="#"
+                  className="hover:text-blue-400 transition duration-300 font-medium"
+                >
+                  Bảng Giá
+                </Link>
+                <Link
+                  to="#"
+                  className="hover:text-blue-400 transition duration-300 font-medium"
+                >
+                  Dành Cho Chủ Sân
+                </Link>
+              </>
+            )}
           </nav>
 
           {/* Right Side Actions */}
@@ -114,11 +127,15 @@ export const Header: React.FC = () => {
                   onClick={() => setIsProfileMenuOpen((prev) => !prev)}
                   className="flex items-center gap-3 rounded-full border border-blue-300/35 bg-blue-500/10 px-2 py-1.5 text-left transition hover:border-blue-300/60 hover:bg-blue-500/20"
                 >
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-cyan-400 text-base font-black text-slate-950">
-                    {profileInitial}
+                  <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-blue-400 to-cyan-400 text-base font-black text-slate-950">
+                    {profileAvatarUrl ? (
+                      <img src={profileAvatarUrl} alt="avatar" className="h-full w-full object-cover" />
+                    ) : (
+                      profileInitial
+                    )}
                   </span>
                   <span className="hidden pr-2 md:block">
-                    <span className="block text-sm font-bold text-white">{currentUser?.userName ?? 'Tài khoản'}</span>
+                    <span className="block text-sm font-bold text-white">{currentUser?.name ?? currentUser?.userName ?? 'Tài khoản'}</span>
                     <span className="block text-xs text-blue-200/80">Hồ sơ</span>
                   </span>
                 </button>

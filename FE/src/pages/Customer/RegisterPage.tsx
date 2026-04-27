@@ -89,6 +89,7 @@ export const RegisterPage: React.FC = () => {
     try {
       setIsSubmitting(true);
       const response = await registerApi({
+        name: fullName.trim(),
         userName: userName.trim(),
         email: email.trim(),
         password,

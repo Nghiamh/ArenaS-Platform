@@ -19,7 +19,12 @@ import './index.css';
 
 function App() {
   return (
-    <Router>
+    <Router
+      future={{
+        v7_relativeSplatPath: true,
+        v7_startTransition: true,
+      }}
+    >
       <Routes>
         <Route
           path="/"
