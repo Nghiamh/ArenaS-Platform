@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { NavLink } from 'react-router-dom';
+import { getCurrentUserProfile, type AuthUser } from '../../Axios/Axios';
 
 type OwnerSidebarKey = 'overview' | 'courts' | 'revenue' | 'bookings' | 'settings';
 
@@ -90,6 +91,53 @@ const secondaryItems: Array<{ key: OwnerSidebarKey | 'home' | 'logout'; label: s
 
 export const OwnerSidebar: React.FC<OwnerSidebarProps> = ({ activeKey, collapsed, onToggleCollapse }) => {
   const [logoSpinTurns, setLogoSpinTurns] = useState(0);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCurrentUser = async () => {
+      try {
+        const response = await getCurrentUserProfile();
+
+        if (isMounted) {
+          setCurrentUser(response.user);
+        }
+      } catch {
+        if (!isMounted) {
+          return;
+        }
+
+        const storedUser = localStorage.getItem('currentUser');
+
+        if (!storedUser) {
+          setCurrentUser(null);
+          return;
+        }
+
+        try {
+          setCurrentUser(JSON.parse(storedUser) as AuthUser);
+        } catch {
+          setCurrentUser(null);
+        }
+      }
+    };
+
+    void loadCurrentUser();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const displayName = currentUser?.name?.trim() || currentUser?.userName?.trim() || 'Tài khoản';
+  const displayEmail = currentUser?.email?.trim() || 'Chưa có email';
+  const profileInitial = useMemo(() => {
+    const sourceName = currentUser?.name?.trim() || currentUser?.userName?.trim() || 'U';
+    return sourceName.charAt(0).toUpperCase();
+  }, [currentUser?.name, currentUser?.userName]);
+  const profileBadgeLabel = currentUser?.role === 'admin' ? 'Admin' : currentUser?.role === 'owner' ? 'Owner' : 'User';
+  const profileAvatarUrl = currentUser?.avatarUrl?.trim() || '';
 
   const handleLogoToggle = () => {
     setLogoSpinTurns((prev) => prev + 1);
@@ -213,12 +261,18 @@ export const OwnerSidebar: React.FC<OwnerSidebarProps> = ({ activeKey, collapsed
           <div className="mt-auto pt-8">
             <div className="rounded-2xl border border-white/10 bg-[#0A1B3E]/75 p-3 shadow-[0_20px_45px_-30px_rgba(2,6,23,1)]">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600 font-black text-white">MT</div>
-                <div>
-                  <p className="text-sm font-bold text-white">Minh Tuấn</p>
-                  <p className="text-xs text-slate-300">minhtuan@arenas.vn</p>
+                <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-blue-600 font-black text-white">
+                  {profileAvatarUrl ? (
+                    <img src={profileAvatarUrl} alt="avatar" className="h-full w-full object-cover" />
+                  ) : (
+                    profileInitial
+                  )}
                 </div>
-                <span className="ml-auto rounded-lg bg-blue-500/25 px-2 py-1 text-xs font-bold text-blue-200">Pro</span>
+                <div>
+                  <p className="text-sm font-bold text-white">{displayName}</p>
+                  <p className="text-xs text-slate-300">{displayEmail}</p>
+                </div>
+                <span className="ml-auto rounded-lg bg-blue-500/25 px-2 py-1 text-xs font-bold text-blue-200">{profileBadgeLabel}</span>
               </div>
             </div>
           </div>
