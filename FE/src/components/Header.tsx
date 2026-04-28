@@ -55,6 +55,12 @@ export const Header: React.FC = () => {
   const profileInitial = currentUser?.name?.trim().charAt(0).toUpperCase() || currentUser?.userName?.trim().charAt(0).toUpperCase() || 'U';
   const profileAvatarUrl = (currentUser?.avatarUrl ?? '').trim();
   const isPlayerAccount = currentUser?.role === 'user';
+  const isManagementAccount = currentUser?.role === 'owner' || currentUser?.role === 'admin';
+  const profileMenuPath = currentUser?.role === 'owner'
+    ? '/owner/dashboard'
+    : currentUser?.role === 'admin'
+      ? '/admin/dashboard'
+      : '/profile';
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
@@ -146,12 +152,24 @@ export const Header: React.FC = () => {
                       type="button"
                       onClick={() => {
                         setIsProfileMenuOpen(false);
-                        navigate('/profile');
+                        navigate(profileMenuPath);
                       }}
                       className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-blue-100 transition hover:bg-blue-500/20"
                     >
-                      Trang cá nhân
+                      {isManagementAccount ? 'Trang quản lí' : 'Trang cá nhân'}
                     </button>
+                    {isManagementAccount && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsProfileMenuOpen(false);
+                          navigate('/profile');
+                        }}
+                        className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-blue-100 transition hover:bg-blue-500/20"
+                      >
+                        Trang cá nhân
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={handleLogout}
