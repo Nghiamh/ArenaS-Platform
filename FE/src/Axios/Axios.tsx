@@ -254,3 +254,112 @@ export async function deleteCurrentUserSkill(skillId: string): Promise<BasicMess
 		throw new Error(toErrorMessage(error));
 	}
 }
+
+export type OwnerCourtStatus = 'available' | 'closed' | 'open';
+
+export type OwnerCourtCoordinates = {
+	latitude: number;
+	longitude: number;
+};
+
+export type OwnerCourt = {
+	id: string;
+	owner_id: string;
+	name: string;
+	sports: string[];
+	price_per_hour: number;
+	location: string;
+	coordinates: OwnerCourtCoordinates | null;
+	amenities: string[];
+	images: string[];
+	avg_rating: number;
+	status: OwnerCourtStatus;
+	createdAt?: string;
+	updatedAt?: string;
+};
+
+export type OwnerCourtPayload = {
+	name: string;
+	sports: string[];
+	price_per_hour: number;
+	location: string;
+	coordinates?: OwnerCourtCoordinates;
+	amenities?: string[];
+	images?: string[];
+	status?: OwnerCourtStatus;
+};
+
+type OwnerCourtsResponse = {
+	message: string;
+	courts: OwnerCourt[];
+};
+
+type OwnerCourtResponse = {
+	message: string;
+	court: OwnerCourt;
+};
+
+function withAuthHeaders() {
+	const accessToken = getValidAccessToken();
+	return accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined;
+}
+
+export async function getOwnerCourts(): Promise<OwnerCourt[]> {
+	try {
+		const { data } = await axiosClient.get<OwnerCourtsResponse>('/owner/courts', {
+			headers: withAuthHeaders(),
+		});
+
+		return data.courts;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function getOwnerCourtById(courtId: string): Promise<OwnerCourt> {
+	try {
+		const { data } = await axiosClient.get<OwnerCourtResponse>(`/owner/courts/${courtId}`, {
+			headers: withAuthHeaders(),
+		});
+
+		return data.court;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function createOwnerCourt(payload: OwnerCourtPayload): Promise<OwnerCourt> {
+	try {
+		const { data } = await axiosClient.post<OwnerCourtResponse>('/owner/courts', payload, {
+			headers: withAuthHeaders(),
+		});
+
+		return data.court;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function updateOwnerCourt(courtId: string, payload: OwnerCourtPayload): Promise<OwnerCourt> {
+	try {
+		const { data } = await axiosClient.put<OwnerCourtResponse>(`/owner/courts/${courtId}`, payload, {
+			headers: withAuthHeaders(),
+		});
+
+		return data.court;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function deleteOwnerCourt(courtId: string): Promise<BasicMessageResponse> {
+	try {
+		const { data } = await axiosClient.delete<BasicMessageResponse>(`/owner/courts/${courtId}`, {
+			headers: withAuthHeaders(),
+		});
+
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}

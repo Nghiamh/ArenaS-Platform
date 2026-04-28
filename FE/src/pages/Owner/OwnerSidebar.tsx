@@ -101,8 +101,9 @@ export const OwnerSidebar: React.FC<OwnerSidebarProps> = ({ activeKey, collapsed
       initial={{ x: -20, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.72, ease: [0.22, 1, 0.36, 1] }}
-      className={`arena-scroll relative border-b border-white/10 bg-gradient-to-b from-[#020A1B]/95 to-[#010819]/95 px-3 py-6 backdrop-blur-xl transition-[padding] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] xl:sticky xl:top-0 xl:h-screen xl:overflow-y-auto xl:border-b-0 xl:border-r ${
-        collapsed ? 'xl:px-2.5' : 'xl:px-5'
+      style={{ width: collapsed ? '92px' : '300px' }}
+      className={`arena-scroll relative border-b border-white/10 bg-gradient-to-b from-[#020A1B]/95 to-[#010819]/95 px-3 py-6 backdrop-blur-xl transition-[padding] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto lg:border-b-0 lg:border-r ${
+        collapsed ? 'lg:px-2.5' : 'lg:px-5'
       }`}
     >
       <div className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-blue-300/35 to-transparent" />
