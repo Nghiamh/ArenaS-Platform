@@ -2,6 +2,9 @@ import { Router } from "express";
 import {
 	createOwnerCourt,
 	deleteOwnerCourt,
+	getCourtsByArea,
+	getNearbyCourts,
+	getPublicCourts,
 	getOwnerCourtById,
 	getOwnerCourts,
 	updateOwnerCourt,
@@ -9,6 +12,9 @@ import {
 
 const courtRoutes = Router();
 
+courtRoutes.get("/public", getPublicCourts);
+courtRoutes.get("/nearby", getNearbyCourts);
+courtRoutes.get("/search", getCourtsByArea);
 courtRoutes.get("/", getOwnerCourts);
 courtRoutes.get("/:courtId", getOwnerCourtById);
 courtRoutes.post("/", createOwnerCourt);

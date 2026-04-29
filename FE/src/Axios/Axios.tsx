@@ -289,6 +289,13 @@ export type OwnerCourtPayload = {
 	status?: OwnerCourtStatus;
 };
 
+export type PublicCourt = OwnerCourt;
+
+type PublicCourtsResponse = {
+	message: string;
+	courts: PublicCourt[];
+};
+
 type OwnerCourtsResponse = {
 	message: string;
 	courts: OwnerCourt[];
@@ -308,6 +315,18 @@ export async function getOwnerCourts(): Promise<OwnerCourt[]> {
 	try {
 		const { data } = await axiosClient.get<OwnerCourtsResponse>('/owner/courts', {
 			headers: withAuthHeaders(),
+		});
+
+		return data.courts;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function getPublicCourts(params?: { sport?: string }): Promise<PublicCourt[]> {
+	try {
+		const { data } = await axiosClient.get<PublicCourtsResponse>('/courts/public', {
+			params,
 		});
 
 		return data.courts;

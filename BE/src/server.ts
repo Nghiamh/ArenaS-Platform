@@ -19,6 +19,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
+app.use("/api/courts", courtRoutes);
 app.use("/api/owner/courts", courtRoutes);
 app.use("/api/profile", userProfileRoutes);
 app.use("/api/profile/skills", userSkillRoutes);

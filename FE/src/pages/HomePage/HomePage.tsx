@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import { createSearchParams, useLocation, useNavigate } from 'react-router-dom';
+import { getPublicCourts, type PublicCourt } from '../../Axios/Axios';
 
 type SportCategory = {
   name: string;
@@ -19,6 +20,30 @@ type Venue = {
   slots: string[];
   tag: string;
   image: string;
+};
+
+const defaultCourtImage =
+  'https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=1280&auto=format&fit=crop';
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(value);
+
+const buildFeaturedVenue = (court: PublicCourt): Venue => {
+  const pricePerHour = Number.isFinite(court.price_per_hour) ? court.price_per_hour : 0;
+  const ratingValue = Number.isFinite(court.avg_rating) ? court.avg_rating : 0;
+  const primarySport = court.sports?.[0]?.trim() || 'Môn thể thao';
+  const location = court.location?.trim() || 'Liên hệ';
+
+  return {
+    name: court.name,
+    sport: primarySport,
+    distance: location,
+    rating: ratingValue.toFixed(1),
+    price: formatCurrency(pricePerHour),
+    slots: [],
+    tag: court.status === 'closed' ? 'Tạm đóng' : 'Đang mở',
+    image: court.images?.[0]?.trim() || defaultCourtImage,
+  };
 };
 
 const container: Variants = {
@@ -65,42 +90,6 @@ const sportCategories: SportCategory[] = [
     fields: '180+ sân',
     icon: '🥎',
     gradient: 'from-fuchsia-600/85 to-purple-800/80',
-  },
-];
-
-const featuredVenues: Venue[] = [
-  {
-    name: 'Champions Arena',
-    sport: 'Bóng Đá',
-    distance: '1.2 km',
-    rating: '4.9 (187)',
-    price: '360.000',
-    slots: ['17:00', '18:00', '19:00'],
-    tag: 'Đánh giá cao',
-    image:
-      'https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=1280&auto=format&fit=crop',
-  },
-  {
-    name: 'Blue Sky Tennis Club',
-    sport: 'Tennis',
-    distance: '0.8 km',
-    rating: '4.8 (234)',
-    price: '280.000',
-    slots: ['08:00', '10:00', '14:00'],
-    tag: 'Xu hướng',
-    image:
-      'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?q=80&w=1280&auto=format&fit=crop',
-  },
-  {
-    name: 'Urban Pickleball Center',
-    sport: 'Pickleball',
-    distance: '2.1 km',
-    rating: '4.7 (156)',
-    price: '420.000',
-    slots: ['16:00', '18:00', '20:00'],
-    tag: 'Mới',
-    image:
-      'https://images.unsplash.com/photo-1661956602116-aa6865609028?q=80&w=1280&auto=format&fit=crop',
   },
 ];
 
@@ -195,6 +184,7 @@ const sectionTitleClass = 'text-3xl md:text-5xl font-extrabold tracking-tight te
 
 const hcmcLocationOptions = [
   'Gần đây',
+  'TP Thủ Đức (gồm Q2, Q9, Thủ Đức)',
   'Quận 1',
   'Quận 3',
   'Quận 4',
@@ -210,7 +200,6 @@ const hcmcLocationOptions = [
   'Tân Bình',
   'Tân Phú',
   'Gò Vấp',
-  'Thủ Đức',
   'Bình Tân',
   'Hóc Môn',
   'Bình Chánh',
@@ -229,6 +218,9 @@ export const HomePage: React.FC = () => {
   const [activeHeroWordIndex, setActiveHeroWordIndex] = useState(0);
   const [toastMessage, setToastMessage] = useState('');
   const [lastToastLocationKey, setLastToastLocationKey] = useState<string | null>(null);
+  const [featuredVenues, setFeaturedVenues] = useState<Venue[]>([]);
+  const [isFeaturedLoading, setIsFeaturedLoading] = useState(true);
+  const [featuredError, setFeaturedError] = useState<string | null>(null);
   const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
     sport: 'Bóng Đá',
@@ -242,6 +234,38 @@ export const HomePage: React.FC = () => {
     }, 2200);
 
     return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadFeaturedVenues = async () => {
+      setIsFeaturedLoading(true);
+      setFeaturedError(null);
+
+      try {
+        const courts = await getPublicCourts();
+        const nextVenues = courts.slice(0, 3).map(buildFeaturedVenue);
+
+        if (isMounted) {
+          setFeaturedVenues(nextVenues);
+        }
+      } catch (error: unknown) {
+        if (isMounted) {
+          setFeaturedError(error instanceof Error ? error.message : 'Không thể tải sân nổi bật.');
+        }
+      } finally {
+        if (isMounted) {
+          setIsFeaturedLoading(false);
+        }
+      }
+    };
+
+    void loadFeaturedVenues();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -444,6 +468,24 @@ export const HomePage: React.FC = () => {
             whileInView="visible"
             viewport={{ once: true, amount: 0.25 }}
           >
+            {isFeaturedLoading && (
+              <div className="rounded-3xl border border-white/10 bg-slate-900/70 p-6 text-center text-sm text-slate-300">
+                Đang tải sân nổi bật...
+              </div>
+            )}
+
+            {featuredError && (
+              <div className="rounded-3xl border border-rose-300/25 bg-rose-500/10 p-6 text-center text-sm text-rose-100">
+                {featuredError}
+              </div>
+            )}
+
+            {!isFeaturedLoading && !featuredError && featuredVenues.length === 0 && (
+              <div className="rounded-3xl border border-white/10 bg-slate-900/70 p-6 text-center text-sm text-slate-300">
+                Chưa có sân nổi bật để hiển thị.
+              </div>
+            )}
+
             {featuredVenues.map((venue) => (
               <motion.article
                 key={venue.name}
@@ -480,11 +522,17 @@ export const HomePage: React.FC = () => {
                   </div>
 
                   <div className="flex flex-wrap gap-2">
-                    {venue.slots.map((slot) => (
-                      <span key={slot} className="rounded-full border border-white/15 px-3 py-1 text-xs text-slate-200">
-                        {slot}
+                    {venue.slots.length > 0 ? (
+                      venue.slots.map((slot) => (
+                        <span key={slot} className="rounded-full border border-white/15 px-3 py-1 text-xs text-slate-200">
+                          {slot}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="rounded-full border border-white/15 px-3 py-1 text-xs text-slate-200">
+                        Liên hệ để xem lịch trống
                       </span>
-                    ))}
+                    )}
                   </div>
 
                   <button className="w-full rounded-xl bg-gradient-to-r from-blue-500 to-cyan-400 py-3 text-sm font-bold uppercase tracking-[0.08em] text-white transition hover:brightness-110">

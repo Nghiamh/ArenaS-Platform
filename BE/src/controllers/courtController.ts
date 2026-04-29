@@ -78,6 +78,10 @@ function normalizeRequiredText(value: unknown, fieldName: string): string {
 	return normalized;
 }
 
+function escapeRegex(value: string): string {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function normalizeTextArray(value: unknown, fieldName: string): string[] {
 	if (!Array.isArray(value)) {
 		throw new Error(`invalid_${fieldName}`);
@@ -104,6 +108,17 @@ function parsePricePerHour(value: unknown): number {
 
 	if (!Number.isFinite(numericValue) || numericValue < 0) {
 		throw new Error("invalid_price_per_hour");
+	}
+
+	return numericValue;
+}
+
+function parseQueryNumber(value: unknown, fieldName: string): number {
+	const numericValue =
+		typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
+
+	if (!Number.isFinite(numericValue)) {
+		throw new Error(`invalid_${fieldName}`);
 	}
 
 	return numericValue;
@@ -212,12 +227,157 @@ function buildCourtResponse(court: {
 	};
 }
 
+type CourtAggregate = {
+	_id: unknown;
+	owner_id: unknown;
+	name: string;
+	sports: string[];
+	price_per_hour: number;
+	location: string;
+	coordinates?: ICourtCoordinates;
+	amenities: string[];
+	images: string[];
+	avg_rating: number;
+	status: CourtStatus;
+	createdAt?: Date;
+	updatedAt?: Date;
+	distance_m?: number;
+};
+
+function buildSportFilter(sportQuery?: string) {
+	if (!sportQuery) {
+		return {};
+	}
+
+	return {
+		sports: { $elemMatch: { $regex: new RegExp(escapeRegex(sportQuery), "i") } },
+	};
+}
+
 function getCourtIdErrorMessage(error: unknown): string {
 	if (error instanceof mongoose.Error.CastError) {
 		return "invalid_court_id";
 	}
 
 	return error instanceof Error ? error.message : "unknown error";
+}
+
+export async function getPublicCourts(req: Request, res: Response): Promise<void> {
+	try {
+		const sportQuery = normalizeOptionalText(req.query.sport);
+		const filters: Record<string, unknown> = {
+			status: { $ne: "closed" },
+		};
+
+		Object.assign(filters, buildSportFilter(sportQuery));
+
+		const courts = await Court.find(filters).sort({ createdAt: -1 });
+
+		res.status(200).json({
+			message: "courts loaded successfully",
+			courts: courts.map(buildCourtResponse),
+		});
+	} catch (error: unknown) {
+		const errorMessage = error instanceof Error ? error.message : "unknown error";
+		res.status(500).json({
+			message: "failed to load courts",
+			error: errorMessage,
+		});
+	}
+}
+
+export async function getNearbyCourts(req: Request, res: Response): Promise<void> {
+	try {
+		const lat = parseQueryNumber(req.query.lat, "lat");
+		const lng = parseQueryNumber(req.query.lng, "lng");
+		const radius = req.query.radius ? parseQueryNumber(req.query.radius, "radius") : 5000;
+
+		if (radius <= 0) {
+			throw new Error("invalid_radius");
+		}
+
+		const sportQuery = normalizeOptionalText(req.query.sport);
+		const query = {
+			status: { $ne: "closed" },
+			...buildSportFilter(sportQuery),
+		};
+
+		const courts = await Court.aggregate([
+			{
+				$geoNear: {
+					near: {
+						type: "Point",
+						coordinates: [lng, lat],
+					},
+					distanceField: "distance_m",
+					maxDistance: radius,
+					spherical: true,
+					query,
+				},
+			},
+			{ $sort: { distance_m: 1 } },
+		]);
+
+		res.status(200).json({
+			message: "courts loaded successfully",
+			total: courts.length,
+			courts: courts.map((court) => {
+				const mapped = buildCourtResponse(court as CourtAggregate);
+				return {
+					...mapped,
+					distance_m: typeof court.distance_m === "number" ? Math.round(court.distance_m) : undefined,
+				};
+			}),
+		});
+	} catch (error: unknown) {
+		const errorMessage = error instanceof Error ? error.message : "unknown error";
+		const statusCode = errorMessage.startsWith("invalid_") ? 400 : 500;
+
+		res.status(statusCode).json({
+			message: statusCode === 400 ? "invalid query params" : "failed to load courts",
+			error: errorMessage,
+		});
+	}
+}
+
+export async function getCourtsByArea(req: Request, res: Response): Promise<void> {
+	try {
+		const minLng = parseQueryNumber(req.query.minLng, "minLng");
+		const minLat = parseQueryNumber(req.query.minLat, "minLat");
+		const maxLng = parseQueryNumber(req.query.maxLng, "maxLng");
+		const maxLat = parseQueryNumber(req.query.maxLat, "maxLat");
+		const sportQuery = normalizeOptionalText(req.query.sport);
+
+		const filters: Record<string, unknown> = {
+			status: { $ne: "closed" },
+			coordinates: {
+				$geoWithin: {
+					$box: [
+						[minLng, minLat],
+						[maxLng, maxLat],
+					],
+				},
+			},
+		};
+
+		Object.assign(filters, buildSportFilter(sportQuery));
+
+		const courts = await Court.find(filters).sort({ createdAt: -1 });
+
+		res.status(200).json({
+			message: "courts loaded successfully",
+			total: courts.length,
+			courts: courts.map(buildCourtResponse),
+		});
+	} catch (error: unknown) {
+		const errorMessage = error instanceof Error ? error.message : "unknown error";
+		const statusCode = errorMessage.startsWith("invalid_") ? 400 : 500;
+
+		res.status(statusCode).json({
+			message: statusCode === 400 ? "invalid query params" : "failed to load courts",
+			error: errorMessage,
+		});
+	}
 }
 
 export async function getOwnerCourts(req: Request, res: Response): Promise<void> {

@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { getPublicCourts, type PublicCourt } from '../../Axios/Axios';
+import { CourtMap } from '../../components/CourtMap';
 
 type FindFieldLocationState = {
   toastMessage?: string;
@@ -15,13 +17,12 @@ const sortOptions: Array<{ value: SortOption; label: string }> = [
   { value: 'ratingDesc', label: 'Đánh Giá Cao' },
 ];
 
-const formatVnd = (priceK: number) => `${new Intl.NumberFormat('vi-VN').format(priceK * 1000)} VND`;
 const formatVndInput = (value: number) => new Intl.NumberFormat('vi-VN').format(value);
 
 type SportName = 'Bóng Đá' | 'Tennis' | 'Cầu Lông' | 'Pickleball';
 
 type Venue = {
-  id: number;
+  id: string;
   sport: SportName;
   name: string;
   image: string;
@@ -29,6 +30,7 @@ type Venue = {
   reviews: number;
   distanceKm: number;
   priceK: number;
+  locationText: string;
   tag: string;
   formatLabel: string;
   slots: string[];
@@ -39,7 +41,145 @@ type Venue = {
   y: number;
 };
 
-const sports: SportName[] = ['Bóng Đá', 'Tennis', 'Cầu Lông', 'Pickleball'];
+const defaultCourtImage =
+  'https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=1200&auto=format&fit=crop';
+
+const defaultSports: SportName[] = ['Bóng Đá', 'Tennis', 'Cầu Lông', 'Pickleball'];
+
+type UserCoordinates = {
+  latitude: number;
+  longitude: number;
+};
+
+const toRadians = (value: number) => (value * Math.PI) / 180;
+
+const computeDistanceKm = (from: UserCoordinates, to: UserCoordinates) => {
+  const earthRadiusKm = 6371;
+  const deltaLatitude = toRadians(to.latitude - from.latitude);
+  const deltaLongitude = toRadians(to.longitude - from.longitude);
+  const fromLatitude = toRadians(from.latitude);
+  const toLatitude = toRadians(to.latitude);
+
+  const a =
+    Math.sin(deltaLatitude / 2) * Math.sin(deltaLatitude / 2) +
+    Math.cos(fromLatitude) * Math.cos(toLatitude) * Math.sin(deltaLongitude / 2) * Math.sin(deltaLongitude / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return earthRadiusKm * c;
+};
+
+const normalizeLocationText = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const locationAliases: Record<string, string[]> = {
+  'tp thu duc': ['tp thu duc', 'thu duc', 'quan 9', 'q9', 'quan 2', 'q2'],
+  'thu duc': ['thu duc', 'tp thu duc', 'quan 9', 'q9', 'quan 2', 'q2'],
+  'quan 9': ['quan 9', 'q9', 'thu duc', 'tp thu duc'],
+  q9: ['q9', 'quan 9', 'thu duc', 'tp thu duc'],
+  'quan 2': ['quan 2', 'q2', 'thu duc', 'tp thu duc'],
+  q2: ['q2', 'quan 2', 'thu duc', 'tp thu duc'],
+};
+
+const matchLocation = (venueLocation: string, selectedLocation: string) => {
+  const normalizedSelected = normalizeLocationText(selectedLocation);
+
+  if (!normalizedSelected || normalizedSelected === 'gan day') {
+    return true;
+  }
+
+  const normalizedVenue = normalizeLocationText(venueLocation);
+
+  if (!normalizedVenue) {
+    return false;
+  }
+
+  const matchedAlias = Object.keys(locationAliases).find((key) => normalizedSelected.includes(key));
+  const tokens = matchedAlias ? locationAliases[matchedAlias] : [normalizedSelected];
+
+  return tokens.some((token) => normalizedVenue.includes(token));
+};
+
+const pickSportCategory = (sports: string[]): SportName => {
+  for (const sport of sports) {
+    const normalized = sport.toLowerCase();
+
+    if (normalized.includes('bóng') || normalized.includes('football') || normalized.includes('futsal')) {
+      return 'Bóng Đá';
+    }
+
+    if (normalized.includes('tennis')) {
+      return 'Tennis';
+    }
+
+    if (normalized.includes('cầu lông') || normalized.includes('badminton')) {
+      return 'Cầu Lông';
+    }
+
+    if (normalized.includes('pickle')) {
+      return 'Pickleball';
+    }
+  }
+
+  return 'Bóng Đá';
+};
+
+const hashString = (value: string): number => {
+  let hash = 0;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(index);
+    hash |= 0;
+  }
+
+  return Math.abs(hash);
+};
+
+const hashToPercent = (value: string, min: number, max: number): number => {
+  const range = max - min;
+  const normalized = (hashString(value) % 1000) / 1000;
+  return min + normalized * range;
+};
+
+const buildVenue = (court: PublicCourt, userCoordinates: UserCoordinates | null): Venue => {
+  const sportCategory = pickSportCategory(court.sports ?? []);
+  const pricePerHour = Number.isFinite(court.price_per_hour) ? court.price_per_hour : 0;
+  const priceK = Math.max(Math.round(pricePerHour / 1000), 0);
+  const coordinates = court.coordinates ? { ...court.coordinates } : null;
+  const distanceKm =
+    userCoordinates && coordinates ? computeDistanceKm(userCoordinates, coordinates) : 0;
+  const rating = Number.isFinite(court.avg_rating) ? court.avg_rating : 0;
+  const primarySport = court.sports?.[0]?.trim() || 'Môn thể thao';
+  const amenities = court.amenities ?? [];
+  const locationText = court.location?.trim() || '';
+  const indoor = amenities.some((amenity) => /trong nha|indoor/i.test(amenity));
+  const isAvailable = court.status === 'available' || court.status === 'open';
+
+  return {
+    id: court.id,
+    sport: sportCategory,
+    name: court.name,
+    image: court.images?.[0]?.trim() || defaultCourtImage,
+    rating,
+    reviews: 0,
+    distanceKm,
+    priceK,
+    locationText,
+    tag: isAvailable ? 'Đang mở' : 'Tạm đóng',
+    formatLabel: primarySport,
+    slots: [],
+    amenities,
+    indoor,
+    hasSlot: isAvailable,
+    x: hashToPercent(court.id, 18, 82),
+    y: hashToPercent(`${court.id}-y`, 18, 82),
+  };
+};
 
 const sportFilters: Record<SportName, string[]> = {
   'Bóng Đá': ['5 Người', '7 Người', 'Có Nhân Tạo', 'Trong Nhà', 'Có Chỗ Trống'],
@@ -47,237 +187,6 @@ const sportFilters: Record<SportName, string[]> = {
   'Cầu Lông': ['Sàn Thảm', 'Sàn Gỗ', 'Có Máy Lạnh', 'Trong Nhà', 'Có Chỗ Trống'],
   Pickleball: ['Trong Nhà', 'Ngoài Trời', 'Có Huấn Luyện', 'Cho Thuê Vợt', 'Có Chỗ Trống'],
 };
-
-const venues: Venue[] = [
-  {
-    id: 1,
-    sport: 'Bóng Đá',
-    name: 'Champions Arena',
-    image:
-      'https://images.unsplash.com/photo-1552667466-07770ae110d0?q=80&w=1200&auto=format&fit=crop',
-    rating: 4.9,
-    reviews: 187,
-    distanceKm: 1.2,
-    priceK: 360,
-    tag: 'Đang Chọn',
-    formatLabel: '7 Người',
-    slots: ['17:00', '18:00', '19:00', '20:00'],
-    amenities: ['Có Nhân Tạo', 'Bãi Đỗ Xe', 'Phòng Tắm', 'Căn Tin', 'Phòng Thay Đồ'],
-    indoor: false,
-    hasSlot: true,
-    x: 45,
-    y: 41,
-  },
-  {
-    id: 2,
-    sport: 'Bóng Đá',
-    name: 'Elite Football Complex',
-    image:
-      'https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=1200&auto=format&fit=crop',
-    rating: 4.7,
-    reviews: 142,
-    distanceKm: 2.3,
-    priceK: 280,
-    tag: 'Phổ Biến',
-    formatLabel: '5 Người',
-    slots: ['16:00', '17:00', '18:00', '19:00'],
-    amenities: ['Có Nhân Tạo', 'Bãi Đỗ Xe', 'Phòng Tắm', 'Căn Tin'],
-    indoor: false,
-    hasSlot: true,
-    x: 58,
-    y: 52,
-  },
-  {
-    id: 3,
-    sport: 'Bóng Đá',
-    name: 'Northside Arena',
-    image:
-      'https://images.unsplash.com/photo-1518091043644-c1d4457512c6?q=80&w=1200&auto=format&fit=crop',
-    rating: 4.8,
-    reviews: 201,
-    distanceKm: 3.1,
-    priceK: 400,
-    tag: 'Trong Nhà',
-    formatLabel: '7 Người',
-    slots: ['18:00', '20:00', '21:00'],
-    amenities: ['Trong Nhà', 'Phòng Tắm', 'Điều Hòa', 'Khu Chờ'],
-    indoor: true,
-    hasSlot: true,
-    x: 33,
-    y: 36,
-  },
-  {
-    id: 11,
-    sport: 'Tennis',
-    name: 'Blue Sky Tennis Club',
-    image:
-      'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?q=80&w=1200&auto=format&fit=crop',
-    rating: 4.8,
-    reviews: 223,
-    distanceKm: 1.1,
-    priceK: 320,
-    tag: 'Giờ Vàng',
-    formatLabel: 'Sân Cứng',
-    slots: ['06:00', '08:00', '17:00', '19:00'],
-    amenities: ['Sân Cứng', 'Có Đèn', 'Phòng Tắm', 'Thuê Vợt'],
-    indoor: false,
-    hasSlot: true,
-    x: 49,
-    y: 37,
-  },
-  {
-    id: 12,
-    sport: 'Tennis',
-    name: 'Clay Court Hub',
-    image:
-      'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=1200&auto=format&fit=crop',
-    rating: 4.6,
-    reviews: 119,
-    distanceKm: 2.6,
-    priceK: 340,
-    tag: 'Đất Nện',
-    formatLabel: 'Sân Đất Nện',
-    slots: ['07:00', '09:00', '16:00', '18:00'],
-    amenities: ['Sân Đất Nện', 'Có Đèn', 'Căn Tin'],
-    indoor: false,
-    hasSlot: true,
-    x: 64,
-    y: 46,
-  },
-  {
-    id: 13,
-    sport: 'Tennis',
-    name: 'Indoor Ace Court',
-    image:
-      'https://images.unsplash.com/photo-1595435742656-5272d0b3fa95?q=80&w=1200&auto=format&fit=crop',
-    rating: 4.9,
-    reviews: 176,
-    distanceKm: 3.3,
-    priceK: 350,
-    tag: 'Premium',
-    formatLabel: 'Trong Nhà',
-    slots: ['10:00', '14:00', '18:00', '20:00'],
-    amenities: ['Trong Nhà', 'Sân Cứng', 'Điều Hòa', 'Có Đèn'],
-    indoor: true,
-    hasSlot: true,
-    x: 38,
-    y: 60,
-  },
-  {
-    id: 21,
-    sport: 'Cầu Lông',
-    name: 'Shuttle Pro Arena',
-    image:
-      'https://images.unsplash.com/photo-1613918431703-aa508f0f9dc8?q=80&w=1200&auto=format&fit=crop',
-    rating: 4.9,
-    reviews: 265,
-    distanceKm: 0.9,
-    priceK: 170,
-    tag: 'Hot',
-    formatLabel: 'Sàn Thảm',
-    slots: ['17:00', '18:00', '19:00', '20:00'],
-    amenities: ['Sàn Thảm', 'Có Máy Lạnh', 'Bãi Xe'],
-    indoor: true,
-    hasSlot: true,
-    x: 46,
-    y: 40,
-  },
-  {
-    id: 22,
-    sport: 'Cầu Lông',
-    name: 'Feather Club House',
-    image:
-      'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=1200&auto=format&fit=crop',
-    rating: 4.7,
-    reviews: 150,
-    distanceKm: 2.1,
-    priceK: 190,
-    tag: 'Sạch Đẹp',
-    formatLabel: 'Sàn Gỗ',
-    slots: ['16:00', '17:30', '19:00'],
-    amenities: ['Sàn Gỗ', 'Có Máy Lạnh', 'Nước Uống'],
-    indoor: true,
-    hasSlot: true,
-    x: 59,
-    y: 50,
-  },
-  {
-    id: 23,
-    sport: 'Cầu Lông',
-    name: 'Urban Smash Center',
-    image:
-      'https://images.unsplash.com/photo-1634522238509-d8b308fb5d12?q=80&w=1200&auto=format&fit=crop',
-    rating: 4.6,
-    reviews: 104,
-    distanceKm: 3.5,
-    priceK: 140,
-    tag: 'Tiết Kiệm',
-    formatLabel: 'Theo Giờ',
-    slots: ['15:00', '17:00', '21:00'],
-    amenities: ['Sàn Thảm', 'Theo Giờ', 'Phòng Tắm'],
-    indoor: false,
-    hasSlot: true,
-    x: 35,
-    y: 57,
-  },
-  {
-    id: 31,
-    sport: 'Pickleball',
-    name: 'Pickle Prime Court',
-    image:
-      'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=1200&auto=format&fit=crop',
-    rating: 4.8,
-    reviews: 128,
-    distanceKm: 1.7,
-    priceK: 260,
-    tag: 'Mới',
-    formatLabel: 'Ngoài Trời',
-    slots: ['06:30', '08:00', '17:30'],
-    amenities: ['Ngoài Trời', 'Cho Thuê Vợt', 'Căng Tin'],
-    indoor: false,
-    hasSlot: true,
-    x: 48,
-    y: 39,
-  },
-  {
-    id: 32,
-    sport: 'Pickleball',
-    name: 'Indoor Pickle Hub',
-    image:
-      'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?q=80&w=1200&auto=format&fit=crop',
-    rating: 4.9,
-    reviews: 210,
-    distanceKm: 2.4,
-    priceK: 290,
-    tag: 'Được Yêu Thích',
-    formatLabel: 'Trong Nhà',
-    slots: ['09:00', '13:00', '18:00'],
-    amenities: ['Trong Nhà', 'Cho Thuê Vợt', 'Có Huấn Luyện'],
-    indoor: true,
-    hasSlot: true,
-    x: 57,
-    y: 55,
-  },
-  {
-    id: 33,
-    sport: 'Pickleball',
-    name: 'Arena Pickle Studio',
-    image:
-      'https://images.unsplash.com/photo-1521412644187-c49fa049e84d?q=80&w=1200&auto=format&fit=crop',
-    rating: 4.7,
-    reviews: 98,
-    distanceKm: 3.0,
-    priceK: 300,
-    tag: 'Huấn Luyện',
-    formatLabel: 'Có Huấn Luyện',
-    slots: ['10:00', '16:00', '19:00'],
-    amenities: ['Có Huấn Luyện', 'Cho Thuê Vợt', 'Trong Nhà'],
-    indoor: true,
-    hasSlot: true,
-    x: 39,
-    y: 63,
-  },
-];
 
 const sportFilterPredicates: Record<SportName, Record<string, (venue: Venue) => boolean>> = {
   'Bóng Đá': {
@@ -317,12 +226,16 @@ export const FindFieldPage: React.FC = () => {
 
   const [toastMessage, setToastMessage] = useState('');
   const [lastToastLocationKey, setLastToastLocationKey] = useState<string | null>(null);
-  const [activeSport, setActiveSport] = useState<SportName>('Bóng Đá');
+  const [courts, setCourts] = useState<PublicCourt[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [userCoordinates, setUserCoordinates] = useState<UserCoordinates | null>(null);
+  const [activeSport, setActiveSport] = useState<SportName>(defaultSports[0]);
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>('distanceAsc');
   const [maxPriceFilter, setMaxPriceFilter] = useState<number>(400);
   const [priceInputValue, setPriceInputValue] = useState<string>('400.000');
-  const [selectedVenueId, setSelectedVenueId] = useState<number>(1);
+  const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
   const [isSportDropdownOpen, setIsSportDropdownOpen] = useState(false);
   const [isExtraFilterOpen, setIsExtraFilterOpen] = useState(false);
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
@@ -343,14 +256,91 @@ export const FindFieldPage: React.FC = () => {
   }, [lastToastLocationKey, location.key, location.pathname, location.state, navigate]);
 
   useEffect(() => {
-    const sportParam = searchParams.get('sport');
+    let isMounted = true;
 
-    if (!sportParam || !sports.includes(sportParam as SportName)) {
+    const loadCourts = async () => {
+      setIsLoading(true);
+      setLoadError(null);
+
+      try {
+        const data = await getPublicCourts();
+
+        if (isMounted) {
+          setCourts(data);
+        }
+      } catch (error: unknown) {
+        if (isMounted) {
+          setLoadError(error instanceof Error ? error.message : 'Không thể tải dữ liệu sân.');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadCourts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
       return;
     }
 
-    setActiveSport(sportParam as SportName);
-  }, [searchParams]);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserCoordinates({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+      },
+      () => undefined,
+      { enableHighAccuracy: false, maximumAge: 60000, timeout: 5000 },
+    );
+  }, []);
+
+  const venues = useMemo(
+    () => courts.map((court) => buildVenue(court, userCoordinates)),
+    [courts, userCoordinates],
+  );
+
+  const selectedLocation = searchParams.get('location') ?? 'Gần đây';
+
+  const availableSports = useMemo(() => {
+    const uniqueSports = new Set<SportName>();
+
+    venues.forEach((venue) => {
+      uniqueSports.add(venue.sport);
+    });
+
+    return uniqueSports.size > 0 ? Array.from(uniqueSports) : defaultSports;
+  }, [venues]);
+
+  useEffect(() => {
+    const sportParam = searchParams.get('sport');
+
+    if (!sportParam) {
+      return;
+    }
+
+    const matchedSport = availableSports.find(
+      (sport) => sport.toLowerCase() === sportParam.toLowerCase(),
+    );
+
+    if (matchedSport) {
+      setActiveSport(matchedSport);
+    }
+  }, [availableSports, searchParams]);
+
+  useEffect(() => {
+    if (!availableSports.includes(activeSport)) {
+      setActiveSport(availableSports[0]);
+    }
+  }, [activeSport, availableSports]);
 
   useEffect(() => {
     if (!toastMessage) {
@@ -369,15 +359,26 @@ export const FindFieldPage: React.FC = () => {
     setIsExtraFilterOpen(false);
   }, [activeSport]);
 
-  const sportVenues = useMemo(() => venues.filter((venue) => venue.sport === activeSport), [activeSport]);
-  const maxSportPrice = useMemo(
-    () => Math.max(...sportVenues.map((venue) => venue.priceK), 100),
-    [sportVenues],
+  const sportVenues = useMemo(() => venues.filter((venue) => venue.sport === activeSport), [activeSport, venues]);
+  const locationFilteredVenues = useMemo(
+    () => sportVenues.filter((venue) => matchLocation(venue.locationText, selectedLocation)),
+    [selectedLocation, sportVenues],
   );
-  const minSportPrice = useMemo(
-    () => Math.min(...sportVenues.map((venue) => venue.priceK), 0),
-    [sportVenues],
-  );
+  const priceScopeVenues = locationFilteredVenues.length > 0 ? locationFilteredVenues : sportVenues;
+  const maxSportPrice = useMemo(() => {
+    if (priceScopeVenues.length === 0) {
+      return 100;
+    }
+
+    return Math.max(...priceScopeVenues.map((venue) => venue.priceK), 100);
+  }, [priceScopeVenues]);
+  const minSportPrice = useMemo(() => {
+    if (priceScopeVenues.length === 0) {
+      return 0;
+    }
+
+    return Math.min(...priceScopeVenues.map((venue) => venue.priceK), 0);
+  }, [priceScopeVenues]);
   const quickFilters = useMemo(() => sportFilters[activeSport].slice(0, 3), [activeSport]);
   const extraFilters = useMemo(() => sportFilters[activeSport].slice(3), [activeSport]);
   const priceFillPercent = useMemo(() => {
@@ -404,7 +405,7 @@ export const FindFieldPage: React.FC = () => {
   };
 
   const filteredVenues = useMemo(() => {
-    const byFilters = sportVenues.filter((venue) => {
+    const byFilters = locationFilteredVenues.filter((venue) => {
       if (selectedFilters.length === 0) {
         return true;
       }
@@ -437,7 +438,7 @@ export const FindFieldPage: React.FC = () => {
 
       return a.distanceKm - b.distanceKm;
     });
-  }, [activeSport, maxPriceFilter, selectedFilters, sortBy, sportVenues]);
+  }, [activeSport, locationFilteredVenues, maxPriceFilter, selectedFilters, sortBy]);
 
   const handlePriceSliderChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number(event.target.value);
@@ -475,9 +476,16 @@ export const FindFieldPage: React.FC = () => {
   };
 
   useEffect(() => {
-    const hasSelectedVenue = filteredVenues.some((venue) => venue.id === selectedVenueId);
+    if (filteredVenues.length === 0) {
+      setSelectedVenueId(null);
+      return;
+    }
 
-    if (!hasSelectedVenue && filteredVenues.length > 0) {
+    const hasSelectedVenue = selectedVenueId
+      ? filteredVenues.some((venue) => venue.id === selectedVenueId)
+      : false;
+
+    if (!hasSelectedVenue) {
       setSelectedVenueId(filteredVenues[0].id);
     }
   }, [filteredVenues, selectedVenueId]);
@@ -504,7 +512,9 @@ export const FindFieldPage: React.FC = () => {
     };
   }, []);
 
-  const selectedVenue = filteredVenues.find((venue) => venue.id === selectedVenueId) ?? filteredVenues[0];
+  const selectedVenue = selectedVenueId
+    ? filteredVenues.find((venue) => venue.id === selectedVenueId)
+    : filteredVenues[0];
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#020817] text-slate-100">
@@ -558,7 +568,7 @@ export const FindFieldPage: React.FC = () => {
                     className="absolute left-0 top-[calc(100%+10px)] z-40 w-full overflow-hidden rounded-2xl border border-blue-300/35 bg-slate-900/95 p-1.5 shadow-[0_18px_44px_-22px_rgba(37,99,235,0.95)] backdrop-blur-xl"
                   >
                     <ul role="listbox" aria-label="Danh sách môn thể thao" className="space-y-1">
-                      {sports.map((sport) => {
+                      {availableSports.map((sport) => {
                         const isSelected = sport === activeSport;
 
                         return (
@@ -771,193 +781,141 @@ export const FindFieldPage: React.FC = () => {
         <section className="min-h-[680px] overflow-hidden rounded-[24px] border border-blue-400/25 bg-slate-950/70 shadow-[0_26px_80px_-40px_rgba(2,6,23,0.95)] backdrop-blur">
           <div className="border-b border-white/10 px-4 py-4 md:px-5">
             <h2 className="text-3xl font-black tracking-tight text-white">Sân {activeSport.toLowerCase()}</h2>
-            <p className="mt-1 text-sm text-blue-200/85">Sắp xếp theo khoảng cách · TP. Hồ Chí Minh</p>
+            <p className="mt-1 text-sm text-blue-200/85">
+              Sắp xếp theo khoảng cách · {selectedLocation || 'TP. Hồ Chí Minh'}
+            </p>
           </div>
 
           <div className="arena-scroll max-h-[650px] space-y-3 overflow-y-auto px-3 py-3 md:px-4">
-            <AnimatePresence mode="popLayout">
-              {filteredVenues.map((venue, index) => {
-                const isSelected = selectedVenue?.id === venue.id;
+            {isLoading && (
+              <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-8 text-center">
+                <p className="text-lg font-bold text-white">Đang tải danh sách sân...</p>
+                <p className="mt-2 text-sm text-slate-300">Vui lòng đợi trong giây lát.</p>
+              </div>
+            )}
 
-                return (
-                  <motion.article
-                    layout
-                    key={venue.id}
-                    initial={{ opacity: 0, y: 18 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 18 }}
-                    transition={{ delay: index * 0.03, duration: 0.28 }}
-                    onMouseEnter={() => setSelectedVenueId(venue.id)}
-                    className={`rounded-[20px] border bg-[#081128]/96 p-2.5 transition ${
-                      isSelected
-                        ? 'border-blue-500 shadow-[0_22px_44px_-26px_rgba(59,130,246,0.95)]'
-                        : 'border-white/10 hover:border-blue-400/45'
-                    }`}
-                  >
-                    <div className="flex flex-col gap-3 md:flex-row">
-                      <div className="relative h-44 overflow-hidden rounded-2xl md:h-auto md:w-[235px] md:min-w-[235px]">
-                        <img
-                          src={venue.image}
-                          alt={venue.name}
-                          className="h-full w-full object-cover transition duration-700 hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent" />
-                        <span className="absolute left-2 top-2 rounded-full bg-blue-600 px-3 py-1 text-xs font-bold text-white">
-                          {venue.formatLabel}
-                        </span>
-                        <span className="absolute right-2 top-2 rounded-full bg-blue-500/90 px-3 py-1 text-xs font-bold text-white">
-                          {venue.tag}
-                        </span>
-                      </div>
+            {loadError && (
+              <div className="rounded-2xl border border-rose-300/25 bg-rose-500/10 p-8 text-center">
+                <p className="text-lg font-bold text-rose-100">Không thể tải danh sách sân</p>
+                <p className="mt-2 text-sm text-rose-200/80">{loadError}</p>
+              </div>
+            )}
 
-                      <div className="flex min-w-0 flex-1 flex-col justify-between gap-3 px-1 py-1">
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div>
-                            <h3 className="text-3xl font-black leading-tight text-white">{venue.name}</h3>
-                            <p className="mt-1 text-base text-slate-300">
-                              ⭐ {venue.rating.toFixed(1)} ({venue.reviews}) · {venue.distanceKm.toFixed(1)} km
-                            </p>
-                          </div>
+            {!isLoading && !loadError && (
+              <>
+                <AnimatePresence mode="popLayout">
+                  {filteredVenues.map((venue, index) => {
+                    const isSelected = selectedVenue?.id === venue.id;
 
-                          <div className="text-right">
-                            <p className="text-sm text-slate-400">từ</p>
-                            <p className="text-[2.2rem] font-black leading-none text-blue-400">
-                              {new Intl.NumberFormat('vi-VN').format(venue.priceK * 1000)}
-                            </p>
-                            <p className="text-base text-slate-400">VND/giờ</p>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                          {venue.amenities.map((amenity) => (
-                            <span
-                              key={amenity}
-                              className="rounded-full border border-white/12 bg-slate-900/85 px-3 py-1 text-sm text-slate-200"
-                            >
-                              {amenity}
+                    return (
+                      <motion.article
+                        layout
+                        key={venue.id}
+                        initial={{ opacity: 0, y: 18 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 18 }}
+                        transition={{ delay: index * 0.03, duration: 0.28 }}
+                        onMouseEnter={() => setSelectedVenueId(venue.id)}
+                        className={`rounded-[20px] border bg-[#081128]/96 p-2.5 transition ${
+                          isSelected
+                            ? 'border-blue-500 shadow-[0_22px_44px_-26px_rgba(59,130,246,0.95)]'
+                            : 'border-white/10 hover:border-blue-400/45'
+                        }`}
+                      >
+                        <div className="flex flex-col gap-3 md:flex-row">
+                          <div className="relative h-44 overflow-hidden rounded-2xl md:h-auto md:w-[235px] md:min-w-[235px]">
+                            <img
+                              src={venue.image}
+                              alt={venue.name}
+                              className="h-full w-full object-cover transition duration-700 hover:scale-105"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent" />
+                            <span className="absolute left-2 top-2 rounded-full bg-blue-600 px-3 py-1 text-xs font-bold text-white">
+                              {venue.formatLabel}
                             </span>
-                          ))}
-                        </div>
+                            <span className="absolute right-2 top-2 rounded-full bg-blue-500/90 px-3 py-1 text-xs font-bold text-white">
+                              {venue.tag}
+                            </span>
+                          </div>
 
-                        <div className="flex flex-col gap-3 border-t border-white/10 pt-3 sm:flex-row sm:items-end sm:justify-between">
-                          <div>
-                            <p className="text-sm font-semibold text-emerald-300">Còn Trống Hôm Nay</p>
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              {venue.slots.map((slot) => (
+                          <div className="flex min-w-0 flex-1 flex-col justify-between gap-3 px-1 py-1">
+                            <div className="flex flex-wrap items-start justify-between gap-2">
+                              <div>
+                                <h3 className="text-3xl font-black leading-tight text-white">{venue.name}</h3>
+                                <p className="mt-1 text-base text-slate-300">
+                                  ⭐ {venue.rating.toFixed(1)} ({venue.reviews}) · {venue.distanceKm.toFixed(1)} km
+                                </p>
+                              </div>
+
+                              <div className="text-right">
+                                <p className="text-sm text-slate-400">từ</p>
+                                <p className="text-[2.2rem] font-black leading-none text-blue-400">
+                                  {new Intl.NumberFormat('vi-VN').format(venue.priceK * 1000)}
+                                </p>
+                                <p className="text-base text-slate-400">VND/giờ</p>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2">
+                              {venue.amenities.map((amenity) => (
                                 <span
-                                  key={slot}
-                                  className="rounded-xl border border-blue-400/25 bg-slate-900/70 px-3 py-1 text-sm text-slate-300"
+                                  key={amenity}
+                                  className="rounded-full border border-white/12 bg-slate-900/85 px-3 py-1 text-sm text-slate-200"
                                 >
-                                  {slot}
+                                  {amenity}
                                 </span>
                               ))}
                             </div>
+
+                            <div className="flex flex-col gap-3 border-t border-white/10 pt-3 sm:flex-row sm:items-end sm:justify-between">
+                              <div>
+                                <p className="text-sm font-semibold text-emerald-300">Còn Trống Hôm Nay</p>
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  {venue.slots.length > 0 ? (
+                                    venue.slots.map((slot) => (
+                                      <span
+                                        key={slot}
+                                        className="rounded-xl border border-blue-400/25 bg-slate-900/70 px-3 py-1 text-sm text-slate-300"
+                                      >
+                                        {slot}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <span className="rounded-xl border border-white/10 bg-slate-900/70 px-3 py-1 text-sm text-slate-300">
+                                      {venue.hasSlot ? 'Liên hệ để xem giờ trống' : 'Chưa có lịch trống'}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <motion.button
+                                whileHover={{ y: -2, scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                className="h-12 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 px-7 text-base font-black text-white shadow-[0_12px_34px_-20px_rgba(59,130,246,0.98)]"
+                              >
+                                Đặt Ngay
+                              </motion.button>
+                            </div>
                           </div>
-
-                          <motion.button
-                            whileHover={{ y: -2, scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="h-12 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 px-7 text-base font-black text-white shadow-[0_12px_34px_-20px_rgba(59,130,246,0.98)]"
-                          >
-                            Đặt Ngay
-                          </motion.button>
                         </div>
-                      </div>
-                    </div>
-                  </motion.article>
-                );
-              })}
-            </AnimatePresence>
+                      </motion.article>
+                    );
+                  })}
+                </AnimatePresence>
 
-            {filteredVenues.length === 0 && (
-              <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-8 text-center">
-                <p className="text-lg font-bold text-white">Không có sân phù hợp với bộ lọc hiện tại</p>
-                <p className="mt-2 text-sm text-slate-300">Thử đổi sang bộ lọc khác để xem thêm kết quả.</p>
-              </div>
+                {filteredVenues.length === 0 && (
+                  <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-8 text-center">
+                    <p className="text-lg font-bold text-white">Không có sân phù hợp với bộ lọc hiện tại</p>
+                    <p className="mt-2 text-sm text-slate-300">Thử đổi sang bộ lọc khác để xem thêm kết quả.</p>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </section>
 
         <section className="relative min-h-[680px] overflow-hidden rounded-[24px] border border-blue-400/25 bg-slate-950/75 shadow-[0_26px_80px_-40px_rgba(2,6,23,0.95)] backdrop-blur lg:sticky lg:top-24">
-          <div className="flex items-center justify-between border-b border-white/10 px-4 py-4 md:px-5">
-            <h3 className="text-[2rem] font-black leading-none text-white">Bản Đồ Trực Tiếp</h3>
-            <span className="text-sm font-semibold text-blue-300">{filteredVenues.length} sân</span>
-          </div>
-
-          <div className="relative h-[620px] overflow-hidden p-3 md:p-4">
-            <div className="arena-map-bg relative h-full w-full overflow-hidden rounded-2xl border border-white/10">
-              <div className="pointer-events-none absolute left-[8%] top-[38%] h-[2px] w-[84%] bg-blue-500/40" />
-              <div className="pointer-events-none absolute left-[10%] top-[66%] h-[2px] w-[80%] bg-blue-500/35" />
-              <div className="pointer-events-none absolute left-[50%] top-[8%] h-[84%] w-[2px] bg-blue-500/35" />
-
-              <div className="pointer-events-none absolute left-[18%] top-[18%] h-[120px] w-[84px] rounded-xl border border-white/10 bg-white/5" />
-              <div className="pointer-events-none absolute left-[24%] top-[44%] h-[150px] w-[96px] rounded-xl border border-white/10 bg-white/5" />
-              <div className="pointer-events-none absolute left-[57%] top-[56%] h-[130px] w-[208px] rounded-xl border border-emerald-300/30 bg-emerald-500/16" />
-
-              {filteredVenues.map((venue) => {
-                const isSelected = selectedVenue?.id === venue.id;
-
-                return (
-                  <motion.button
-                    key={venue.id}
-                    initial={{ opacity: 0, scale: 0.7 }}
-                    animate={{ opacity: 1, scale: isSelected ? 1.06 : 1 }}
-                    transition={{ duration: 0.25 }}
-                    onClick={() => setSelectedVenueId(venue.id)}
-                    style={{ left: `${venue.x}%`, top: `${venue.y}%` }}
-                    className="group absolute -translate-x-1/2 -translate-y-1/2"
-                  >
-                    <motion.span
-                      animate={{ boxShadow: ['0 0 0 0 rgba(59,130,246,0.42)', '0 0 0 12px rgba(59,130,246,0)'] }}
-                      transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 0.25 }}
-                      className={`absolute inset-0 rounded-full ${isSelected ? 'opacity-100' : 'opacity-50'}`}
-                    />
-                    <span
-                      className={`relative block rounded-full px-3 py-2 text-sm font-black leading-none text-white ${
-                        isSelected ? 'bg-blue-600' : 'bg-slate-600/90'
-                      }`}
-                    >
-                      {formatVnd(venue.priceK)}
-                    </span>
-                  </motion.button>
-                );
-              })}
-
-              {selectedVenue && (
-                <motion.div
-                  key={selectedVenue.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="absolute left-[50%] top-[29%] min-w-[228px] -translate-x-1/2 rounded-2xl border border-slate-300/55 bg-white px-4 py-3 text-slate-900 shadow-xl"
-                >
-                  <p className="text-2xl font-black leading-tight">{selectedVenue.name}</p>
-                  <p className="mt-1 text-base font-semibold text-slate-600">{formatVnd(selectedVenue.priceK)} /giờ</p>
-                </motion.div>
-              )}
-
-              <div className="absolute bottom-3 left-3 flex items-center gap-3 rounded-xl border border-white/10 bg-slate-900/80 px-3 py-2 text-sm">
-                <span className="inline-flex items-center gap-2 text-slate-300">
-                  <span className="h-3 w-3 rounded-full bg-slate-500" /> Còn Trống
-                </span>
-                <span className="inline-flex items-center gap-2 text-blue-200">
-                  <span className="h-3 w-3 rounded-full bg-blue-500" /> Đang Chọn
-                </span>
-              </div>
-
-              <div className="absolute right-3 top-3 flex flex-col gap-2">
-                <button className="h-10 w-10 rounded-xl border border-white/15 bg-slate-900/80 text-xl font-bold text-white transition hover:border-white/30">
-                  +
-                </button>
-                <button className="h-10 w-10 rounded-xl border border-white/15 bg-slate-900/80 text-xl font-bold text-white transition hover:border-white/30">
-                  -
-                </button>
-              </div>
-
-              <button className="absolute bottom-4 right-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-5 py-3 text-sm font-black text-white shadow-[0_12px_30px_-18px_rgba(59,130,246,0.95)] transition hover:brightness-110">
-                Vị Trí Của Tôi
-              </button>
-            </div>
-          </div>
+          <CourtMap />
         </section>
       </main>
     </div>
