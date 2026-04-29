@@ -109,7 +109,7 @@ export const Header: React.FC = () => {
             {!isPlayerAccount && (
               <>
                 <Link
-                  to="#"
+                  to="/bang-gia"
                   className="hover:text-blue-400 transition duration-300 font-medium"
                 >
                   Bảng Giá

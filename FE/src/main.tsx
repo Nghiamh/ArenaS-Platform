@@ -15,6 +15,7 @@ import { OwnerRevenueScreen } from './pages/Owner/OwnerRevenueScreen';
 import { OwnerBookingScheduleScreen } from './pages/Owner/OwnerBookingScheduleScreen';
 import { OwnerSettingsScreen } from './pages/Owner/OwnerSettingsScreen';
 import { AdminDashboardPage } from './pages/Admin/AdminDashboardPage';
+import { PriceListPage } from './pages/HomePage/PriceListPage';
 import './index.css';
 
 function App() {
@@ -65,6 +66,14 @@ function App() {
           element={
             <Layout>
               <FindFieldPage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/bang-gia"
+          element={
+            <Layout>
+              <PriceListPage />
             </Layout>
           }
         />
