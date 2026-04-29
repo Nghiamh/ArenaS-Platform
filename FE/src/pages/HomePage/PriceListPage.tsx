@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, type Variants } from 'framer-motion';
 
 type PriceFeature = {
   label: string;
@@ -8,14 +9,18 @@ type PriceFeature = {
 type PricePlan = {
   tag?: string;
   tagTone?: 'blue' | 'violet' | 'gold';
+  iconTone?: 'slate' | 'blue' | 'gold' | 'violet';
+  iconName: 'startup' | 'basic' | 'pro' | 'enterprise';
   name: string;
   subtitle: string;
-  price: string;
-  period: string;
-  note?: string;
+  monthlyPrice: string;
+  monthlyPeriod: string;
+  monthlyNote?: string;
+  yearlyPrice: string;
+  yearlyPeriod: string;
+  yearlyNote?: string;
   cta: string;
   accent: string;
-  icon: string;
   features: PriceFeature[];
   highlight?: boolean;
 };
@@ -31,15 +36,90 @@ type FaqItem = {
   answer: string;
 };
 
+const gridVariants: Variants = {
+  hidden: {},
+  show: {
+    transition: {
+      staggerChildren: 0.12,
+    },
+  },
+};
+
+const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 24, scale: 0.98 },
+  show: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.55, ease: [0.16, 1, 0.3, 1] },
+  },
+};
+
+const featureVariants: Variants = {
+  hidden: { opacity: 0, y: 10 },
+  show: (index: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.35,
+      delay: index * 0.03,
+    },
+  }),
+};
+
+const iconBaseClass = 'flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl';
+
+const iconToneClass: Record<NonNullable<PricePlan['iconTone']>, string> = {
+  slate: 'bg-slate-700/25 text-slate-200',
+  blue: 'bg-blue-500/15 text-blue-300',
+  gold: 'bg-amber-500/15 text-amber-200',
+  violet: 'bg-violet-500/15 text-violet-300',
+};
+
+const planIcons: Record<PricePlan['iconName'], React.ReactNode> = {
+  startup: (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3c3.5 2 5.5 5.2 5.5 8.7 0 4.1-2.8 7.7-5.5 9.3-2.7-1.6-5.5-5.2-5.5-9.3C6.5 8.2 8.5 5 12 3Z" />
+      <path d="M12 12v6" />
+      <path d="M9.5 14.5 12 12l2.5 2.5" />
+    </svg>
+  ),
+  basic: (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="5" y="4" width="14" height="16" rx="2.2" />
+      <path d="M8 8h8" />
+      <path d="M8 12h8" />
+      <path d="M8 16h5" />
+    </svg>
+  ),
+  pro: (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3.5 14.6 8l4.9.7-3.5 3.4.8 4.9-4.8-2.6-4.8 2.6.8-4.9L4.5 8.7 9.4 8 12 3.5Z" />
+      <path d="M12 12.2v4" />
+    </svg>
+  ),
+  enterprise: (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 4.5 13.8 9l4.5 1.8-4.5 1.7L12 17l-1.8-4.5L5.7 10.8 10.2 9 12 4.5Z" />
+      <path d="M19 6v3" />
+      <path d="M19 12v3" />
+      <path d="M19 18v0" />
+    </svg>
+  ),
+};
+
 const plans: PricePlan[] = [
   {
     name: 'Khởi Nghiệp',
     subtitle: 'Dành cho chủ sân mới bắt đầu, muốn trải nghiệm nền tảng.',
-    price: '0đ',
-    period: 'Mãi mãi miễn phí',
+    monthlyPrice: '0đ',
+    monthlyPeriod: 'Mãi mãi miễn phí',
+    yearlyPrice: '0đ',
+    yearlyPeriod: 'Mãi mãi miễn phí',
     cta: 'Bắt Đầu Miễn Phí',
     accent: 'from-slate-600 to-slate-800',
-    icon: '◌',
+    iconName: 'startup',
+    iconTone: 'slate',
     features: [
       { label: '1 cơ sở', included: true },
       { label: '2 sân nhỏ', included: true },
@@ -55,12 +135,16 @@ const plans: PricePlan[] = [
   {
     name: 'Cơ Bản',
     subtitle: 'Phù hợp cho cơ sở thể thao nhỏ đang phát triển.',
-    price: '299K',
-    period: '/tháng',
-    note: 'hoặc 249K/tháng khi trả năm',
+    monthlyPrice: '299.000',
+    monthlyPeriod: '/Tháng',
+    monthlyNote: 'hoặc 249.000 /Tháng khi trả năm',
+    yearlyPrice: '249.000',
+    yearlyPeriod: '/Tháng khi trả năm',
+    yearlyNote: 'Tiết kiệm khoảng 17% so với thanh toán theo tháng',
     cta: 'Dùng Thử 14 Ngày',
     accent: 'from-blue-600 to-cyan-500',
-    icon: '▣',
+    iconName: 'basic',
+    iconTone: 'blue',
     features: [
       { label: '1 cơ sở', included: true },
       { label: '5 sân nhỏ', included: true },
@@ -78,12 +162,16 @@ const plans: PricePlan[] = [
     tagTone: 'gold',
     name: 'Chuyên Nghiệp',
     subtitle: 'Giải pháp toàn diện cho cơ sở thể thao chuyên nghiệp.',
-    price: '699K',
-    period: '/tháng',
-    note: 'hoặc 579K/tháng khi trả năm',
+    monthlyPrice: '699.000',
+    monthlyPeriod: '/Tháng',
+    monthlyNote: 'hoặc 579.000 /Tháng khi trả năm',
+    yearlyPrice: '579.000',
+    yearlyPeriod: '/Tháng khi trả năm',
+    yearlyNote: 'Tiết kiệm khoảng 17% so với thanh toán theo tháng',
     cta: 'Dùng Thử 14 Ngày',
     accent: 'from-blue-500 via-blue-600 to-indigo-500',
-    icon: '♛',
+    iconName: 'pro',
+    iconTone: 'gold',
     highlight: true,
     features: [
       { label: '3 cơ sở', included: true },
@@ -103,11 +191,14 @@ const plans: PricePlan[] = [
     tagTone: 'violet',
     name: 'Doanh Nghiệp',
     subtitle: 'Cho hệ thống sân thể thao lớn và tập đoàn quản lý nhiều cơ sở.',
-    price: 'Liên Hệ',
-    period: 'Tư vấn miễn phí',
+    monthlyPrice: 'Liên Hệ',
+    monthlyPeriod: 'Tư vấn miễn phí',
+    yearlyPrice: 'Liên Hệ',
+    yearlyPeriod: 'Tư vấn miễn phí',
     cta: 'Liên Hệ Tư Vấn',
     accent: 'from-violet-600 to-fuchsia-500',
-    icon: '✧',
+    iconName: 'enterprise',
+    iconTone: 'violet',
     features: [
       { label: 'Không giới hạn cơ sở & sân nhỏ', included: true },
       { label: 'Tất cả tính năng Chuyên Nghiệp', included: true },
@@ -180,19 +271,17 @@ const planTagClass: Record<NonNullable<PricePlan['tagTone']>, string> = {
   gold: 'border-amber-300/70 bg-amber-400/20 text-amber-100',
 };
 
-const iconToneClass: Record<NonNullable<PricePlan['tagTone']>, string> = {
-  blue: 'bg-blue-500/15 text-blue-300',
-  violet: 'bg-violet-500/15 text-violet-300',
-  gold: 'bg-amber-500/15 text-amber-200',
-};
-
 export const PriceListPage: React.FC = () => {
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
+
+  const isYearly = billingCycle === 'yearly';
+  const savingsLabelClass = isYearly ? 'text-emerald-200' : 'text-emerald-100';
 
   return (
-    <div className="relative overflow-hidden bg-[#050b1d] text-white">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(59,130,246,0.22),transparent_28%),radial-gradient(circle_at_80%_10%,rgba(168,85,247,0.22),transparent_25%),radial-gradient(circle_at_50%_80%,rgba(14,165,233,0.12),transparent_32%)]" />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:72px_72px] opacity-[0.08]" />
+    <div className="relative overflow-hidden bg-[#071024] text-white">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(37,99,235,0.16),transparent_28%),radial-gradient(circle_at_80%_10%,rgba(168,85,247,0.16),transparent_25%),radial-gradient(circle_at_50%_80%,rgba(14,165,233,0.1),transparent_32%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:72px_72px] opacity-[0.08]" />
 
       <section className="relative px-4 pb-8 pt-10 sm:px-6 lg:px-8 lg:pt-14">
         <div className="mx-auto max-w-7xl">
@@ -201,24 +290,66 @@ export const PriceListPage: React.FC = () => {
               Bảng giá dịch vụ
             </span>
             <h1 className="mt-5 text-4xl font-black leading-tight text-white sm:text-5xl lg:text-6xl">
-              Thiết kế bảng giá rõ ràng, sang và dễ so sánh
+              Chọn Gói Phù Hợp Phát Triển Cơ Sở
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
-              Giao diện tập trung vào 4 gói giá đúng như ảnh mẫu, đồng thời bổ sung phần so sánh chi tiết, chỉ số tin cậy,
-              FAQ và lời kêu gọi hành động để người dùng ra quyết định nhanh hơn.
+              Từ chủ sân mới bắt đầu đến hệ thống chuỗi thể thao, ArenaS có gói giải pháp phù hợp với quy mô và ngân sách của bạn.
             </p>
           </div>
 
-          <div className="mt-10 grid gap-5 xl:grid-cols-4 lg:grid-cols-2">
+          <div className="mt-10 flex justify-center">
+            <div className="flex items-center gap-4 rounded-full border border-white/10 bg-[#09122b]/90 px-4 py-3 shadow-[0_18px_50px_-24px_rgba(37,99,235,0.45)] backdrop-blur-md sm:px-5">
+              <span className={`text-sm font-semibold transition-colors ${isYearly ? 'text-slate-400' : 'text-slate-100'}`}>
+                Thanh Toán Tháng
+              </span>
+              <button
+                type="button"
+                onClick={() => setBillingCycle((current) => (current === 'monthly' ? 'yearly' : 'monthly'))}
+                className={`relative h-11 w-28 shrink-0 overflow-hidden rounded-full border transition-colors duration-300 ${
+                  isYearly ? 'border-blue-200/70 bg-blue-500' : 'border-slate-400/50 bg-slate-700/85'
+                }`}
+                aria-label="Chuyển đổi giữa thanh toán tháng và năm"
+              >
+                <span
+                  className={`absolute left-1 top-1 h-9 w-9 rounded-full bg-white shadow-[0_4px_12px_-6px_rgba(15,23,42,0.65)] transition-transform duration-300 will-change-transform ${
+                    isYearly ? 'translate-x-[64px]' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+              <span className={`text-sm font-semibold transition-colors ${isYearly ? 'text-slate-100' : 'text-slate-400'}`}>
+                Thanh Toán Năm
+              </span>
+              <span className={`rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-xs font-extrabold tracking-wide ${savingsLabelClass}`}>
+                Tiết kiệm 17%
+              </span>
+            </div>
+          </div>
+
+          <motion.div
+            className="mt-10 grid gap-5 xl:grid-cols-4 lg:grid-cols-2"
+            variants={gridVariants}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.18 }}
+          >
             {plans.map((plan) => {
               const isPopular = Boolean(plan.highlight);
               const tagTone = plan.tagTone ?? 'blue';
+              const iconTone = plan.iconTone ?? 'blue';
+              const isEnterprisePrice = plan.monthlyPrice === 'Liên Hệ';
+              const displayPrice = isYearly ? plan.yearlyPrice : plan.monthlyPrice;
+              const displayPeriod = isYearly ? plan.yearlyPeriod : plan.monthlyPeriod;
+              const displayNote = isYearly ? plan.yearlyNote : plan.monthlyNote;
 
               return (
-                <article
+                <motion.article
                   key={plan.name}
-                  className={`relative overflow-hidden rounded-[2rem] border bg-[linear-gradient(180deg,rgba(9,16,39,0.98),rgba(10,17,41,0.94))] p-5 shadow-[0_24px_80px_-30px_rgba(2,8,23,0.9)] transition duration-300 hover:-translate-y-1 hover:border-white/20 sm:p-6 ${
-                    isPopular ? 'border-blue-500/70 ring-1 ring-blue-400/40' : 'border-white/10'
+                  variants={cardVariants}
+                  whileHover={{ y: -8, scale: 1.015 }}
+                  whileTap={{ scale: 0.992 }}
+                  transition={{ type: 'spring', stiffness: 220, damping: 24, mass: 0.9 }}
+                  className={`relative overflow-hidden rounded-[2rem] border bg-[linear-gradient(180deg,rgba(8,15,33,0.98),rgba(4,9,20,0.98))] p-5 shadow-[0_22px_70px_-30px_rgba(2,8,23,0.82)] transition-[border-color,box-shadow,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-white/20 sm:p-6 ${
+                    isPopular ? 'border-blue-300/95 ring-2 ring-blue-400/45 shadow-[0_34px_110px_-34px_rgba(37,99,235,0.52)] scale-[1.01]' : 'border-white/10'
                   }`}
                 >
                   <div
@@ -236,37 +367,55 @@ export const PriceListPage: React.FC = () => {
                   )}
 
                   <div className="flex items-start gap-4">
-                    <div className={`flex h-12 w-12 items-center justify-center rounded-2xl text-xl ${iconToneClass[tagTone]}`}>
-                      {plan.icon}
+                    <div className={`${iconBaseClass} ${iconToneClass[iconTone]}`}>
+                      {planIcons[plan.iconName]}
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold text-white">{plan.name}</h2>
-                      <p className="mt-1 text-sm leading-6 text-slate-300">{plan.subtitle}</p>
+                      <h2 className="text-[1.65rem] font-bold leading-tight tracking-tight text-white">
+                        {plan.name}
+                      </h2>
+                      <p className="mt-1 max-w-[16ch] text-sm leading-6 text-slate-400 sm:max-w-none">
+                        {plan.subtitle}
+                      </p>
                     </div>
                   </div>
 
                   <div className="mt-8">
-                    <div className="flex items-end gap-2">
-                      <span className="text-5xl font-black tracking-tight text-white">{plan.price}</span>
-                      <span className="pb-2 text-base font-medium text-slate-300">{plan.period}</span>
+                    <div className="flex flex-col items-start gap-1">
+                      <span className={`font-black tracking-tight text-white ${isEnterprisePrice ? 'text-3xl leading-none sm:text-4xl' : 'text-3xl leading-none sm:text-[2.6rem]'}`}>
+                        {displayPrice}
+                      </span>
+                      <span className={`whitespace-nowrap font-medium text-slate-300 ${isEnterprisePrice ? 'text-xs sm:text-sm' : 'text-sm sm:text-base'}`}>
+                        {displayPeriod}
+                      </span>
                     </div>
-                    {plan.note && <p className="mt-1 text-sm text-slate-400">{plan.note}</p>}
+                    {displayNote && <p className="mt-1 text-sm text-emerald-200">{displayNote}</p>}
                   </div>
 
                   <button
                     type="button"
-                    className={`mt-8 w-full rounded-2xl border px-4 py-3.5 text-sm font-bold transition duration-200 ${
+                    className={`mt-8 w-full rounded-2xl border px-4 py-3.5 text-sm font-bold tracking-wide transition-colors duration-300 ${
                       isPopular
-                        ? 'border-transparent bg-blue-500 text-white shadow-[0_16px_40px_-18px_rgba(37,99,235,0.95)] hover:bg-blue-400'
-                        : 'border-white/10 bg-white/4 text-white hover:border-white/20 hover:bg-white/8'
+                        ? 'border-blue-300/40 bg-blue-500 text-white shadow-[0_16px_40px_-18px_rgba(37,99,235,0.95)] hover:bg-blue-400'
+                        : isEnterprisePrice
+                          ? 'border-violet-300/40 bg-violet-500/15 text-violet-100 hover:bg-violet-500/30 hover:border-violet-300/70'
+                          : 'border-white/10 bg-white/4 text-white hover:border-blue-300/40 hover:bg-blue-500/18 hover:text-blue-100'
                     }`}
                   >
                     {plan.cta}
                   </button>
 
                   <div className="mt-7 space-y-3">
-                    {plan.features.map((feature) => (
-                      <div key={feature.label} className={`flex items-start gap-3 text-sm ${feature.included ? 'text-slate-100' : 'text-slate-500'}`}>
+                    {plan.features.map((feature, index) => (
+                      <motion.div
+                        key={feature.label}
+                        custom={index}
+                        variants={featureVariants}
+                        initial="hidden"
+                        whileInView="show"
+                        viewport={{ once: true, amount: 0.2 }}
+                        className={`flex items-start gap-3 text-sm ${feature.included ? 'text-slate-100' : 'text-slate-500'}`}
+                      >
                         <span
                           className={`mt-[2px] flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${
                             feature.included ? 'bg-emerald-400/15 text-emerald-300' : 'bg-white/5 text-slate-500'
@@ -277,13 +426,13 @@ export const PriceListPage: React.FC = () => {
                         <span className={feature.included ? 'leading-6' : 'leading-6 line-through decoration-slate-600/70'}>
                           {feature.label}
                         </span>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
-                </article>
+                </motion.article>
               );
             })}
-          </div>
+          </motion.div>
         </div>
       </section>
 
@@ -387,17 +536,17 @@ export const PriceListPage: React.FC = () => {
           <div className="flex flex-col gap-6">
             <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
               <div className="rounded-[1.5rem] border border-white/8 bg-white/4 p-5">
-                <div className="text-2xl font-black text-white">Chat Tự Động</div>
+                <div className="text-xl font-black leading-tight text-white sm:text-2xl">Chat Tự Động</div>
                 <p className="mt-2 text-sm leading-6 text-slate-300">Nhận tư vấn tức thì 24/7 từ hệ thống hỗ trợ của ArenaS.</p>
                 <div className="mt-3 text-sm font-semibold text-blue-300">Bắt đầu chat →</div>
               </div>
               <div className="rounded-[1.5rem] border border-white/8 bg-white/4 p-5">
-                <div className="text-2xl font-black text-white">Gọi Tư Vấn</div>
+                <div className="text-xl font-black leading-tight text-white sm:text-2xl">Gọi Tư Vấn</div>
                 <p className="mt-2 text-sm leading-6 text-slate-300">Nói chuyện trực tiếp với chuyên gia để chọn gói phù hợp.</p>
                 <div className="mt-3 text-sm font-semibold text-emerald-300">1900 0000 →</div>
               </div>
               <div className="rounded-[1.5rem] border border-white/8 bg-white/4 p-5">
-                <div className="text-2xl font-black text-white">Demo Trực Tiếp</div>
+                <div className="text-xl font-black leading-tight text-white sm:text-2xl">Demo Trực Tiếp</div>
                 <p className="mt-2 text-sm leading-6 text-slate-300">Xem bản demo theo nhu cầu sân bóng, tennis hoặc cụm nhiều cơ sở.</p>
                 <div className="mt-3 text-sm font-semibold text-violet-300">Đặt lịch demo →</div>
               </div>
@@ -408,7 +557,7 @@ export const PriceListPage: React.FC = () => {
                 <span className="inline-flex rounded-full border border-white/20 bg-white/12 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.28em] text-blue-50">
                   Gói được yêu thích
                 </span>
-                <h3 className="mt-5 max-w-md text-4xl font-black leading-tight text-white sm:text-5xl">
+                <h3 className="mt-5 max-w-md text-3xl font-black leading-[1.05] text-white sm:text-5xl">
                   Miễn phí đến khi bạn sẵn sàng mở rộng
                 </h3>
                 <p className="mt-4 max-w-xl text-sm leading-7 text-blue-50/90 sm:text-base">
@@ -419,13 +568,13 @@ export const PriceListPage: React.FC = () => {
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <button
                   type="button"
-                  className="rounded-2xl bg-white px-5 py-3.5 text-sm font-black text-blue-700 transition hover:bg-blue-50"
+                  className="rounded-2xl bg-white px-5 py-3.5 text-sm font-bold text-blue-700 transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-blue-50"
                 >
                   Đăng Ký Miễn Phí →
                 </button>
                 <button
                   type="button"
-                  className="rounded-2xl border border-white/20 bg-white/10 px-5 py-3.5 text-sm font-black text-white transition hover:bg-white/16"
+                  className="rounded-2xl border border-white/20 bg-white/10 px-5 py-3.5 text-sm font-bold text-white transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-white/16"
                 >
                   Xem Demo
                 </button>
@@ -435,8 +584,8 @@ export const PriceListPage: React.FC = () => {
         </div>
       </section>
 
-      <footer className="relative px-4 pb-8 pt-4 text-center text-xs text-slate-500 sm:px-6 lg:px-8">
-        © 2026 ArenaS. Bảng giá được thiết kế riêng cho trang HomePage.
+      <footer className="relative px-4 pb-8 pt-4 text-center text-xs text-slate-400 sm:px-6 lg:px-8">
+        © 2026 ArenaS. Bảng giá được thiết kế riêng cho ArenaS.
       </footer>
     </div>
   );
