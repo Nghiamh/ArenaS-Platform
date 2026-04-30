@@ -1,15 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { OwnerSidebar } from './OwnerSidebar';
+import { OwnerBookingScheduleBoard } from './OwnerBookingScheduleBoard';
 
-const bookings = [
-  { customer: 'Nguyen Van An', court: 'San A', time: '18:00 - 19:00', status: 'Da xac nhan' },
-  { customer: 'Tran Minh Quan', court: 'San B', time: '19:00 - 20:00', status: 'Cho thanh toan' },
-  { customer: 'Hoang Gia Bao', court: 'San C', time: '20:00 - 21:00', status: 'Da hoan tat' },
-];
+const todayBadge = '5 lượt đặt hôm nay';
+
+type BookingViewMode = 'day' | 'week';
+
+const viewButtonClass = (active: boolean) =>
+  active
+    ? 'rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-[0_12px_25px_-18px_rgba(37,99,235,0.9)]'
+    : 'px-4 py-2 text-sm font-semibold text-slate-400 transition hover:text-white';
 
 export const OwnerBookingScheduleScreen: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => localStorage.getItem('ownerSidebarCollapsed') === '1');
+  const [viewMode, setViewMode] = useState<BookingViewMode>('day');
 
   useEffect(() => {
     localStorage.setItem('ownerSidebarCollapsed', sidebarCollapsed ? '1' : '0');
@@ -31,33 +36,48 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
 
         <main className="arena-scroll min-h-screen px-4 py-6 md:px-6 lg:px-8 xl:max-h-screen xl:overflow-y-auto">
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-6">
-            <header className="border-b border-white/10 pb-4">
-              <h1 className="text-4xl font-black tracking-tight text-white sm:text-3xl">Lich Dat San</h1>
-              <p className="mt-1 text-sm text-slate-400">Tong hop cac lich dat moi nhat theo tung khung gio.</p>
+            <header className="flex flex-wrap items-start justify-between gap-4 border-b border-white/10 pb-4">
+              <div>
+                <h1 className="text-4xl font-black tracking-tight text-white sm:text-3xl">Lịch Đặt Sân</h1>
+                <p className="mt-1 text-sm text-slate-400">Xin chào, Minh Tuấn 👋 — Thứ Hai, 02/03/2026</p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  className="grid h-11 w-11 place-items-center rounded-2xl border border-white/10 bg-white/[0.04] text-slate-300 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
+                  aria-label="Thông báo"
+                >
+                  🔔
+                </button>
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 font-black text-white shadow-[0_18px_35px_-20px_rgba(37,99,235,0.95)]">M</div>
+              </div>
             </header>
 
-            <section className="overflow-x-auto rounded-3xl border border-white/10 bg-[#081734]/85">
-              <table className="min-w-full text-left">
-                <thead className="border-b border-white/10 text-xs uppercase tracking-[0.12em] text-slate-500">
-                  <tr>
-                    <th className="px-5 py-4">Khach hang</th>
-                    <th className="px-5 py-4">San</th>
-                    <th className="px-5 py-4">Khung gio</th>
-                    <th className="px-5 py-4">Trang thai</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bookings.map((booking) => (
-                    <tr key={`${booking.customer}-${booking.time}`} className="border-b border-white/5 text-slate-200">
-                      <td className="px-5 py-4 font-semibold text-white">{booking.customer}</td>
-                      <td className="px-5 py-4">{booking.court}</td>
-                      <td className="px-5 py-4">{booking.time}</td>
-                      <td className="px-5 py-4 text-blue-200">{booking.status}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/35 bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-300 shadow-[0_18px_35px_-24px_rgba(16,185,129,0.95)]">
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-emerald-400/50 bg-emerald-400/10">✓</span>
+                {todayBadge}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <button className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/[0.08]">Tất cả cơ sở</button>
+                <button className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/[0.08]">Tất cả trạng thái</button>
+                <div className="flex items-center overflow-hidden rounded-full border border-white/10 bg-white/[0.04] p-1">
+                  <button type="button" onClick={() => setViewMode('day')} className={viewButtonClass(viewMode === 'day')}>
+                    Ngày
+                  </button>
+                  <button type="button" onClick={() => setViewMode('week')} className={viewButtonClass(viewMode === 'week')}>
+                    Tuần
+                  </button>
+                  <button type="button" className="px-4 py-2 text-sm font-semibold text-slate-400 transition hover:text-white">
+                    Danh sách
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <OwnerBookingScheduleBoard viewMode={viewMode} />
           </motion.div>
         </main>
       </div>
