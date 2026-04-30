@@ -6,6 +6,9 @@ import { CourtMap } from '../../components/CourtMap';
 
 type FindFieldLocationState = {
   toastMessage?: string;
+  selectedVenueId?: string;
+  sport?: string;
+  directionsCourt?: any;
 };
 
 type SortOption = 'distanceAsc' | 'priceAsc' | 'priceDesc' | 'ratingDesc';
@@ -239,12 +242,25 @@ export const FindFieldPage: React.FC = () => {
   const [isSportDropdownOpen, setIsSportDropdownOpen] = useState(false);
   const [isExtraFilterOpen, setIsExtraFilterOpen] = useState(false);
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
+  const [directionsCourt, setDirectionsCourt] = useState<any | null>(null);
   const sportDropdownRef = useRef<HTMLDivElement | null>(null);
   const extraFilterRef = useRef<HTMLDivElement | null>(null);
   const sortDropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const state = location.state as FindFieldLocationState | null;
+
+    if (state?.selectedVenueId) {
+      setSelectedVenueId(state.selectedVenueId);
+    }
+
+    if (state?.directionsCourt) {
+      setDirectionsCourt(state.directionsCourt);
+    }
+
+    if (state?.sport && defaultSports.includes(state.sport as SportName)) {
+      setActiveSport(state.sport as SportName);
+    }
 
     if (!state?.toastMessage || lastToastLocationKey === location.key) {
       return;
@@ -303,10 +319,13 @@ export const FindFieldPage: React.FC = () => {
     );
   }, []);
 
-  const venues = useMemo(
-    () => courts.map((court) => buildVenue(court, userCoordinates)),
-    [courts, userCoordinates],
-  );
+  const venues = useMemo(() => {
+    const baseCourts = [...courts];
+    if (directionsCourt && !baseCourts.some(c => c.id === directionsCourt.id)) {
+      baseCourts.push(directionsCourt);
+    }
+    return baseCourts.map((court) => buildVenue(court, userCoordinates));
+  }, [courts, userCoordinates, directionsCourt]);
 
   const selectedLocation = searchParams.get('location') ?? 'Gần đây';
 
@@ -359,10 +378,10 @@ export const FindFieldPage: React.FC = () => {
     setIsExtraFilterOpen(false);
   }, [activeSport]);
 
-  const sportVenues = useMemo(() => venues.filter((venue) => venue.sport === activeSport), [activeSport, venues]);
+  const sportVenues = useMemo(() => venues.filter((venue) => venue.id === directionsCourt?.id || venue.sport === activeSport), [activeSport, venues, directionsCourt]);
   const locationFilteredVenues = useMemo(
-    () => sportVenues.filter((venue) => matchLocation(venue.locationText, selectedLocation)),
-    [selectedLocation, sportVenues],
+    () => sportVenues.filter((venue) => venue.id === directionsCourt?.id || matchLocation(venue.locationText, selectedLocation)),
+    [selectedLocation, sportVenues, directionsCourt],
   );
   const priceScopeVenues = locationFilteredVenues.length > 0 ? locationFilteredVenues : sportVenues;
   const maxSportPrice = useMemo(() => {
@@ -406,12 +425,16 @@ export const FindFieldPage: React.FC = () => {
 
   const filteredVenues = useMemo(() => {
     const byFilters = locationFilteredVenues.filter((venue) => {
+      if (venue.id === directionsCourt?.id) {
+        return true;
+      }
+
       if (selectedFilters.length === 0) {
         return true;
       }
 
       return selectedFilters.every((filter) => {
-        const filterPredicate = sportFilterPredicates[activeSport][filter];
+        const filterPredicate = sportFilterPredicates[activeSport]?.[filter];
 
         if (!filterPredicate) {
           return true;
@@ -421,7 +444,7 @@ export const FindFieldPage: React.FC = () => {
       });
     });
 
-    const byPrice = byFilters.filter((venue) => venue.priceK <= maxPriceFilter);
+    const byPrice = byFilters.filter((venue) => venue.id === directionsCourt?.id || venue.priceK <= maxPriceFilter);
 
     return [...byPrice].sort((a, b) => {
       if (sortBy === 'priceAsc') {
@@ -816,14 +839,15 @@ export const FindFieldPage: React.FC = () => {
                         exit={{ opacity: 0, y: 18 }}
                         transition={{ delay: index * 0.03, duration: 0.28 }}
                         onMouseEnter={() => setSelectedVenueId(venue.id)}
-                        className={`rounded-[20px] border bg-[#081128]/96 p-2.5 transition ${
+                        onClick={() => navigate(`/courts/${venue.id}`)}
+                        className={`cursor-pointer rounded-[20px] border bg-[#081128]/96 p-2.5 transition ${
                           isSelected
                             ? 'border-blue-500 shadow-[0_22px_44px_-26px_rgba(59,130,246,0.95)]'
                             : 'border-white/10 hover:border-blue-400/45'
                         }`}
                       >
                         <div className="flex flex-col gap-3 md:flex-row">
-                          <div className="relative h-44 overflow-hidden rounded-2xl md:h-auto md:w-[235px] md:min-w-[235px]">
+                          <div className="relative h-36 overflow-hidden rounded-xl md:h-auto md:w-[180px] md:min-w-[180px]">
                             <img
                               src={venue.image}
                               alt={venue.name}
@@ -840,19 +864,19 @@ export const FindFieldPage: React.FC = () => {
 
                           <div className="flex min-w-0 flex-1 flex-col justify-between gap-3 px-1 py-1">
                             <div className="flex flex-wrap items-start justify-between gap-2">
-                              <div>
-                                <h3 className="text-3xl font-black leading-tight text-white">{venue.name}</h3>
-                                <p className="mt-1 text-base text-slate-300">
+                              <div className="min-w-0 flex-1 pr-2">
+                                <h3 className="truncate text-xl font-bold text-white">{venue.name}</h3>
+                                <p className="mt-1 text-sm text-slate-300">
                                   ⭐ {venue.rating.toFixed(1)} ({venue.reviews}) · {venue.distanceKm.toFixed(1)} km
                                 </p>
                               </div>
 
-                              <div className="text-right">
-                                <p className="text-sm text-slate-400">từ</p>
-                                <p className="text-[2.2rem] font-black leading-none text-blue-400">
+                              <div className="text-right whitespace-nowrap shrink-0">
+                                <span className="text-xs text-slate-400 mr-1">từ</span>
+                                <span className="text-2xl font-black text-blue-400">
                                   {new Intl.NumberFormat('vi-VN').format(venue.priceK * 1000)}
-                                </p>
-                                <p className="text-base text-slate-400">VND/giờ</p>
+                                </span>
+                                <span className="text-xs text-slate-400 ml-1">VND/giờ</span>
                               </div>
                             </div>
 
@@ -860,7 +884,7 @@ export const FindFieldPage: React.FC = () => {
                               {venue.amenities.map((amenity) => (
                                 <span
                                   key={amenity}
-                                  className="rounded-full border border-white/12 bg-slate-900/85 px-3 py-1 text-sm text-slate-200"
+                                  className="rounded-full border border-white/12 bg-slate-900/85 px-2 py-0.5 text-[11px] text-slate-200"
                                 >
                                   {amenity}
                                 </span>
@@ -875,13 +899,13 @@ export const FindFieldPage: React.FC = () => {
                                     venue.slots.map((slot) => (
                                       <span
                                         key={slot}
-                                        className="rounded-xl border border-blue-400/25 bg-slate-900/70 px-3 py-1 text-sm text-slate-300"
+                                        className="rounded-xl border border-blue-400/25 bg-slate-900/70 px-2 py-1 text-xs text-slate-300"
                                       >
                                         {slot}
                                       </span>
                                     ))
                                   ) : (
-                                    <span className="rounded-xl border border-white/10 bg-slate-900/70 px-3 py-1 text-sm text-slate-300">
+                                    <span className="rounded-xl border border-white/10 bg-slate-900/70 px-2 py-1 text-xs text-slate-300">
                                       {venue.hasSlot ? 'Liên hệ để xem giờ trống' : 'Chưa có lịch trống'}
                                     </span>
                                   )}
@@ -891,7 +915,7 @@ export const FindFieldPage: React.FC = () => {
                               <motion.button
                                 whileHover={{ y: -2, scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
-                                className="h-12 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 px-7 text-base font-black text-white shadow-[0_12px_34px_-20px_rgba(59,130,246,0.98)]"
+                                className="h-10 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-5 text-sm font-bold text-white shadow-[0_12px_34px_-20px_rgba(59,130,246,0.98)]"
                               >
                                 Đặt Ngay
                               </motion.button>
@@ -915,7 +939,7 @@ export const FindFieldPage: React.FC = () => {
         </section>
 
         <section className="relative min-h-[680px] overflow-hidden rounded-[24px] border border-blue-400/25 bg-slate-950/75 shadow-[0_26px_80px_-40px_rgba(2,6,23,0.95)] backdrop-blur lg:sticky lg:top-24">
-          <CourtMap />
+          <CourtMap targetCourt={directionsCourt} />
         </section>
       </main>
     </div>

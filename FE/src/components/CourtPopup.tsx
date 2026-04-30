@@ -68,7 +68,7 @@ export const CourtPopup: React.FC<CourtPopupProps> = ({
 			<div className="mt-4 grid gap-2">
 				<button
 					type="button"
-					onClick={() => navigate(`/courts/${court.id}`)}
+					onClick={() => navigate(`/courts/${court.id}`, { state: { court } })}
 					className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
 				>
 					Xem chi tiết

@@ -182,9 +182,9 @@ export const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
 	return (
 		<div className="fixed bottom-0 left-0 right-0 z-30 w-full translate-y-0 rounded-t-3xl border-t border-slate-200 bg-white/95 p-5 shadow-[0_-20px_40px_-20px_rgba(15,23,42,0.35)] backdrop-blur">
 			<div className="flex items-center justify-between">
-				<div>
+				<div className="min-w-0 flex-1 pr-4">
 					<p className="text-sm font-semibold text-slate-500">Chỉ đường đến</p>
-					<p className="text-lg font-bold text-slate-900">{court?.name ?? 'Sân thể thao'}</p>
+					<p className="truncate text-base font-bold text-slate-900">{court?.name ?? 'Sân thể thao'}</p>
 				</div>
 				<button
 					type="button"
@@ -195,22 +195,7 @@ export const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
 				</button>
 			</div>
 
-			<div className="mt-4 flex items-center gap-2">
-				{transportOptions.map((option) => (
-					<button
-						key={option.mode}
-						type="button"
-						onClick={() => setTransportMode(option.mode)}
-						className={`rounded-full px-3 py-1 text-sm font-semibold transition ${
-							transportMode === option.mode
-								? 'bg-slate-900 text-white'
-								: 'bg-slate-100 text-slate-600'
-						}`}
-					>
-						{option.label}
-					</button>
-				))}
-			</div>
+
 
 			<div className="mt-4 grid gap-2 text-sm text-slate-700">
 				{loading && <p>Đang tải chỉ đường...</p>}
@@ -221,9 +206,11 @@ export const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
 							const route = routesByMode[option.mode];
 
 							return (
-								<div
+								<button
+									type="button"
 									key={option.mode}
-									className={`rounded-2xl border px-3 py-2 text-xs font-semibold ${
+									onClick={() => setTransportMode(option.mode)}
+									className={`flex flex-col items-start rounded-2xl border px-3 py-2 text-xs font-semibold transition hover:opacity-80 cursor-pointer ${
 										transportMode === option.mode
 											? 'border-slate-900 bg-slate-900 text-white'
 											: 'border-slate-200 bg-white text-slate-600'
@@ -240,7 +227,7 @@ export const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
 									) : (
 										<p className="mt-1 text-[11px] text-inherit">Chưa có dữ liệu</p>
 									)}
-								</div>
+								</button>
 							);
 						})}
 					</div>
