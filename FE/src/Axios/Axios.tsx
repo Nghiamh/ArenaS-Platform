@@ -9,6 +9,36 @@ export const axiosClient = axios.create({
 	},
 });
 
+// Request interceptor: attach Authorization header when a valid access token exists
+axiosClient.interceptors.request.use((config) => {
+	const token = localStorage.getItem('accessToken')?.trim();
+
+	if (token && token !== 'undefined' && token !== 'null') {
+		config.headers = config.headers ?? {};
+		(config.headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+	}
+
+	return config;
+});
+
+// Response interceptor: on 401 clear stored auth and notify UI so it stops making protected requests
+axiosClient.interceptors.response.use(
+	(response) => response,
+	(error) => {
+		if (axios.isAxiosError(error) && error.response?.status === 401) {
+			try {
+				localStorage.removeItem('accessToken');
+				localStorage.removeItem('currentUser');
+				window.dispatchEvent(new Event('currentUserUpdated'));
+			} catch {
+				// ignore
+			}
+		}
+
+		return Promise.reject(error);
+	}
+);
+
 export type AuthUser = {
 	id: string;
 	name: string;
@@ -121,6 +151,16 @@ function getValidAccessToken(): string | null {
 	return token;
 }
 
+function requireAccessToken(): string {
+	const accessToken = getValidAccessToken();
+
+	if (!accessToken) {
+		throw new Error('missing_token');
+	}
+
+	return accessToken;
+}
+
 export async function login(payload: LoginPayload): Promise<AuthResponse> {
 	try {
 		const { data } = await axiosClient.post<AuthResponse>('/auth/login', payload);
@@ -168,7 +208,7 @@ export async function resetPassword(payload: ResetPasswordPayload): Promise<Basi
 
 export async function getCurrentUserProfile(): Promise<ProfileResponse> {
 	try {
-		const accessToken = getValidAccessToken();
+		const accessToken = requireAccessToken();
 
 		const { data } = await axiosClient.get<ProfileResponse>('/profile/me', {
 			headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
@@ -184,7 +224,7 @@ export async function updateCurrentUserProfile(
 	payload: UpdateProfilePayload,
 ): Promise<ProfileResponse> {
 	try {
-		const accessToken = getValidAccessToken();
+		const accessToken = requireAccessToken();
 
 		const { data } = await axiosClient.put<ProfileResponse>('/profile/me', payload, {
 			headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
@@ -198,7 +238,7 @@ export async function updateCurrentUserProfile(
 
 export async function getCurrentUserSkills(): Promise<UserSkillsResponse> {
 	try {
-		const accessToken = getValidAccessToken();
+		const accessToken = requireAccessToken();
 
 		const { data } = await axiosClient.get<UserSkillsResponse>('/profile/skills', {
 			headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
@@ -212,7 +252,7 @@ export async function getCurrentUserSkills(): Promise<UserSkillsResponse> {
 
 export async function createCurrentUserSkill(payload: UserSkillPayload): Promise<UserSkillResponse> {
 	try {
-		const accessToken = getValidAccessToken();
+		const accessToken = requireAccessToken();
 
 		const { data } = await axiosClient.post<UserSkillResponse>('/profile/skills', payload, {
 			headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
@@ -229,7 +269,7 @@ export async function updateCurrentUserSkill(
 	payload: UserSkillPayload,
 ): Promise<UserSkillResponse> {
 	try {
-		const accessToken = getValidAccessToken();
+		const accessToken = requireAccessToken();
 
 		const { data } = await axiosClient.put<UserSkillResponse>(`/profile/skills/${skillId}`, payload, {
 			headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
@@ -243,7 +283,7 @@ export async function updateCurrentUserSkill(
 
 export async function deleteCurrentUserSkill(skillId: string): Promise<BasicMessageResponse> {
 	try {
-		const accessToken = getValidAccessToken();
+		const accessToken = requireAccessToken();
 
 		const { data } = await axiosClient.delete<BasicMessageResponse>(`/profile/skills/${skillId}`, {
 			headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
@@ -307,7 +347,7 @@ type OwnerCourtResponse = {
 };
 
 function withAuthHeaders() {
-	const accessToken = getValidAccessToken();
+	const accessToken = requireAccessToken();
 	return accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined;
 }
 

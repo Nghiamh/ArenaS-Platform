@@ -154,6 +154,8 @@ const getSkillToneClasses = (value: number): { panel: string; badge: string; acc
   };
 };
 
+const isAuthError = (message: string): boolean => message === 'missing_token' || message === 'unauthorized';
+
 export const ProfilePage: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [activeTab, setActiveTab] = useState<ProfileTab>('profile');
@@ -218,7 +220,9 @@ export const ProfilePage: React.FC = () => {
       } catch (error: unknown) {
         if (isMounted) {
           const message = error instanceof Error ? error.message : 'Không tải được hồ sơ.';
-          showErrorPopup(message);
+          if (!isAuthError(message)) {
+            showErrorPopup(message);
+          }
 
           const raw = localStorage.getItem('currentUser');
           if (raw) {
@@ -274,7 +278,9 @@ export const ProfilePage: React.FC = () => {
       } catch (error: unknown) {
         if (isMounted) {
           const message = error instanceof Error ? error.message : 'Không tải được kỹ năng.';
-          showErrorPopup(message);
+          if (!isAuthError(message)) {
+            showErrorPopup(message);
+          }
         }
       } finally {
         if (isMounted) {

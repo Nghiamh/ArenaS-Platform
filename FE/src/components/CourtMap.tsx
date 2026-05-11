@@ -33,7 +33,11 @@ const DEFAULT_CENTER = {
 const MIN_SEARCH_ZOOM = 12;
 const mapStyle = 'mapbox://styles/mapbox/streets-v12';
 
-export const CourtMap: React.FC = () => {
+export type TargetCourt = Court | { id: string; name: string; coordinates: { latitude: number; longitude: number } | null; [key: string]: any };
+
+export const CourtMap: React.FC<{
+	targetCourt?: TargetCourt;
+}> = ({ targetCourt }) => {
 	const mapRef = useRef<MapRef | null>(null);
 	const hasCenteredRef = useRef(false);
 	const lastBoundsRef = useRef<MapBounds | null>(null);
@@ -82,6 +86,18 @@ export const CourtMap: React.FC = () => {
 			duration: 800,
 		});
 	}, [userLocation]);
+
+	useEffect(() => {
+		if (targetCourt && targetCourt.coordinates && mapRef.current) {
+			mapRef.current.flyTo({
+				center: [targetCourt.coordinates.longitude, targetCourt.coordinates.latitude],
+				zoom: 15,
+				duration: 800,
+			});
+			setDirectionsCourt(targetCourt as Court);
+			setIsDirectionsOpen(true);
+		}
+	}, [targetCourt]);
 
 	const courtsWithCoordinates = useMemo(
 		() => courts.filter((court) => court.coordinates !== null) as Array<Court & { coordinates: NonNullable<Court['coordinates']> }>,

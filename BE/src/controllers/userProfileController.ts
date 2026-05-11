@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
-import jwt from "jsonwebtoken";
-import User, { IUserRole } from "../models/userModel.js";
+import { IUserRole } from "../models/userModel.js";
 
 function resolveRedirectPathByRole(role: IUserRole): string {
 	if (role === "owner") {
@@ -42,55 +41,6 @@ function buildUserProfileResponse(user: {
 	};
 }
 
-function parseBearerToken(authorizationHeader: string | undefined): string | null {
-	if (!authorizationHeader) {
-		return null;
-	}
-
-	const [scheme, token] = authorizationHeader.split(" ");
-	if (scheme !== "Bearer" || !token) {
-		return null;
-	}
-
-	return token;
-}
-
-async function findUserFromAuthorizationHeader(authorizationHeader: string | undefined) {
-	const token = parseBearerToken(authorizationHeader);
-	if (!token) {
-		throw new Error("missing_token");
-	}
-
-	const secret = process.env.JWT_SECRET;
-	if (!secret) {
-		throw new Error("Missing JWT_SECRET in environment variables");
-	}
-
-	let payload: jwt.JwtPayload;
-
-	try {
-		payload = jwt.verify(token, secret) as jwt.JwtPayload;
-	} catch (error: unknown) {
-		if (error instanceof jwt.JsonWebTokenError) {
-			throw new Error("invalid_token");
-		}
-
-		throw error;
-	}
-
-	const userId = payload.sub;
-
-	if (typeof userId !== "string" || !userId) {
-		throw new Error("invalid_token");
-	}
-
-	const user = await User.findById(userId);
-	if (!user) {
-		throw new Error("user_not_found");
-	}
-
-	return user;
-}
 
 function parseDateOfBirth(value: unknown): Date | undefined {
 	if (typeof value !== "string") {
@@ -121,7 +71,7 @@ function normalizeOptionalText(value: unknown): string | undefined {
 
 export async function getCurrentUserProfile(req: Request, res: Response): Promise<void> {
 	try {
-		const user = await findUserFromAuthorizationHeader(req.headers.authorization);
+		const user = req.user!;
 
 		res.status(200).json({
 			message: "current user profile loaded",
@@ -145,7 +95,7 @@ export async function getCurrentUserProfile(req: Request, res: Response): Promis
 
 export async function updateCurrentUserProfile(req: Request, res: Response): Promise<void> {
 	try {
-		const user = await findUserFromAuthorizationHeader(req.headers.authorization);
+		const user = req.user!;
 		const { name, phone, dateOfBirth, avatarUrl } = req.body as {
 			name?: string;
 			phone?: string;

@@ -16,6 +16,7 @@ import { OwnerBookingScheduleScreen } from './pages/Owner/OwnerBookingScheduleSc
 import { OwnerSettingsScreen } from './pages/Owner/OwnerSettingsScreen';
 import { AdminDashboardPage } from './pages/Admin/AdminDashboardPage';
 import { PriceListPage } from './pages/HomePage/PriceListPage';
+import CourtDetailPage from './pages/CourtDetailPage/CourtDetailPage';
 import './index.css';
 
 function App() {
@@ -74,6 +75,14 @@ function App() {
           element={
             <Layout>
               <PriceListPage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/courts/:courtId"
+          element={
+            <Layout>
+              <CourtDetailPage />
             </Layout>
           }
         />

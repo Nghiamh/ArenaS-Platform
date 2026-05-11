@@ -1,64 +1,7 @@
 import { Request, Response } from "express";
-import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import Court, { CourtStatus, ICourtCoordinates } from "../models/courtModel.js";
-import User, { IUserRole } from "../models/userModel.js";
 
-function parseBearerToken(authorizationHeader: string | undefined): string | null {
-	if (!authorizationHeader) {
-		return null;
-	}
-
-	const [scheme, token] = authorizationHeader.split(" ");
-	if (scheme !== "Bearer" || !token) {
-		return null;
-	}
-
-	return token;
-}
-
-async function findUserFromAuthorizationHeader(authorizationHeader: string | undefined) {
-	const token = parseBearerToken(authorizationHeader);
-	if (!token) {
-		throw new Error("missing_token");
-	}
-
-	const secret = process.env.JWT_SECRET;
-	if (!secret) {
-		throw new Error("Missing JWT_SECRET in environment variables");
-	}
-
-	let payload: jwt.JwtPayload;
-
-	try {
-		payload = jwt.verify(token, secret) as jwt.JwtPayload;
-	} catch (error: unknown) {
-		if (error instanceof jwt.JsonWebTokenError) {
-			throw new Error("invalid_token");
-		}
-
-		throw error;
-	}
-
-	const userId = payload.sub;
-
-	if (typeof userId !== "string" || !userId) {
-		throw new Error("invalid_token");
-	}
-
-	const user = await User.findById(userId);
-	if (!user) {
-		throw new Error("user_not_found");
-	}
-
-	return user;
-}
-
-function assertOwnerRole(user: { role?: IUserRole }) {
-	if ((user.role ?? "user") !== "owner") {
-		throw new Error("courts_disabled_for_role");
-	}
-}
 
 function normalizeOptionalText(value: unknown): string | undefined {
 	if (typeof value !== "string") {
@@ -382,8 +325,7 @@ export async function getCourtsByArea(req: Request, res: Response): Promise<void
 
 export async function getOwnerCourts(req: Request, res: Response): Promise<void> {
 	try {
-		const user = await findUserFromAuthorizationHeader(req.headers.authorization);
-		assertOwnerRole(user);
+		const user = req.user!;
 
 		const courts = await Court.find({ owner_id: user._id }).sort({ createdAt: -1 });
 
@@ -416,8 +358,7 @@ export async function getOwnerCourts(req: Request, res: Response): Promise<void>
 
 export async function getOwnerCourtById(req: Request, res: Response): Promise<void> {
 	try {
-		const user = await findUserFromAuthorizationHeader(req.headers.authorization);
-		assertOwnerRole(user);
+		const user = req.user!;
 		const { courtId } = req.params as { courtId?: string };
 
 		if (!courtId) {
@@ -464,8 +405,7 @@ export async function getOwnerCourtById(req: Request, res: Response): Promise<vo
 
 export async function createOwnerCourt(req: Request, res: Response): Promise<void> {
 	try {
-		const user = await findUserFromAuthorizationHeader(req.headers.authorization);
-		assertOwnerRole(user);
+		const user = req.user!;
 
 		const { name, sports, price_per_hour, location, coordinates, amenities, images, status } = req.body as {
 			name?: string;
@@ -539,8 +479,7 @@ export async function createOwnerCourt(req: Request, res: Response): Promise<voi
 
 export async function updateOwnerCourt(req: Request, res: Response): Promise<void> {
 	try {
-		const user = await findUserFromAuthorizationHeader(req.headers.authorization);
-		assertOwnerRole(user);
+		const user = req.user!;
 		const { courtId } = req.params as { courtId?: string };
 
 		if (!courtId) {
@@ -683,8 +622,7 @@ export async function updateOwnerCourt(req: Request, res: Response): Promise<voi
 
 export async function deleteOwnerCourt(req: Request, res: Response): Promise<void> {
 	try {
-		const user = await findUserFromAuthorizationHeader(req.headers.authorization);
-		assertOwnerRole(user);
+		const user = req.user!;
 		const { courtId } = req.params as { courtId?: string };
 
 		if (!courtId) {

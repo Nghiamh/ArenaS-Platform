@@ -1,67 +1,10 @@
 import { Request, Response } from "express";
-import jwt from "jsonwebtoken";
-import User, { IUserRole } from "../models/userModel.js";
 import UserSkill from "../models/userSkillModel.js";
 
 const ALLOWED_SKILL_SPORTS = new Set(["Bóng đá", "Tennis", "Pickleball", "Cầu lông"]);
 const ALLOWED_SKILL_LEVELS = new Set([1, 2, 3, 4, 5]);
 const ALLOWED_SKILL_RATING_SCORES = new Set([1, 2, 3, 4, 5]);
 
-function parseBearerToken(authorizationHeader: string | undefined): string | null {
-	if (!authorizationHeader) {
-		return null;
-	}
-
-	const [scheme, token] = authorizationHeader.split(" ");
-	if (scheme !== "Bearer" || !token) {
-		return null;
-	}
-
-	return token;
-}
-
-async function findUserFromAuthorizationHeader(authorizationHeader: string | undefined) {
-	const token = parseBearerToken(authorizationHeader);
-	if (!token) {
-		throw new Error("missing_token");
-	}
-
-	const secret = process.env.JWT_SECRET;
-	if (!secret) {
-		throw new Error("Missing JWT_SECRET in environment variables");
-	}
-
-	let payload: jwt.JwtPayload;
-
-	try {
-		payload = jwt.verify(token, secret) as jwt.JwtPayload;
-	} catch (error: unknown) {
-		if (error instanceof jwt.JsonWebTokenError) {
-			throw new Error("invalid_token");
-		}
-
-		throw error;
-	}
-
-	const userId = payload.sub;
-
-	if (typeof userId !== "string" || !userId) {
-		throw new Error("invalid_token");
-	}
-
-	const user = await User.findById(userId);
-	if (!user) {
-		throw new Error("user_not_found");
-	}
-
-	return user;
-}
-
-function assertSkillOwnerIsRegularUser(user: { role?: IUserRole }) {
-	if ((user.role ?? "user") !== "user") {
-		throw new Error("skills_disabled_for_role");
-	}
-}
 
 function normalizeOptionalText(value: unknown): string | undefined {
 	if (typeof value !== "string") {
@@ -117,8 +60,7 @@ function buildUserSkillResponse(skill: {
 
 export async function getCurrentUserSkills(req: Request, res: Response): Promise<void> {
 	try {
-		const user = await findUserFromAuthorizationHeader(req.headers.authorization);
-		assertSkillOwnerIsRegularUser(user);
+		const user = req.user!;
 		const skills = await UserSkill.find({ user_id: user._id }).sort({ createdAt: -1 });
 
 		res.status(200).json({
@@ -150,8 +92,7 @@ export async function getCurrentUserSkills(req: Request, res: Response): Promise
 
 export async function createCurrentUserSkill(req: Request, res: Response): Promise<void> {
 	try {
-		const user = await findUserFromAuthorizationHeader(req.headers.authorization);
-		assertSkillOwnerIsRegularUser(user);
+		const user = req.user!;
 		const { sport, note, level, rating_score } = req.body as {
 			sport?: string;
 			note?: string;
@@ -216,8 +157,7 @@ export async function createCurrentUserSkill(req: Request, res: Response): Promi
 
 export async function updateCurrentUserSkill(req: Request, res: Response): Promise<void> {
 	try {
-		const user = await findUserFromAuthorizationHeader(req.headers.authorization);
-		assertSkillOwnerIsRegularUser(user);
+		const user = req.user!;
 		const { skillId } = req.params as { skillId?: string };
 		const { sport, note, level, rating_score } = req.body as {
 			sport?: string;
@@ -292,8 +232,7 @@ export async function updateCurrentUserSkill(req: Request, res: Response): Promi
 
 export async function deleteCurrentUserSkill(req: Request, res: Response): Promise<void> {
 	try {
-		const user = await findUserFromAuthorizationHeader(req.headers.authorization);
-		assertSkillOwnerIsRegularUser(user);
+		const user = req.user!;
 		const { skillId } = req.params as { skillId?: string };
 
 		if (!skillId) {
