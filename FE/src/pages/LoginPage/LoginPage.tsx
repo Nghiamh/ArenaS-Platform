@@ -70,6 +70,13 @@ const LockIcon = () => (
   </svg>
 );
 
+const UserIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+
 const EyeIcon = ({ hidden }: { hidden: boolean }) => (
   <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
     {hidden ? (
@@ -248,7 +255,7 @@ export const LoginPage: React.FC = () => {
         },
       });
     } catch (error: unknown) {
-      setErrorMessage(error instanceof Error ? error.message : 'Đăng nhập thất bại.');
+      setErrorMessage(error instanceof Error ? error.message : 'Đăng nhập thất bại. Email/tên đăng nhập hoặc mật khẩu không chính xác.');
     } finally {
       setIsSubmitting(false);
     }
@@ -393,20 +400,20 @@ export const LoginPage: React.FC = () => {
 
               <div className="my-8 flex items-center gap-4 text-sm text-slate-500">
                 <span className="h-px flex-1 bg-white/10" />
-                hoặc tiếp tục với email
+                hoặc tiếp tục với tài khoản
                 <span className="h-px flex-1 bg-white/10" />
               </div>
 
               <form className="space-y-5" onSubmit={handleLogin}>
                 <label className="block space-y-2">
-                  <span className="text-sm font-semibold text-blue-200/90">Địa chỉ Email</span>
+                  <span className="text-sm font-semibold text-blue-200/90">Email hoặc Tên Đăng Nhập</span>
                   <div className="flex h-14 items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 text-slate-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition focus-within:border-blue-400/70 focus-within:bg-white/[0.07]">
                     <span className="text-slate-500">
-                      <EnvelopeIcon />
+                      <UserIcon />
                     </span>
                     <input
-                      type="email"
-                      placeholder="Email hoặc username"
+                      type="text"
+                      placeholder="Nhập email hoặc tên đăng nhập"
                       value={identifier}
                       onChange={(event) => setIdentifier(event.target.value)}
                       autoComplete="username"
