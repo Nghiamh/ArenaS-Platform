@@ -99,11 +99,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
 			const bounds = feature.bbox
 				? {
-						minLng: feature.bbox[0],
-						minLat: feature.bbox[1],
-						maxLng: feature.bbox[2],
-						maxLat: feature.bbox[3],
-					}
+					minLng: feature.bbox[0],
+					minLat: feature.bbox[1],
+					maxLng: feature.bbox[2],
+					maxLat: feature.bbox[3],
+				}
 				: buildBoundsFromCenter(feature.center?.[0] ?? 105.8542, feature.center?.[1] ?? 21.0285);
 
 			const centerLng = feature.center?.[0] ?? (bounds.minLng + bounds.maxLng) / 2;
@@ -190,11 +190,10 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 								key={option.label}
 								type="button"
 								onClick={() => onSportSelected(option.value)}
-								className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
-									isActive
+								className={`rounded-full px-3 py-1 text-xs font-semibold transition ${isActive
 										? 'bg-emerald-500 text-white'
 										: 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-								}`}
+									}`}
 							>
 								{option.label}
 							</button>

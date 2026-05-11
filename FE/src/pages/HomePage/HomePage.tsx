@@ -12,6 +12,7 @@ type SportCategory = {
 };
 
 type Venue = {
+  id: string;
   name: string;
   sport: string;
   distance: string;
@@ -35,6 +36,7 @@ const buildFeaturedVenue = (court: PublicCourt): Venue => {
   const location = court.location?.trim() || 'Liên hệ';
 
   return {
+    id: court.id,
     name: court.name,
     sport: primarySport,
     distance: location,
@@ -488,10 +490,11 @@ export const HomePage: React.FC = () => {
 
             {featuredVenues.map((venue) => (
               <motion.article
-                key={venue.name}
+                key={venue.id}
                 variants={itemUp}
                 whileHover={{ y: -8 }}
-                className="group overflow-hidden rounded-3xl border border-white/10 bg-slate-900/70 shadow-[0_24px_60px_-32px_rgba(15,23,42,0.9)]"
+                onClick={() => navigate(`/courts/${venue.id}`)}
+                className="group cursor-pointer overflow-hidden rounded-3xl border border-white/10 bg-slate-900/70 shadow-[0_24px_60px_-32px_rgba(15,23,42,0.9)]"
               >
                 <div className="relative h-56 overflow-hidden">
                   <img
