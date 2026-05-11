@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { Court, CourtCoordinates } from '../hooks/useCourtSearch';
 
 type RouteFeature = {
@@ -53,10 +53,7 @@ export const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState('');
 
-	const canRequestRoute = useMemo(
-		() => Boolean(open && court?.coordinates && userLocation && mapboxToken),
-		[court, mapboxToken, open, userLocation],
-	);
+
 
 	useEffect(() => {
 		if (!open) {
