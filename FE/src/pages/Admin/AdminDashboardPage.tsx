@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
 interface StatCard {
@@ -74,8 +74,6 @@ const mockBookings: BookingItem[] = [
 ];
 
 export const AdminDashboardPage: React.FC = () => {
-  const [selectedPeriod] = useState<'week' | 'month' | 'year'>('month');
-
   // Calculate statistics
   const stats = useMemo<StatCard[]>(() => {
     const totalBookings = mockBookings.length;
@@ -238,9 +236,12 @@ export const AdminDashboardPage: React.FC = () => {
 
             <div className="mt-6 pt-6 border-t border-slate-700/50">
               <p className="text-xs text-slate-400 mb-3">Tổng số sân: 27</p>
-              <button className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium text-sm transition-colors duration-200">
-                Quản Lý Sân
-              </button>
+              <Link
+                to="/admin/manage-stadiums"
+                className="block w-full rounded-lg bg-blue-600 px-4 py-2 text-center text-sm font-medium transition-colors duration-200 hover:bg-blue-700"
+              >
+                Quản Lý Sân & Duyệt Sân
+              </Link>
             </div>
           </div>
         </div>
@@ -317,14 +318,14 @@ export const AdminDashboardPage: React.FC = () => {
         {/* Quick Action Cards */}
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Quản Lý Sân', icon: '🏟️', color: 'from-blue-600 to-blue-700' },
-            { label: 'Quản Lý Booking', icon: '📋', color: 'from-green-600 to-green-700' },
+            { label: 'Quản Lý Sân & Duyệt Sân', icon: '🏟️', color: 'from-blue-600 to-cyan-700', to: '/admin/manage-stadiums' },
+            { label: 'Quản Lý Booking', icon: '📋', color: 'from-green-600 to-green-700', to: '#' },
             { label: 'Quản Lý Người Dùng', icon: '👥', color: 'from-purple-600 to-purple-700' },
             { label: 'Báo Cáo Doanh Thu', icon: '📈', color: 'from-orange-600 to-orange-700' },
           ].map((action, idx) => (
             <Link
               key={idx}
-              to="#"
+              to={action.to ?? '#'}
               className={`rounded-lg bg-gradient-to-br ${action.color} p-6 text-center hover:shadow-lg hover:shadow-current/30 transition-all duration-300 transform hover:scale-105`}
             >
               <div className="text-4xl mb-3">{action.icon}</div>
