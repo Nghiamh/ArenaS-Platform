@@ -150,9 +150,8 @@ export const OwnerSidebar: React.FC<OwnerSidebarProps> = ({ activeKey, collapsed
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.72, ease: [0.22, 1, 0.36, 1] }}
       style={{ width: collapsed ? '92px' : '300px' }}
-      className={`arena-scroll relative border-b border-white/10 bg-gradient-to-b from-[#020A1B]/95 to-[#010819]/95 px-3 py-6 backdrop-blur-xl transition-[padding] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto lg:border-b-0 lg:border-r ${
-        collapsed ? 'lg:px-2.5' : 'lg:px-5'
-      }`}
+      className={`arena-scroll relative border-b border-white/10 bg-gradient-to-b from-[#020A1B]/95 to-[#010819]/95 px-3 py-6 backdrop-blur-xl transition-[padding] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto lg:border-b-0 lg:border-r ${collapsed ? 'lg:px-2.5' : 'lg:px-5'
+        }`}
     >
       <div className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-blue-300/35 to-transparent" />
 
@@ -209,11 +208,10 @@ export const OwnerSidebar: React.FC<OwnerSidebarProps> = ({ activeKey, collapsed
               <NavLink
                 key={item.key}
                 to={item.to}
-                className={`group flex w-full items-center rounded-xl py-3 text-left transition ${
-                  isActive
+                className={`group flex w-full items-center rounded-xl py-3 text-left transition ${isActive
                     ? 'border border-blue-200/65 bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-[0_12px_34px_-18px_rgba(59,130,246,0.95)]'
                     : 'border border-transparent text-slate-300 hover:border-white/10 hover:bg-white/5 hover:text-white'
-                } ${collapsed ? 'justify-center px-2' : 'justify-between px-3'}`}
+                  } ${collapsed ? 'justify-center px-2' : 'justify-between px-3'}`}
               >
                 <span className={`flex items-center font-semibold ${collapsed ? 'justify-center' : 'gap-2.5'}`}>
                   <span className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-blue-300'}>{item.icon}</span>
@@ -241,13 +239,12 @@ export const OwnerSidebar: React.FC<OwnerSidebarProps> = ({ activeKey, collapsed
                 <NavLink
                   key={item.key}
                   to={item.to}
-                  className={`flex items-center rounded-lg px-2 py-2 transition ${
-                    item.key === 'logout'
+                  className={`flex items-center rounded-lg px-2 py-2 transition ${item.key === 'logout'
                       ? 'text-red-300 hover:bg-red-500/10'
                       : isActive
                         ? 'bg-blue-500/20 text-blue-200'
                         : 'hover:bg-white/5'
-                  } ${collapsed ? 'justify-center' : 'gap-2'}`}
+                    } ${collapsed ? 'justify-center' : 'gap-2'}`}
                 >
                   <span className="text-current">{item.icon}</span>
                   {!collapsed && item.label}
