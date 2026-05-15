@@ -30,7 +30,6 @@ const DEFAULT_CENTER = {
 	zoom: 13,
 };
 
-const MIN_SEARCH_ZOOM = 12;
 const mapStyle = 'mapbox://styles/mapbox/streets-v12';
 
 export type TargetCourt = Court | { id: string; name: string; coordinates: { latitude: number; longitude: number } | null; [key: string]: any };
@@ -88,14 +87,44 @@ export const CourtMap: React.FC<{
 	}, [userLocation]);
 
 	useEffect(() => {
-		if (targetCourt && targetCourt.coordinates && mapRef.current) {
-			mapRef.current.flyTo({
-				center: [targetCourt.coordinates.longitude, targetCourt.coordinates.latitude],
-				zoom: 15,
-				duration: 800,
-			});
-			setDirectionsCourt(targetCourt as Court);
-			setIsDirectionsOpen(true);
+		if (targetCourt && targetCourt.coordinates) {
+			let lng: number | undefined;
+			let lat: number | undefined;
+
+			// Handle GeoJSON format { type: 'Point', coordinates: [lng, lat] }
+			if (Array.isArray((targetCourt.coordinates as any).coordinates)) {
+				lng = (targetCourt.coordinates as any).coordinates[0];
+				lat = (targetCourt.coordinates as any).coordinates[1];
+			} else {
+				// Handle standard { longitude, latitude } format
+				lng = (targetCourt.coordinates as any).longitude;
+				lat = (targetCourt.coordinates as any).latitude;
+			}
+
+			if (lng !== undefined && lat !== undefined) {
+				// Ensure directionsCourt has the right structure that DirectionsPanel expects
+				const courtForDirections = {
+					...targetCourt,
+					coordinates: { longitude: lng, latitude: lat }
+				};
+				setDirectionsCourt(courtForDirections as Court);
+				setIsDirectionsOpen(true);
+
+				if (mapRef.current) {
+					mapRef.current.flyTo({
+						center: [lng, lat],
+						zoom: 15,
+						duration: 800,
+					});
+				} else {
+					// Fallback if map isn't ready yet, map will initialize at DEFAULT_CENTER but we can try to center later
+					setTimeout(() => {
+						if (mapRef.current) {
+							mapRef.current.flyTo({ center: [lng!, lat!], zoom: 15, duration: 800 });
+						}
+					}, 1000);
+				}
+			}
 		}
 	}, [targetCourt]);
 
@@ -110,9 +139,7 @@ export const CourtMap: React.FC<{
 			return;
 		}
 
-		if (map.getZoom() < MIN_SEARCH_ZOOM) {
-			return;
-		}
+		// Removed zoom constraint to always fetch courts
 
 		const bounds = map.getBounds();
 		const nextBounds = {
@@ -192,8 +219,6 @@ export const CourtMap: React.FC<{
 		setRouteFeature(null);
 	}, []);
 
-	const emptyState = !loading && !error && courtsWithCoordinates.length === 0;
-
 	return (
 		<div className="relative h-full min-h-[680px] w-full">
 			<Map
@@ -267,13 +292,7 @@ export const CourtMap: React.FC<{
 				</div>
 			)}
 
-			{emptyState && (
-				<div className="pointer-events-none absolute inset-0 flex items-center justify-center text-center text-sm font-semibold text-slate-100">
-					<div className="rounded-2xl bg-slate-900/70 px-4 py-3">
-						Không tìm thấy sân nào trong khu vực này
-					</div>
-				</div>
-			)}
+
 
 			{!isMapboxReady && (
 				<div className="absolute inset-0 flex items-center justify-center text-center text-sm font-semibold text-slate-100">

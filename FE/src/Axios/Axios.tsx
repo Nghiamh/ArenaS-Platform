@@ -314,6 +314,7 @@ export type OwnerCourt = {
 	images: string[];
 	avg_rating: number;
 	status: OwnerCourtStatus;
+	number_of_courts: number;
 	createdAt?: string;
 	updatedAt?: string;
 };
