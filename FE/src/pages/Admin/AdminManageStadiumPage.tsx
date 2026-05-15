@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { AdminLayout } from '../../components';
 
 type StadiumStatus = 'approved' | 'pending' | 'rejected' | 'hidden';
 
@@ -138,8 +139,9 @@ export const AdminManageStadiumPage: React.FC = () => {
   const pendingQueue = stadiums.filter((item) => item.status === 'pending');
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-4 py-8 text-white sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl space-y-6">
+    <AdminLayout activeKey="stadiums">
+      <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-4 py-8 text-white sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl space-y-6">
         <header className="rounded-2xl border border-slate-700/50 bg-slate-900/40 p-6 backdrop-blur-sm">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -282,7 +284,8 @@ export const AdminManageStadiumPage: React.FC = () => {
             )}
           </div>
         </section>
-      </div>
-    </main>
+        </div>
+      </main>
+    </AdminLayout>
   );
 };
