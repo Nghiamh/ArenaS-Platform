@@ -18,6 +18,7 @@ export interface ICourt extends Document {
 	images: string[];
 	avg_rating: number;
 	status: CourtStatus;
+	number_of_courts: number;
 	createdAt?: Date;
 	updatedAt?: Date;
 }
@@ -106,6 +107,12 @@ const courtSchema = new Schema<ICourt, ICourtModel>(
 			required: true,
 			default: "available",
 			enum: ["available", "closed", "open"],
+		},
+		number_of_courts: {
+			type: Number,
+			required: true,
+			default: 8,
+			min: 1,
 		},
 	},
 	{
