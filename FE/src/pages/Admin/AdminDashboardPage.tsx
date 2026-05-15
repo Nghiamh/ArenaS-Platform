@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { AdminLayout } from '../../components';
 
 interface StatCard {
   label: string;
@@ -145,8 +146,9 @@ export const AdminDashboardPage: React.FC = () => {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-4 sm:px-6 lg:px-8 py-8 text-white">
-      <div className="mx-auto max-w-7xl">
+    <AdminLayout activeKey="dashboard">
+      <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-4 py-8 text-white sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-8">
           <p className="text-sm font-semibold uppercase tracking-widest text-cyan-400">
@@ -333,7 +335,8 @@ export const AdminDashboardPage: React.FC = () => {
             </Link>
           ))}
         </div>
-      </div>
-    </main>
+        </div>
+      </main>
+    </AdminLayout>
   );
 };
