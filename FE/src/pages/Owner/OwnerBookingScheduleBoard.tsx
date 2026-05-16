@@ -1,5 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { getOwnerCourts, getOwnerBookings, createOwnerBooking, type OwnerCourt, type OwnerBooking } from '../../Axios/Axios';
 import {
   bookingHours,
   bookingScheduleFacilities,
@@ -265,10 +266,64 @@ const WeekView: React.FC = () => (
 type BookingViewMode = 'day' | 'week';
 
 export const OwnerBookingScheduleBoard: React.FC<{ viewMode: BookingViewMode }> = ({ viewMode }) => {
-  const [schedule, setSchedule] = useState<ScheduleState>(() =>
-    JSON.parse(JSON.stringify(bookingScheduleFacilities))
-  );
+  const [schedule, setSchedule] = useState<ScheduleState>([]);
+  const [ownerCourts, setOwnerCourts] = useState<OwnerCourt[]>([]);
+  const [currentDate, setCurrentDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [modal, setModal] = useState<ModalState>(CLOSED);
+
+  const fetchScheduleData = useCallback(async () => {
+    try {
+      const [courtsData, bookingsData] = await Promise.all([
+        getOwnerCourts(),
+        getOwnerBookings({ startDate: currentDate, endDate: currentDate }) // only day view for now
+      ]);
+
+      setOwnerCourts(courtsData);
+
+      // Parse to ScheduleState
+      const nextSchedule: ScheduleState = courtsData.map((court, i) => {
+        const courtBookings = bookingsData.filter(b => b.court_id === court.id);
+        const accent: BookingTone = ['blue', 'violet', 'emerald', 'slate'][i % 4] as BookingTone;
+        
+        return {
+          name: court.name,
+          location: court.location,
+          accent,
+          bookingCount: courtBookings.length,
+          courts: court.sub_courts.map(sub => {
+            const subBookings = courtBookings.filter(b => b.sub_court_id === sub._id);
+            return {
+              id: sub._id,
+              name: sub.name,
+              capacity: `${sub.type} · ${sub.price_per_hour / 1000}K/giờ`,
+              price: `${sub.price_per_hour / 1000}K`,
+              open: sub.status === 'open',
+              bookings: subBookings.map(b => {
+                const [sh, sm] = b.start_time.split(':').map(Number);
+                const [eh, em] = b.end_time.split(':').map(Number);
+                return {
+                  bookingId: b._id,
+                  customer: b.customer_name,
+                  startHour: sh + sm / 60,
+                  endHour: eh + em / 60,
+                  tone: b.tone as BookingTone || accent,
+                  note: b.note,
+                };
+              })
+            };
+          })
+        };
+      });
+
+      setSchedule(nextSchedule);
+    } catch (error) {
+      console.error('Failed to fetch schedule data:', error);
+    }
+  }, [currentDate]);
+
+  useEffect(() => {
+    fetchScheduleData();
+  }, [fetchScheduleData]);
 
   const facilities = schedule.map(f => f.name);
   const courts     = schedule.flatMap(f => f.courts.map(c => c.name));
@@ -305,24 +360,50 @@ export const OwnerBookingScheduleBoard: React.FC<{ viewMode: BookingViewMode }> 
     initial: { source: 'phone', status: 'confirmed', tone: 'blue' },
   });
 
-  const handleSave = useCallback((data: BookingModalData) => {
-    setSchedule(prev => {
-      const next = JSON.parse(JSON.stringify(prev)) as ScheduleState;
-      let fIdx = modal.fIdx >= 0 ? modal.fIdx : next.findIndex(f => f.name === data.facilityName);
-      if (fIdx < 0) return prev;
-      let cIdx = modal.cIdx >= 0 ? modal.cIdx : next[fIdx].courts.findIndex(c => c.name === data.courtName);
-      if (cIdx < 0) return prev;
-      const blk: BookingBlock = { customer: data.customer, startHour: data.startHour, endHour: data.endHour, tone: data.tone, note: data.note || undefined };
-      if (modal.bIdx !== null) {
-        next[fIdx].courts[cIdx].bookings[modal.bIdx] = blk;
+  const handleSave = useCallback(async (data: BookingModalData) => {
+    try {
+      const fIdx = modal.fIdx >= 0 ? modal.fIdx : schedule.findIndex(f => f.name === data.facilityName);
+      if (fIdx < 0) return;
+      const cIdx = modal.cIdx >= 0 ? modal.cIdx : schedule[fIdx].courts.findIndex(c => c.name === data.courtName);
+      if (cIdx < 0) return;
+
+      const court = ownerCourts.find(c => c.name === data.facilityName);
+      const subCourt = court?.sub_courts.find(sc => sc.name === data.courtName);
+
+      if (!court || !subCourt) throw new Error('Không tìm thấy sân hợp lệ');
+
+      // format start/end
+      const sh = Math.floor(data.startHour).toString().padStart(2, '0');
+      const sm = (data.startHour % 1) * 60 === 30 ? '30' : '00';
+      const eh = Math.floor(data.endHour).toString().padStart(2, '0');
+      const em = (data.endHour % 1) * 60 === 30 ? '30' : '00';
+
+      if (modal.bIdx === null) {
+        // Create new
+        await createOwnerBooking({
+          court_id: court.id,
+          sub_court_id: subCourt._id!,
+          date: currentDate,
+          start_time: `${sh}:${sm}`,
+          end_time: `${eh}:${em}`,
+          customer_name: data.customer,
+          customer_phone: data.phone,
+          note: data.note,
+          status: data.status,
+          source: data.source,
+          tone: data.tone
+        });
       } else {
-        next[fIdx].courts[cIdx].bookings.push(blk);
-        next[fIdx].bookingCount++;
+        // (Editing existing booking would go here if API exists)
       }
-      return next;
-    });
-    setModal(CLOSED);
-  }, [modal]);
+
+      await fetchScheduleData();
+      setModal(CLOSED);
+    } catch (error) {
+      console.error('Lỗi khi lưu đặt sân:', error);
+      alert('Lỗi: ' + (error instanceof Error ? error.message : ''));
+    }
+  }, [modal, schedule, ownerCourts, currentDate, fetchScheduleData]);
 
   const handleDelete = useCallback(() => {
     if (modal.fIdx < 0 || modal.cIdx < 0 || modal.bIdx === null) return;

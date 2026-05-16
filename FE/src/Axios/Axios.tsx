@@ -532,3 +532,57 @@ export async function seedCourtDashboardData(courtId: string, payload?: Partial<
 		throw new Error(toErrorMessage(error));
 	}
 }
+
+export type OwnerBooking = {
+	_id: string;
+	court_id: string;
+	sub_court_id: string;
+	date: string;
+	start_time: string;
+	end_time: string;
+	customer_name: string;
+	customer_phone?: string;
+	note?: string;
+	total_price: number;
+	status: string;
+	source: string;
+	tone: 'blue' | 'violet' | 'emerald' | 'slate';
+	createdAt: string;
+};
+
+export async function getOwnerBookings(params?: { startDate?: string; endDate?: string }): Promise<OwnerBooking[]> {
+	try {
+		const { data } = await axiosClient.get<{ message: string; bookings: OwnerBooking[] }>('/bookings/owner-bookings', {
+			headers: withAuthHeaders(),
+			params,
+		});
+		return data.bookings;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export type CreateOwnerBookingPayload = {
+	court_id: string;
+	sub_court_id: string;
+	date: string;
+	start_time: string;
+	end_time: string;
+	customer_name: string;
+	customer_phone?: string;
+	note?: string;
+	status?: string;
+	source?: string;
+	tone?: string;
+};
+
+export async function createOwnerBooking(payload: CreateOwnerBookingPayload): Promise<OwnerBooking> {
+	try {
+		const { data } = await axiosClient.post<{ message: string; booking: OwnerBooking }>('/bookings/owner-bookings', payload, {
+			headers: withAuthHeaders(),
+		});
+		return data.booking;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}

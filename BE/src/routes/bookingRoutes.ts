@@ -1,5 +1,5 @@
 import express from 'express';
-import { generateCourtSlots, bookCourtSlot, getCourtSlots } from '../controllers/bookingController.js';
+import { generateCourtSlots, bookCourtSlot, getCourtSlots, getOwnerBookings, ownerCreateBooking } from '../controllers/bookingController.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -12,5 +12,11 @@ router.post('/book-slot', requireAuth, bookCourtSlot);
 
 // 3. API Lấy danh sách Slot (Công khai hoặc Admin)
 router.get('/slots/:courtId', getCourtSlots);
+
+// 4. API Lấy danh sách bookings cho owner
+router.get('/owner-bookings', requireAuth, getOwnerBookings);
+
+// 5. API Owner tạo booking thủ công
+router.post('/owner-bookings', requireAuth, ownerCreateBooking);
 
 export default router;

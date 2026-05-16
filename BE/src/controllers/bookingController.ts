@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { CourtSlotModel, ISlot } from '../models/courtSlotModel.js';
 import { CourtDashboardModel } from '../models/courtDashboardModel.js';
 import Court from '../models/courtModel.js';
+import { BookingModel } from '../models/bookingModel.js';
 
 // Helper: Khởi tạo các mốc thời gian 30 phút
 function generateTimeSlots(openTime: string, closeTime: string): ISlot[] {
@@ -222,3 +223,132 @@ export async function bookCourtSlot(req: Request, res: Response) {
 		return res.status(500).json({ error: 'internal_server_error' });
 	}
 }
+
+// 5. API: Lấy danh sách Booking của Owner
+export async function getOwnerBookings(req: Request, res: Response) {
+	try {
+		const ownerId = (req as any).user.userId;
+		const { startDate, endDate } = req.query;
+
+		// 1. Tìm tất cả các court_id thuộc về owner này
+		const ownerCourts = await Court.find({ owner_id: ownerId }).select('_id');
+		const courtIds = ownerCourts.map(c => c._id);
+
+		// 2. Query bookings thuộc các court_id đó
+		let query: any = { court_id: { $in: courtIds } };
+		
+		if (startDate && endDate) {
+			query.date = { $gte: startDate as string, $lte: endDate as string };
+		} else if (startDate) {
+			query.date = startDate as string;
+		}
+
+		const bookings = await BookingModel.find(query);
+		
+		return res.status(200).json({
+			message: 'Lấy danh sách booking thành công',
+			bookings
+		});
+	} catch (error) {
+		console.error('Lỗi khi lấy owner bookings:', error);
+		return res.status(500).json({ error: 'internal_server_error' });
+	}
+}
+
+// 6. API: Owner tạo trực tiếp Booking
+export async function ownerCreateBooking(req: Request, res: Response) {
+	const session = await mongoose.startSession();
+	session.startTransaction();
+
+	try {
+		const ownerId = (req as any).user.userId;
+		const { court_id, sub_court_id, date, start_time, end_time, customer_name, customer_phone, note, status, source, tone } = req.body;
+
+		// 1. Kiểm tra ownership
+		const court = await Court.findOne({ _id: court_id, owner_id: ownerId }).session(session);
+		if (!court) {
+			throw new Error('not_found_or_not_authorized');
+		}
+
+		const pricePerHour = court.price_per_hour || 0;
+		// Tính price (cơ bản: mỗi 30p = price/2)
+		const start = start_time.split(':').map(Number);
+		const end = end_time.split(':').map(Number);
+		const diffHours = (end[0] + end[1]/60) - (start[0] + start[1]/60);
+		const total_price = pricePerHour * diffHours;
+
+		// Tạo Booking document
+		const newBooking = new BookingModel({
+			court_id,
+			sub_court_id,
+			date,
+			start_time,
+			end_time,
+			customer_name,
+			customer_phone,
+			note,
+			total_price,
+			status: status || 'confirmed',
+			source: source || 'phone',
+			// @ts-ignore
+			tone: tone || 'blue' // Lưu thêm tone nếu cần thiết
+		});
+
+		await newBooking.save({ session });
+
+		// Cập nhật CourtSlot nếu đã generate (tuỳ chọn - nếu chưa generate thì bỏ qua cũng được)
+		const courtSlot = await CourtSlotModel.findOne({ court_id, sub_court_id, date }).session(session);
+		if (courtSlot) {
+			let startIndex = -1;
+			let endIndex = -1;
+
+			for (let i = 0; i < courtSlot.slots.length; i++) {
+				if (courtSlot.slots[i].start === start_time) startIndex = i;
+				if (courtSlot.slots[i].end === end_time) endIndex = i;
+			}
+
+			if (startIndex !== -1 && endIndex !== -1 && startIndex <= endIndex) {
+				const numberOfSlotsBooked = endIndex - startIndex + 1;
+				for (let i = startIndex; i <= endIndex; i++) {
+					courtSlot.slots[i].status = 'booked';
+					courtSlot.slots[i].booking_id = newBooking._id as any;
+				}
+				await courtSlot.save({ session });
+				
+				// Cập nhật Dashboard
+				const targetDate = new Date(date);
+				targetDate.setHours(0, 0, 0, 0);
+
+				await CourtDashboardModel.findOneAndUpdate(
+					{ court_id, sub_court_id, date: targetDate },
+					{
+						$inc: { 
+							booked_slots: numberOfSlotsBooked, 
+							available_slots: -numberOfSlotsBooked,
+							total_bookings: 1,
+							revenue: total_price
+						}
+					},
+					{ upsert: true, new: true, session }
+				);
+			}
+		}
+
+		await session.commitTransaction();
+		session.endSession();
+
+		return res.status(201).json({
+			message: 'Tạo lịch đặt thành công',
+			booking: newBooking
+		});
+	} catch (error: any) {
+		await session.abortTransaction();
+		session.endSession();
+		console.error('Lỗi khi owner tạo booking:', error);
+		if (error.message === 'not_found_or_not_authorized') {
+			return res.status(403).json({ error: 'Không có quyền truy cập sân này' });
+		}
+		return res.status(500).json({ error: 'internal_server_error' });
+	}
+}
+
