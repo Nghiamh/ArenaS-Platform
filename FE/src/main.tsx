@@ -18,6 +18,7 @@ import { AdminDashboardPage } from './pages/Admin/AdminDashboardPage';
 import { AdminManageStadiumPage } from './pages/Admin/AdminManageStadiumPage';
 import { PriceListPage } from './pages/HomePage/PriceListPage';
 import CourtDetailPage from './pages/CourtDetailPage/CourtDetailPage';
+import { WalletPage } from './pages/WalletPage/WalletPage';
 import './index.css';
 
 function App() {
@@ -85,6 +86,14 @@ function App() {
           element={
             <Layout>
               <CourtDetailPage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/wallet"
+          element={
+            <Layout>
+              <WalletPage />
             </Layout>
           }
         />

@@ -9,6 +9,8 @@ import UserSkill from "./models/userSkillModel.js";
 import courtRoutes from "./routes/courtRoutes.js";
 import userProfileRoutes from "./routes/userProfileRoutes.js";
 import userSkillRoutes from "./routes/userSkillRoutes.js";
+import walletRoutes from "./routes/walletRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
@@ -23,6 +25,8 @@ app.use("/api/courts", courtRoutes);
 app.use("/api/owner/courts", courtRoutes);
 app.use("/api/profile", userProfileRoutes);
 app.use("/api/profile/skills", userSkillRoutes);
+app.use("/api/wallet", walletRoutes);
+app.use("/api/payment", paymentRoutes);
 app.get("/api/health", (_req, res) => {
 	res.status(200).json({ status: "ok", service: "arena-backend" });
 });
