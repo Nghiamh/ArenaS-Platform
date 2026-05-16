@@ -302,19 +302,37 @@ export type OwnerCourtCoordinates = {
 	longitude: number;
 };
 
+export type SubCourtType = 'football_5' | 'football_7' | 'badminton' | 'tennis' | 'pickleball' | 'other';
+
+export type SubCourtStatus = 'open' | 'closed';
+
+export type SubCourt = {
+	_id?: string;
+	name: string;
+	type: SubCourtType;
+	surface?: string;
+	price_per_hour: number;
+	status: SubCourtStatus;
+};
+
 export type OwnerCourt = {
 	id: string;
-	owner_id: string;
 	name: string;
 	sports: string[];
 	price_per_hour: number;
 	location: string;
-	coordinates: OwnerCourtCoordinates | null;
+	coordinates?: {
+		latitude: number;
+		longitude: number;
+	};
 	amenities: string[];
 	images: string[];
+	open_time?: string;
+	close_time?: string;
 	avg_rating: number;
 	status: OwnerCourtStatus;
 	number_of_courts: number;
+	sub_courts: SubCourt[];
 	createdAt?: string;
 	updatedAt?: string;
 };
@@ -324,10 +342,22 @@ export type OwnerCourtPayload = {
 	sports: string[];
 	price_per_hour: number;
 	location: string;
-	coordinates?: OwnerCourtCoordinates;
-	amenities?: string[];
-	images?: string[];
-	status?: OwnerCourtStatus;
+	coordinates?: {
+		latitude: number;
+		longitude: number;
+	};
+	amenities: string[];
+	images: string[];
+	open_time?: string;
+	close_time?: string;
+	status: OwnerCourtStatus;
+	sub_courts: Array<{
+		name: string;
+		type: SubCourtType;
+		surface?: string;
+		price_per_hour: number;
+		status: SubCourtStatus;
+	}>;
 };
 
 export type PublicCourt = OwnerCourt;
@@ -376,6 +406,15 @@ export async function getPublicCourts(params?: { sport?: string }): Promise<Publ
 	}
 }
 
+export async function getPublicCourtById(courtId: string): Promise<PublicCourt> {
+	try {
+		const { data } = await axiosClient.get<{ message: string; court: PublicCourt }>(`/courts/public/${courtId}`);
+		return data.court;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
 export async function getOwnerCourtById(courtId: string): Promise<OwnerCourt> {
 	try {
 		const { data } = await axiosClient.get<OwnerCourtResponse>(`/owner/courts/${courtId}`, {
@@ -419,6 +458,130 @@ export async function deleteOwnerCourt(courtId: string): Promise<BasicMessageRes
 		});
 
 		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+// ---------------------------------------------------------------------------
+// COURT DASHBOARD / STATS
+// ---------------------------------------------------------------------------
+
+export type CourtDashboard = {
+	_id: string;
+	court_id: string;
+	sub_court_id: string;
+	date: string;
+	total_slots: number;
+	booked_slots: number;
+	available_slots: number;
+	blocked_slots: number;
+	total_bookings: number;
+	revenue: number;
+	last_updated: string;
+};
+
+// Booking APIs
+export type CourtSlotStatus = 'available' | 'booked' | 'locked';
+
+export type CourtSlotDetail = {
+	start: string;
+	end: string;
+	status: CourtSlotStatus;
+	booking_id?: string;
+};
+
+export type CourtSlotData = {
+	_id: string;
+	court_id: string;
+	sub_court_id: string;
+	date: string;
+	slots: CourtSlotDetail[];
+};
+
+export async function getCourtSlots(courtId: string, date: string): Promise<CourtSlotData[]> {
+	try {
+		const { data } = await axiosClient.get<CourtSlotData[]>(`/bookings/slots/${courtId}`, {
+			params: { date },
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function getCourtDashboard(courtId: string, date?: string): Promise<CourtDashboard[]> {
+	try {
+		const { data } = await axiosClient.get<CourtDashboard[]>(`/dashboard/${courtId}`, {
+			headers: withAuthHeaders(),
+			params: { date },
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function seedCourtDashboardData(courtId: string, payload?: Partial<CourtDashboard>): Promise<{ message: string, dashboard: CourtDashboard }> {
+	try {
+		const { data } = await axiosClient.post<{ message: string, dashboard: CourtDashboard }>(`/dashboard/${courtId}/seed`, payload, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export type OwnerBooking = {
+	_id: string;
+	court_id: string;
+	sub_court_id: string;
+	date: string;
+	start_time: string;
+	end_time: string;
+	customer_name: string;
+	customer_phone?: string;
+	note?: string;
+	total_price: number;
+	status: string;
+	source: string;
+	tone: 'blue' | 'violet' | 'emerald' | 'slate';
+	createdAt: string;
+};
+
+export async function getOwnerBookings(params?: { startDate?: string; endDate?: string }): Promise<OwnerBooking[]> {
+	try {
+		const { data } = await axiosClient.get<{ message: string; bookings: OwnerBooking[] }>('/bookings/owner-bookings', {
+			headers: withAuthHeaders(),
+			params,
+		});
+		return data.bookings;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export type CreateOwnerBookingPayload = {
+	court_id: string;
+	sub_court_id: string;
+	date: string;
+	start_time: string;
+	end_time: string;
+	customer_name: string;
+	customer_phone?: string;
+	note?: string;
+	status?: string;
+	source?: string;
+	tone?: string;
+};
+
+export async function createOwnerBooking(payload: CreateOwnerBookingPayload): Promise<OwnerBooking> {
+	try {
+		const { data } = await axiosClient.post<{ message: string; booking: OwnerBooking }>('/bookings/owner-bookings', payload, {
+			headers: withAuthHeaders(),
+		});
+		return data.booking;
 	} catch (error: unknown) {
 		throw new Error(toErrorMessage(error));
 	}

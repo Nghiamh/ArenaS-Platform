@@ -7,10 +7,12 @@ import authRoutes from "./routes/authRoutes.js";
 import Court from "./models/courtModel.js";
 import UserSkill from "./models/userSkillModel.js";
 import courtRoutes from "./routes/courtRoutes.js";
+import courtDashboardRoutes from "./routes/courtDashboardRoutes.js";
 import userProfileRoutes from "./routes/userProfileRoutes.js";
 import userSkillRoutes from "./routes/userSkillRoutes.js";
 import walletRoutes from "./routes/walletRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
+import bookingRoutes from "./routes/bookingRoutes.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
@@ -23,10 +25,12 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/courts", courtRoutes);
 app.use("/api/owner/courts", courtRoutes);
+app.use("/api/dashboard", courtDashboardRoutes);
 app.use("/api/profile", userProfileRoutes);
 app.use("/api/profile/skills", userSkillRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/bookings", bookingRoutes);
 app.get("/api/health", (_req, res) => {
 	res.status(200).json({ status: "ok", service: "arena-backend" });
 });

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { getPublicCourts, type PublicCourt } from '../../Axios/Axios';
+import { getPublicCourtById, getCourtSlots, type PublicCourt, type CourtSlotData } from '../../Axios/Axios';
 
 type LocationState = { court?: PublicCourt };
 
@@ -15,15 +15,7 @@ const EXTRA_IMGS = [
 
 const fmt = (v: number) => new Intl.NumberFormat('vi-VN').format(v);
 
-function seedBooked(date: string): Set<number> {
-  let h = 0;
-  for (let i = 0; i < date.length; i++) h = ((h * 31) + date.charCodeAt(i)) | 0;
-  const s = new Set<number>();
-  [12, 13, 17, 18, 19, 20].forEach((hr, i) => { if ((h >> i) & 1) s.add(hr); });
-  return s;
-}
 
-const OPEN_HR = 5, CLOSE_HR = 24;
 
 const REVIEWS = [
   { id: 1, avatar: 'M', name: 'Minh Tuấn', date: '12/05/2026', rating: 5, text: 'Sân đẹp, mặt cỏ xịn, giá cả hợp lý.' },
@@ -70,31 +62,57 @@ const CourtDetailPage: React.FC = () => {
     return day === 0 ? 'Chủ nhật' : `Thứ ${day + 1}`;
   };
 
-  const currentHours = useMemo(() => {
-    if (shift === 'morning') return Array.from({ length: 7 }, (_, i) => 5 + i);
-    return Array.from({ length: 12 }, (_, i) => 12 + i);
-  }, [shift]);
+  const { openHour, closeHour } = useMemo(() => {
+    const o = court?.open_time ? parseInt(court.open_time.split(':')[0], 10) : 6;
+    const c = court?.close_time ? parseInt(court.close_time.split(':')[0], 10) : 22;
+    return { openHour: o, closeHour: c };
+  }, [court]);
 
-  // Mock booking data based on selected date
+  const currentHours = useMemo(() => {
+    // Or just divide by 2 for balanced visual grid:
+    const splitHour = Math.floor((openHour + closeHour) / 2);
+    
+    if (shift === 'morning') {
+      const length = Math.max(0, splitHour - openHour);
+      return Array.from({ length }, (_, i) => openHour + i);
+    }
+    
+    const length = Math.max(0, closeHour - splitHour);
+    return Array.from({ length }, (_, i) => splitHour + i);
+  }, [shift, openHour, closeHour]);
+
+  // Real booking data based on selected date
   const selectedDateStr = weekDays[selectedDayIdx].toISOString().slice(0, 10);
-  const booked = useMemo(() => seedBooked(selectedDateStr), [selectedDateStr]);
+  const [slotData, setSlotData] = useState<Record<string, CourtSlotData>>({});
 
   useEffect(() => {
-    if (court || !courtId) { setLoading(false); return; }
+    if (!courtId || !selectedDateStr) return;
+    let isMounted = true;
+    getCourtSlots(courtId, selectedDateStr)
+      .then(data => {
+        if (!isMounted) return;
+        const map: Record<string, CourtSlotData> = {};
+        data.forEach(d => { map[d.sub_court_id] = d; });
+        setSlotData(map);
+      })
+      .catch(console.error);
+    return () => { isMounted = false; };
+  }, [courtId, selectedDateStr]);
+
+  useEffect(() => {
+    if (!courtId) { setLoading(false); return; }
     let dead = false;
-    setLoading(true);
-    getPublicCourts()
-      .then(list => {
+    if (!court) setLoading(true);
+    getPublicCourtById(courtId)
+      .then(f => {
         if (!dead) {
-          const f = list.find(c => c.id === courtId) ?? null;
           setCourt(f);
-          if (!f) setError('Không tìm thấy sân.');
         }
       })
-      .catch(e => { if (!dead) setError(e instanceof Error ? e.message : 'Lỗi tải sân.'); })
+      .catch(e => { if (!dead && !court) setError(e instanceof Error ? e.message : 'Lỗi tải sân.'); })
       .finally(() => { if (!dead) setLoading(false); });
     return () => { dead = true; };
-  }, [court, courtId]);
+  }, [courtId]);
 
   const gallery = useMemo(() => {
     const raw = (court?.images ?? []).filter(i => i?.trim());
@@ -106,7 +124,6 @@ const CourtDetailPage: React.FC = () => {
 
   const price = court?.price_per_hour ?? 0;
   const rating = Number.isFinite(court?.avg_rating) ? court!.avg_rating : 4.5;
-  const reviewCount = 1; // Mock
 
   // ── Loading / Error ─────────────────────────────────────────────────────────
   if (loading) return (
@@ -202,12 +219,12 @@ const CourtDetailPage: React.FC = () => {
                   <h3 className="font-bold text-white border-l-4 border-[#1D9E75] pl-3 text-lg leading-none">Thông tin sân</h3>
                   <div className="space-y-4 text-sm">
                      <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                        <span className="text-slate-400">Giờ mở cửa:</span>
-                        <span className="font-semibold text-white">{OPEN_HR}h - {CLOSE_HR}h</span>
+                        <span className="text-slate-400">Giờ hoạt động:</span>
+                        <span className="font-semibold text-white">{court.open_time || '06:00'} - {court.close_time || '22:00'}</span>
                      </div>
                      <div className="flex items-center justify-between border-b border-white/5 pb-2">
                         <span className="text-slate-400">Số sân thi đấu:</span>
-                        <span className="font-semibold text-white">{court.number_of_courts || 8} Sân</span>
+                        <span className="font-semibold text-white">{court.sub_courts?.length || court.number_of_courts || 0} Sân</span>
                      </div>
                      <div className="flex items-center justify-between border-b border-white/5 pb-2">
                         <span className="text-slate-400">Giá sân:</span>
@@ -320,25 +337,41 @@ const CourtDetailPage: React.FC = () => {
              </div>
 
              {/* Court Rows */}
-             {Array.from({ length: court.number_of_courts || 8 }).map((_, courtIdx) => (
-               <div key={courtIdx} className="flex border-b border-white/5 last:border-b-0">
-                  <div className="w-16 flex-shrink-0 flex items-center justify-center font-bold text-slate-300 text-sm border-r border-white/5 bg-[#141e2b]">
-                     <span className="w-2 h-4 bg-amber-400 rounded-sm mr-2"></span>
-                     0{courtIdx + 1}
-                  </div>
-                  {currentHours.map((hr, hrIdx) => {
-                     // Fake some bookings based on hour and court to make it look realistic
-                     const isBooked = booked.has(hr) && (courtIdx % 2 === hrIdx % 2);
-                     return (
-                       <div key={hr} className="flex-1 p-1.5 border-l border-white/5">
-                          <div className={`w-full h-10 rounded-md transition cursor-pointer hover:border-white/30 ${
-                             isBooked ? 'bg-slate-800 border-slate-700' : 'bg-transparent border border-white/10'
-                          }`}></div>
-                       </div>
-                     );
-                  })}
-               </div>
-             ))}
+             {(court.sub_courts && court.sub_courts.length > 0 ? court.sub_courts : Array.from({ length: court.number_of_courts || 8 })).map((subCourt: any, courtIdx) => {
+               const scId = subCourt?._id;
+               const scData = scId ? slotData[scId] : undefined;
+               
+               return (
+                 <div key={scId || courtIdx} className="flex border-b border-white/5 last:border-b-0">
+                    <div className="w-16 flex-shrink-0 flex items-center justify-center font-bold text-slate-300 text-sm border-r border-white/5 bg-[#141e2b] truncate px-1">
+                       <span className="w-2 h-4 bg-amber-400 rounded-sm mr-2 flex-shrink-0"></span>
+                       {subCourt?.name || `Sân ${courtIdx + 1}`}
+                    </div>
+                    {currentHours.map((hr) => {
+                       // Look up the 2 slots for this hour
+                       const startStr1 = `${hr.toString().padStart(2, '0')}:00`;
+                       const startStr2 = `${hr.toString().padStart(2, '0')}:30`;
+                       
+                       const slot1 = scData?.slots?.find(s => s.start === startStr1);
+                       const slot2 = scData?.slots?.find(s => s.start === startStr2);
+                       
+                       const getSlotColor = (status?: string) => {
+                         if (!status || status === 'available') return 'bg-transparent border border-white/10 hover:border-white/30';
+                         if (status === 'locked') return 'bg-slate-700 border-slate-600 hover:border-slate-500';
+                         if (status === 'booked') return 'bg-rose-500 border-rose-400 hover:border-rose-300';
+                         return 'bg-transparent border border-white/10';
+                       };
+
+                       return (
+                         <div key={hr} className="flex-1 p-1 flex gap-1 border-l border-white/5">
+                            <div className={`flex-1 h-10 rounded-md transition cursor-pointer ${getSlotColor(slot1?.status)}`} title={`${startStr1} - ${slot1?.status || 'available'}`}></div>
+                            <div className={`flex-1 h-10 rounded-md transition cursor-pointer ${getSlotColor(slot2?.status)}`} title={`${startStr2} - ${slot2?.status || 'available'}`}></div>
+                         </div>
+                       );
+                    })}
+                 </div>
+               );
+             })}
            </div>
 
         </div>
