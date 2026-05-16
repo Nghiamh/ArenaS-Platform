@@ -193,11 +193,11 @@ const SPORT_TO_API: Partial<Record<SportName, string>> = {
 };
 
 const SPORT_CHIPS: Array<{ value: SportName | 'all'; label: string; icon: string }> = [
-  { value: 'all',       label: 'Tất cả',       icon: '🏟️' },
-  { value: 'Pickleball', label: 'Sân pickleball', icon: '🏓' },
-  { value: 'Cầu Lông',  label: 'Sân cầu lông',  icon: '🏸' },
-  { value: 'Bóng Đá',   label: 'Sân bóng đá',   icon: '⚽' },
-  { value: 'Tennis',    label: 'Sân tennis',     icon: '🎾' },
+  { value: 'all',       label: 'Tất cả',       icon: '' },
+  { value: 'Pickleball', label: 'Sân pickleball', icon: '' },
+  { value: 'Cầu Lông',  label: 'Sân cầu lông',  icon: '' },
+  { value: 'Bóng Đá',   label: 'Sân bóng đá',   icon: '' },
+  { value: 'Tennis',    label: 'Sân tennis',     icon: '' },
 ];
 
 export const FindFieldPage: React.FC = () => {
