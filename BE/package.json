@@ -8,6 +8,8 @@
     "dev": "nodemon --watch src --ext ts,json --exec tsx src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
+    "seed:admin": "tsx src/seeds/createAdminSeed.ts",
+    "reset:admin": "tsx src/seeds/resetAdminSeed.ts",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix"
   },

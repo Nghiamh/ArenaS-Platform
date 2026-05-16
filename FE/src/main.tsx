@@ -15,6 +15,7 @@ import { OwnerRevenueScreen } from './pages/Owner/OwnerRevenueScreen';
 import { OwnerBookingScheduleScreen } from './pages/Owner/OwnerBookingScheduleScreen';
 import { OwnerSettingsScreen } from './pages/Owner/OwnerSettingsScreen';
 import { AdminDashboardPage } from './pages/Admin/AdminDashboardPage';
+import { AdminManageStadiumPage } from './pages/Admin/AdminManageStadiumPage';
 import { PriceListPage } from './pages/HomePage/PriceListPage';
 import CourtDetailPage from './pages/CourtDetailPage/CourtDetailPage';
 import './index.css';
@@ -46,6 +47,7 @@ function App() {
         <Route path="/owner/bookings" element={<OwnerBookingScheduleScreen />} />
         <Route path="/owner/settings" element={<OwnerSettingsScreen />} />
         <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+        <Route path="/admin/manage-stadiums" element={<AdminManageStadiumPage />} />
         <Route
           path="/profile"
           element={

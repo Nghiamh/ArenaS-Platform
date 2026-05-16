@@ -53,6 +53,8 @@ export const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState('');
 
+
+
 	useEffect(() => {
 		if (!open) {
 			onRouteChange(null);
@@ -79,20 +81,20 @@ export const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
 		const fetchRouteForMode = async (mode: TransportMode): Promise<RouteResult | null> => {
 			const response = await fetch(
 				`https://api.mapbox.com/directions/v5/mapbox/${mode}/` +
-					`${userLocation.longitude},${userLocation.latitude};` +
-					`${court.coordinates?.longitude},${court.coordinates?.latitude}` +
-					`?geometries=geojson&language=vi&access_token=${mapboxToken}`,
+				`${userLocation.longitude},${userLocation.latitude};` +
+				`${court.coordinates?.longitude},${court.coordinates?.latitude}` +
+				`?geometries=geojson&language=vi&access_token=${mapboxToken}`,
 				{ signal: controller.signal },
 			);
 
 			const data = (await response.json().catch(() => null)) as
 				| {
-						routes?: Array<{
-							distance: number;
-							duration: number;
-							geometry: { coordinates: number[][] };
-						}>;
-					}
+					routes?: Array<{
+						distance: number;
+						duration: number;
+						geometry: { coordinates: number[][] };
+					}>;
+				}
 				| null;
 
 			const route = data?.routes?.[0];
@@ -205,11 +207,10 @@ export const DirectionsPanel: React.FC<DirectionsPanelProps> = ({
 									type="button"
 									key={option.mode}
 									onClick={() => setTransportMode(option.mode)}
-									className={`flex flex-col items-start rounded-2xl border px-3 py-2 text-xs font-semibold transition hover:opacity-80 cursor-pointer ${
-										transportMode === option.mode
+									className={`flex flex-col items-start rounded-2xl border px-3 py-2 text-xs font-semibold transition hover:opacity-80 cursor-pointer ${transportMode === option.mode
 											? 'border-slate-900 bg-slate-900 text-white'
 											: 'border-slate-200 bg-white text-slate-600'
-									}`}
+										}`}
 								>
 									<p className="text-[11px] uppercase tracking-wide text-inherit">{option.name}</p>
 									{route ? (
