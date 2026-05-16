@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-import Court, { CourtStatus, ICourtCoordinates } from "../models/courtModel.js";
+import Court, { CourtStatus, ICourtCoordinates, ISubCourt, SubCourtType, SubCourtStatus } from "../models/courtModel.js";
 
 
 function normalizeOptionalText(value: unknown): string | undefined {
@@ -129,6 +129,57 @@ function parseCoordinates(value: unknown): ICourtCoordinates | undefined {
 	throw new Error("invalid_coordinates");
 }
 
+const VALID_SUB_COURT_TYPES: SubCourtType[] = ["football_5", "football_7", "other"];
+const VALID_SUB_COURT_STATUSES: SubCourtStatus[] = ["open", "closed"];
+
+function parseSubCourts(value: unknown): ISubCourt[] {
+	if (value === undefined || value === null) {
+		return [];
+	}
+
+	if (!Array.isArray(value)) {
+		throw new Error("invalid_sub_courts");
+	}
+
+	return value.map((item: unknown, idx: number) => {
+		if (typeof item !== "object" || item === null) {
+			throw new Error(`invalid_sub_courts[${idx}]`);
+		}
+
+		const { name, type, surface, price_per_hour, status } = item as Record<string, unknown>;
+
+		if (typeof name !== "string" || !name.trim()) {
+			throw new Error(`invalid_sub_courts[${idx}].name`);
+		}
+
+		if (!VALID_SUB_COURT_TYPES.includes(type as SubCourtType)) {
+			throw new Error(`invalid_sub_courts[${idx}].type`);
+		}
+
+		const parsedPrice = typeof price_per_hour === "number" ? price_per_hour : Number(price_per_hour);
+		if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+			throw new Error(`invalid_sub_courts[${idx}].price_per_hour`);
+		}
+
+		const parsedStatus: SubCourtStatus = VALID_SUB_COURT_STATUSES.includes(status as SubCourtStatus)
+			? (status as SubCourtStatus)
+			: "open";
+
+		const subCourt: ISubCourt = {
+			name: (name as string).trim(),
+			type: type as SubCourtType,
+			price_per_hour: parsedPrice,
+			status: parsedStatus,
+		};
+
+		if (typeof surface === "string" && surface.trim()) {
+			subCourt.surface = surface.trim();
+		}
+
+		return subCourt;
+	});
+}
+
 function toPublicCoordinates(coordinates?: ICourtCoordinates): { latitude: number; longitude: number } | null {
 	if (!coordinates) {
 		return null;
@@ -150,6 +201,8 @@ function buildCourtResponse(court: {
 	images: string[];
 	avg_rating: number;
 	status: CourtStatus;
+	number_of_courts?: number;
+	sub_courts?: ISubCourt[];
 	createdAt?: Date;
 	updatedAt?: Date;
 }) {
@@ -165,6 +218,8 @@ function buildCourtResponse(court: {
 		images: court.images,
 		avg_rating: court.avg_rating,
 		status: normalizeCourtStatus(court.status),
+		number_of_courts: court.number_of_courts ?? 0,
+		sub_courts: court.sub_courts ?? [],
 		createdAt: court.createdAt?.toISOString(),
 		updatedAt: court.updatedAt?.toISOString(),
 	};
@@ -182,6 +237,8 @@ type CourtAggregate = {
 	images: string[];
 	avg_rating: number;
 	status: CourtStatus;
+	number_of_courts?: number;
+	sub_courts?: ISubCourt[];
 	createdAt?: Date;
 	updatedAt?: Date;
 	distance_m?: number;
@@ -407,7 +464,7 @@ export async function createOwnerCourt(req: Request, res: Response): Promise<voi
 	try {
 		const user = req.user!;
 
-		const { name, sports, price_per_hour, location, coordinates, amenities, images, status } = req.body as {
+		const { name, sports, price_per_hour, location, coordinates, amenities, images, status, sub_courts } = req.body as {
 			name?: string;
 			sports?: unknown;
 			price_per_hour?: number | string;
@@ -416,6 +473,7 @@ export async function createOwnerCourt(req: Request, res: Response): Promise<voi
 			amenities?: unknown;
 			images?: unknown;
 			status?: CourtStatus;
+			sub_courts?: unknown;
 		};
 
 		const normalizedName = normalizeRequiredText(name, "name");
@@ -426,6 +484,7 @@ export async function createOwnerCourt(req: Request, res: Response): Promise<voi
 		const normalizedAmenities = amenities === undefined ? [] : normalizeTextArray(amenities, "amenities");
 		const normalizedImages = images === undefined ? [] : normalizeTextArray(images, "images");
 		const parsedStatus = parseStatus(status);
+		const parsedSubCourts = parseSubCourts(sub_courts);
 
 		const createdCourt = await Court.create({
 			owner_id: user._id,
@@ -438,6 +497,7 @@ export async function createOwnerCourt(req: Request, res: Response): Promise<voi
 			images: normalizedImages,
 			avg_rating: 0,
 			status: parsedStatus,
+			sub_courts: parsedSubCourts,
 		});
 
 		res.status(201).json({
@@ -493,7 +553,7 @@ export async function updateOwnerCourt(req: Request, res: Response): Promise<voi
 			return;
 		}
 
-		const { name, sports, price_per_hour, location, coordinates, amenities, images, status } = req.body as {
+		const { name, sports, price_per_hour, location, coordinates, amenities, images, status, sub_courts } = req.body as {
 			name?: string;
 			sports?: unknown;
 			price_per_hour?: number | string;
@@ -502,6 +562,7 @@ export async function updateOwnerCourt(req: Request, res: Response): Promise<voi
 			amenities?: unknown;
 			images?: unknown;
 			status?: CourtStatus;
+			sub_courts?: unknown;
 		};
 
 		let shouldSave = false;
@@ -574,6 +635,16 @@ export async function updateOwnerCourt(req: Request, res: Response): Promise<voi
 			const parsedStatus = parseStatus(status);
 			if (court.status !== parsedStatus) {
 				court.status = parsedStatus;
+				shouldSave = true;
+			}
+		}
+
+		if (sub_courts !== undefined) {
+			const parsedSubCourts = parseSubCourts(sub_courts);
+			const currentSubCourts = JSON.stringify(court.sub_courts ?? []);
+			const nextSubCourts = JSON.stringify(parsedSubCourts);
+			if (currentSubCourts !== nextSubCourts) {
+				court.sub_courts = parsedSubCourts;
 				shouldSave = true;
 			}
 		}

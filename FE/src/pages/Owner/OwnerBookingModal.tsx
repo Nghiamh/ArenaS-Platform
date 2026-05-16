@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { BookingTone } from './ownerBookingScheduleMockData';
+import { TimeSlotPicker } from '../../components/TimeSlotPicker';
 
 /* ── Types ── */
 export type ModalMode = 'add' | 'edit' | 'view';
@@ -308,35 +309,45 @@ export const OwnerBookingModal: React.FC<OwnerBookingModalProps> = ({
                 {isView ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderRadius: 12, border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.03)', padding: '10px 16px' }}>
                     <span style={{ fontSize: 20 }}>🕐</span>
-                    <span style={{ color: '#fff', fontSize: 15, fontWeight: 700 }}>{fmt(form.startHour)} – {fmt(form.endHour)}</span>
+                    <span style={{ color: '#fff', fontSize: 15, fontWeight: 700 }}>{fmt(Math.floor(form.startHour)).replace(':00', form.startHour % 1 === 0.5 ? ':30' : ':00')} – {fmt(Math.floor(form.endHour)).replace(':00', form.endHour % 1 === 0.5 ? ':30' : ':00')}</span>
                     <span style={{ marginLeft: 'auto', borderRadius: 20, background: 'rgba(59,130,246,0.2)', color: '#93c5fd', padding: '3px 10px', fontSize: 12, fontWeight: 700 }}>
                       {dur}h
                     </span>
                   </div>
                 ) : (
-                  <>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                      <div>
-                        <p style={{ marginBottom: 6, fontSize: 11, color: '#475569', fontWeight: 600 }}>Bắt đầu</p>
-                        <SelectEl value={form.startHour} onChange={e => set('startHour', Number(e.target.value))}>
-                          {HOURS.map(h => <option key={h} value={h}>{fmt(h)}</option>)}
-                        </SelectEl>
-                      </div>
-                      <div>
-                        <p style={{ marginBottom: 6, fontSize: 11, color: '#475569', fontWeight: 600 }}>Kết thúc</p>
-                        <SelectEl value={form.endHour} onChange={e => set('endHour', Number(e.target.value))}>
-                          {HOURS.filter(h => h > form.startHour).map(h => <option key={h} value={h}>{fmt(h)}</option>)}
-                        </SelectEl>
-                      </div>
-                    </div>
-                    <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      {dur > 0 ? (
-                        <span style={{ fontSize: 12, color: '#60a5fa', fontWeight: 600 }}>✓ Tổng {dur} giờ thuê sân</span>
-                      ) : (
-                        <span style={{ fontSize: 12, color: '#f87171', fontWeight: 600 }}>⚠ Giờ kết thúc phải sau giờ bắt đầu</span>
-                      )}
-                    </div>
-                  </>
+                  <div className="mt-2 rounded-xl bg-white/[0.02] p-1">
+                    <TimeSlotPicker 
+                      slots={(() => {
+                        const slots = [];
+                        for (let i = 7 * 60; i < 23 * 60; i += 30) {
+                          const h1 = Math.floor(i / 60).toString().padStart(2, '0');
+                          const m1 = (i % 60).toString().padStart(2, '0');
+                          const h2 = Math.floor((i + 30) / 60).toString().padStart(2, '0');
+                          const m2 = ((i + 30) % 60).toString().padStart(2, '0');
+                          
+                          // Mock slots already booked (for demo)
+                          const isBooked = (i === 10 * 60) || (i === 10 * 60 + 30) || (i === 17 * 60);
+
+                          slots.push({
+                            start: `${h1}:${m1}`,
+                            end: `${h2}:${m2}`,
+                            status: isBooked ? 'booked' as const : 'available' as const
+                          });
+                        }
+                        return slots;
+                      })()}
+                      onChange={(range) => {
+                        if (range) {
+                          const sH = Number(range.start_time.split(':')[0]) + Number(range.start_time.split(':')[1]) / 60;
+                          const eH = Number(range.end_time.split(':')[0]) + Number(range.end_time.split(':')[1]) / 60;
+                          setForm(prev => ({ ...prev, startHour: sH, endHour: eH }));
+                        } else {
+                          // Reset to invalid/default if cleared
+                          setForm(prev => ({ ...prev, startHour: 0, endHour: 0 }));
+                        }
+                      }}
+                    />
+                  </div>
                 )}
               </div>
 

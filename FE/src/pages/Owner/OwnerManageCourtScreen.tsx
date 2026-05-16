@@ -8,8 +8,22 @@ import {
   type OwnerCourt,
   type OwnerCourtPayload,
   type OwnerCourtStatus,
+  type SubCourt,
+  type SubCourtType,
+  type SubCourtStatus,
+  getCourtDashboard,
+  type CourtDashboard,
 } from '../../Axios/Axios';
 import { OwnerSidebar } from './OwnerSidebar';
+
+/** Local form representation of a sub-court — price kept as string for smooth input */
+type SubCourtFormItem = {
+  name: string;
+  type: SubCourtType;
+  surface?: string;
+  priceText: string;  // string to allow free typing, converted on save
+  status: SubCourtStatus;
+};
 
 type CourtFormState = {
   name: string;
@@ -21,7 +35,28 @@ type CourtFormState = {
   status: OwnerCourtStatus;
   latitude: string;
   longitude: string;
+  subCourts: SubCourtFormItem[];
 };
+
+const SUB_COURT_TYPE_LABELS: Record<SubCourtType, string> = {
+  football_5: 'Sân 5 người',
+  football_7: 'Sân 7 người',
+  other: 'Khác',
+};
+
+const SUB_COURT_TYPE_PLAYER_COUNT: Record<SubCourtType, string> = {
+  football_5: '5 Người',
+  football_7: '7 Người',
+  other: 'Khác',
+};
+
+const AVAILABLE_SUB_COURT_TYPES: Array<{ value: SubCourtType; label: string }> = [
+  { value: 'football_5', label: 'Sân 5 người' },
+  { value: 'football_7', label: 'Sân 7 người' },
+  { value: 'other', label: 'Khác' },
+];
+
+const SURFACE_OPTIONS = ['Cỏ Nhân Tạo', 'Cỏ Tự Nhiên', 'Sàn Gỗ', 'Xi Măng', 'Khác'];
 
 const defaultCourtImage = 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=1200&auto=format&fit=crop';
 
@@ -73,7 +108,7 @@ const modalCardVariant = {
 
 const createEmptyCourtForm = (): CourtFormState => ({
   name: '',
-  sportsText: 'Bóng đá 7 người',
+  sportsText: 'football',
   pricePerHour: '0',
   location: '',
   amenitiesText: '',
@@ -81,6 +116,7 @@ const createEmptyCourtForm = (): CourtFormState => ({
   status: 'available',
   latitude: '',
   longitude: '',
+  subCourts: [],
 });
 
 const toFormState = (court: OwnerCourt): CourtFormState => ({
@@ -93,6 +129,13 @@ const toFormState = (court: OwnerCourt): CourtFormState => ({
   status: court.status === 'open' ? 'available' : court.status,
   latitude: court.coordinates ? String(court.coordinates.latitude) : '',
   longitude: court.coordinates ? String(court.coordinates.longitude) : '',
+  subCourts: (court.sub_courts ?? []).map((sc) => ({
+    name: sc.name,
+    type: sc.type,
+    surface: sc.surface,
+    priceText: String(sc.price_per_hour),
+    status: sc.status,
+  })),
 });
 
 const parseList = (value: string) =>
@@ -178,8 +221,16 @@ const buildPayload = (form: CourtFormState): OwnerCourtPayload => {
     amenities,
     images: images.length ? images : [defaultCourtImage],
     status: form.status,
+    sub_courts: form.subCourts.map((sc) => ({
+      name: sc.name,
+      type: sc.type,
+      surface: sc.surface,
+      price_per_hour: Number(sc.priceText) || 0,
+      status: sc.status,
+    })),
   };
 };
+
 
 const StatusDot: React.FC<{ status: OwnerCourtStatus }> = ({ status }) => (
   <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold ${statusBadgeClass[status]}`}>
@@ -187,6 +238,185 @@ const StatusDot: React.FC<{ status: OwnerCourtStatus }> = ({ status }) => (
     {courtStatusLabel[status]}
   </span>
 );
+
+/** Collapsible sub-courts panel shown below the main card info */
+const SubCourtsPanel: React.FC<{
+  subCourts: SubCourt[];
+  dashboards?: Record<string, CourtDashboard>;
+  onEditCourt?: () => void;
+}> = ({ subCourts, dashboards = {}, onEditCourt }) => {
+  const [expanded, setExpanded] = useState(true);
+  if (!subCourts || subCourts.length === 0) return null;
+
+  const openCount = subCourts.filter((sc) => sc.status === 'open').length;
+
+  const fmtPrice = (p: number) => {
+    if (p === 0) return <span className="text-slate-500">—</span>;
+    if (p >= 1000) return <>{Math.round(p / 1000)}K<span className="text-xs font-normal text-slate-400">/h</span></>;
+    return <>{p}<span className="text-xs font-normal text-slate-400">/h</span></>;
+  };
+
+  return (
+    <div className="border-t border-white/[0.07] bg-[#060f28]/60">
+      {/* Panel header */}
+      <div className="flex items-center justify-between px-5 py-3 lg:px-6">
+        <div className="flex items-center gap-3">
+          {/* Layer icon */}
+          <svg className="h-4 w-4 text-blue-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+          </svg>
+          <span className="text-sm font-bold text-white">Sân nhỏ</span>
+          <span className="rounded-full bg-blue-500/20 px-2.5 py-0.5 text-xs font-bold text-blue-300 ring-1 ring-blue-400/30">
+            {openCount}/{subCourts.length} mở
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {onEditCourt && (
+            <button
+              type="button"
+              onClick={onEditCourt}
+              className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/15 px-3 py-1.5 text-xs font-bold text-blue-300 ring-1 ring-blue-400/30 transition hover:bg-blue-500/25"
+            >
+              <span className="text-sm leading-none">＋</span> Thêm sân nhỏ
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-white"
+            aria-label={expanded ? 'Thu gọn' : 'Mở rộng'}
+          >
+            <svg
+              className={`h-4 w-4 transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`}
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+            >
+              <path d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Collapsible table */}
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            key="sub-courts-table"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            style={{ overflow: 'hidden' }}
+          >
+            {/* Column headers */}
+            <div className="grid grid-cols-[32px_1fr_90px_110px_90px_100px_100px_68px] gap-x-3 border-t border-white/[0.05] px-5 py-2 lg:px-6">
+              <div />
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Tên sân</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Số người</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Mặt sân</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Giá/giờ</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Slot trống</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Trạng thái</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 text-center">Thao tác</p>
+            </div>
+
+            {/* Rows */}
+            {subCourts.map((sc, i) => {
+              const isCourtOpen = sc.status === 'open';
+              const dashboard = sc._id ? dashboards[sc._id] : undefined;
+              
+              // Use real dashboard data if available, fallback to defaults
+              const totalSlots = dashboard ? dashboard.total_slots : 32;
+              const freeSlots = dashboard ? dashboard.available_slots : (isCourtOpen ? 32 : 0);
+              const bookedSlots = dashboard ? dashboard.booked_slots : 0;
+              const fillPct = totalSlots > 0 ? Math.round((bookedSlots / totalSlots) * 100) : 0;
+
+              return (
+                <div
+                  key={sc._id || i}
+                  className="grid grid-cols-[32px_1fr_90px_110px_90px_100px_100px_68px] gap-x-3 items-center border-t border-white/[0.04] px-5 py-3 transition hover:bg-white/[0.015] lg:px-6"
+                >
+                  {/* Index badge */}
+                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-600/70 text-xs font-black text-white">
+                    {i + 1}
+                  </div>
+
+                  {/* Name */}
+                  <p className="text-sm font-bold text-white truncate">{sc.name}</p>
+
+                  {/* Player count badge */}
+                  <span className="inline-flex items-center rounded-full bg-blue-500/15 px-2.5 py-1 text-xs font-bold text-blue-300 ring-1 ring-blue-400/25 w-fit">
+                    {SUB_COURT_TYPE_PLAYER_COUNT[sc.type]}
+                  </span>
+
+                  {/* Surface */}
+                  <p className="text-sm text-slate-300 truncate">{sc.surface ?? '—'}</p>
+
+                  {/* Price */}
+                  <p className="text-sm font-bold text-white">
+                    {fmtPrice(sc.price_per_hour)}
+                  </p>
+
+                  {/* Available Slots */}
+                  <div className="flex flex-col justify-center gap-1.5 pr-2">
+                    <span className={`text-sm font-bold ${
+                      !isCourtOpen ? 'text-slate-500' :
+                      freeSlots === 0 ? 'text-rose-400' : 
+                      freeSlots <= 8 ? 'text-amber-400' : // <= 4 hours
+                      'text-emerald-400'
+                    }`}>
+                      {!isCourtOpen ? '0h' : `${freeSlots / 2}h`}
+                      <span className="text-xs font-normal text-slate-500"> / {totalSlots / 2}h</span>
+                    </span>
+                    <div className="h-1.5 w-full rounded-full bg-white/[0.08] overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          !isCourtOpen ? 'bg-slate-500' :
+                          fillPct >= 90 ? 'bg-rose-400' : 
+                          fillPct >= 60 ? 'bg-amber-400' : 
+                          'bg-emerald-400'
+                        }`}
+                        style={{ width: `${!isCourtOpen ? 100 : fillPct}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Status */}
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold w-fit ${
+                      isCourtOpen
+                        ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/30'
+                        : 'bg-rose-500/20 text-rose-300 ring-1 ring-rose-400/30'
+                    }`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${isCourtOpen ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+                    {isCourtOpen ? 'Đang mở' : 'Tạm đóng'}
+                  </span>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-1.5 justify-center">
+                    {onEditCourt && (
+                      <motion.button
+                        type="button"
+                        whileHover={{ scale: 1.08 }}
+                        whileTap={{ scale: 0.93 }}
+                        onClick={onEditCourt}
+                        className="flex h-7 w-7 items-center justify-center rounded-full border border-blue-400/30 bg-blue-500/10 text-blue-300 text-xs transition hover:bg-blue-500/20"
+                        aria-label="Chỉnh sửa sân nhỏ"
+                        title="Chỉnh sửa"
+                      >
+                        ✎
+                      </motion.button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
 
 const CourtCard: React.FC<{
   court: OwnerCourt;
@@ -198,11 +428,33 @@ const CourtCard: React.FC<{
   const primaryImage = court.images[0] ?? defaultCourtImage;
   const isOpen = court.status === 'available' || court.status === 'open';
 
+  const [dashboards, setDashboards] = useState<Record<string, CourtDashboard>>({});
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchDashboards = async () => {
+      try {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const data = await getCourtDashboard(court.id, todayStr);
+        if (isMounted) {
+          const map: Record<string, CourtDashboard> = {};
+          data.forEach(d => { map[d.sub_court_id] = d; });
+          setDashboards(map);
+        }
+      } catch (error) {
+        console.error('Failed to fetch dashboard:', error);
+      }
+    };
+    fetchDashboards();
+    return () => { isMounted = false; };
+  }, [court.id]);
+
   return (
     <motion.article
       variants={itemVariants}
       className="overflow-hidden rounded-3xl border border-white/10 bg-[#081734]/85 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.75)]"
     >
+      {/* Main info section */}
       <div className="grid gap-0 lg:grid-cols-[230px_minmax(0,1fr)]">
         <div className="relative min-h-[166px] overflow-hidden bg-[#0a1730]">
           <CourtImage src={primaryImage} alt={court.name} />
@@ -222,8 +474,8 @@ const CourtCard: React.FC<{
         <div className="p-5 lg:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h3 className="text-4xl font-black tracking-tight text-white sm:text-3xl">{court.name}</h3>
-              <p className="mt-2 text-sm text-slate-400">📍 {court.location}</p>
+              <h3 className="text-3xl font-black tracking-tight text-white">{court.name}</h3>
+              <p className="mt-1.5 text-sm text-slate-400">📍 {court.location}</p>
               <div className="mt-3 flex flex-wrap items-center gap-4 text-sm">
                 <p className="font-bold text-amber-300">★ {court.avg_rating.toFixed(1)}</p>
                 <p className="font-semibold text-slate-300">{formatCurrency(court.price_per_hour)} đ/giờ</p>
@@ -316,9 +568,13 @@ const CourtCard: React.FC<{
           </div>
         </div>
       </div>
+
+      {/* Sub-courts collapsible panel */}
+      <SubCourtsPanel subCourts={court.sub_courts ?? []} dashboards={dashboards} onEditCourt={() => onEditCourt(court)} />
     </motion.article>
   );
 };
+
 
 export const OwnerManageCourtScreen: React.FC = () => {
   const [searchValue, setSearchValue] = useState('');
@@ -449,6 +705,7 @@ export const OwnerManageCourtScreen: React.FC = () => {
         amenities: court.amenities,
         images: court.images,
         status: nextStatus,
+        sub_courts: court.sub_courts ?? [],
       });
       await refreshCourts();
     } catch (error) {
@@ -574,7 +831,7 @@ export const OwnerManageCourtScreen: React.FC = () => {
               animate="visible"
               exit="exit"
               variants={modalCardVariant}
-              className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#081734] p-3 shadow-[0_24px_48px_-24px_rgba(0,0,0,0.8)] max-h-[86vh] overflow-y-auto no-scrollbar"
+              className="w-full max-w-2xl rounded-2xl border border-white/10 bg-[#081734] p-3 shadow-[0_24px_48px_-24px_rgba(0,0,0,0.8)] max-h-[86vh] overflow-y-auto no-scrollbar"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -676,16 +933,164 @@ export const OwnerManageCourtScreen: React.FC = () => {
                   <select
                     value={courtForm.status}
                     onChange={(event) => setCourtForm((prev) => ({ ...prev, status: event.target.value as OwnerCourtStatus }))}
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none transition focus:border-cyan-300/50"
+                    className="w-full rounded-xl border border-white/10 px-3 py-2 text-sm text-white outline-none transition focus:border-cyan-300/50"
+                    style={{ background: '#0f2044', color: '#fff' }}
                   >
                     {statusOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
+                      <option key={option.value} value={option.value} style={{ background: '#0f2044', color: '#fff' }}>
                         {option.label}
                       </option>
                     ))}
                   </select>
                 </label>
               </div>
+
+              {/* Sub Courts Manager */}
+              <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-slate-300">Sân nhỏ</p>
+                    {courtForm.subCourts.length > 0 && (
+                      <span className="rounded-full bg-blue-500/20 px-2 py-0.5 text-xs font-bold text-blue-300">
+                        {courtForm.subCourts.length} sân
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCourtForm((prev) => ({
+                        ...prev,
+                        subCourts: [
+                          ...prev.subCourts,
+                          { name: `Sân ${prev.subCourts.length + 1}`, type: 'football_5', priceText: '', status: 'open' },
+                        ],
+                      }))
+                    }
+                    className="inline-flex items-center gap-1 rounded-full bg-cyan-500/15 px-3 py-1 text-xs font-bold text-cyan-300 ring-1 ring-cyan-400/30 transition hover:bg-cyan-500/25"
+                  >
+                    <span className="text-base leading-none">＋</span> Thêm sân nhỏ
+                  </button>
+                </div>
+
+                {courtForm.subCourts.length === 0 ? (
+                  <p className="text-xs text-slate-500 italic">Chưa có sân nhỏ nào. Nhấn "Thêm sân nhỏ" để thêm.</p>
+                ) : (
+                  <div className="overflow-x-auto pb-2">
+                    <div className="space-y-2 min-w-[580px]">
+                      {/* Column headers */}
+                    <div className="grid grid-cols-[80px_1fr_90px_80px_70px_32px] gap-1.5 px-1">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600">Tên sân</p>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600">Loại</p>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600">Mặt sân</p>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600">Giá/h (đ)</p>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600">Trạng thái</p>
+                      <p />
+                    </div>
+                    {courtForm.subCourts.map((sc, idx) => (
+                      <div key={idx} className="grid grid-cols-[80px_1fr_90px_80px_70px_32px] gap-1.5 items-center">
+                        {/* Name */}
+                        <input
+                          value={sc.name}
+                          onChange={(e) =>
+                            setCourtForm((prev) => {
+                              const next = [...prev.subCourts];
+                              next[idx] = { ...next[idx], name: e.target.value };
+                              return { ...prev, subCourts: next };
+                            })
+                          }
+                          className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white outline-none focus:border-cyan-300/50"
+                          placeholder="Sân A"
+                        />
+                        {/* Type */}
+                        <select
+                          value={sc.type}
+                          onChange={(e) =>
+                            setCourtForm((prev) => {
+                              const next = [...prev.subCourts];
+                              next[idx] = { ...next[idx], type: e.target.value as SubCourtType };
+                              return { ...prev, subCourts: next };
+                            })
+                          }
+                          className="rounded-lg border border-white/10 px-2 py-1.5 text-xs outline-none focus:border-cyan-300/50"
+                          style={{ background: '#0d1e3d', color: '#e2e8f0' }}
+                        >
+                          {AVAILABLE_SUB_COURT_TYPES.map((opt) => (
+                            <option key={opt.value} value={opt.value} style={{ background: '#0d1e3d', color: '#e2e8f0' }}>{opt.label}</option>
+                          ))}
+                        </select>
+                        {/* Surface */}
+                        <select
+                          value={sc.surface ?? ''}
+                          onChange={(e) =>
+                            setCourtForm((prev) => {
+                              const next = [...prev.subCourts];
+                              next[idx] = { ...next[idx], surface: e.target.value || undefined };
+                              return { ...prev, subCourts: next };
+                            })
+                          }
+                          className="rounded-lg border border-white/10 px-2 py-1.5 text-xs outline-none focus:border-cyan-300/50"
+                          style={{ background: '#0d1e3d', color: '#e2e8f0' }}
+                        >
+                          <option value="" style={{ background: '#0d1e3d', color: '#e2e8f0' }}>-- Chọn --</option>
+                          {SURFACE_OPTIONS.map((s) => (
+                            <option key={s} value={s} style={{ background: '#0d1e3d', color: '#e2e8f0' }}>{s}</option>
+                          ))}
+                        </select>
+                        {/* Price */}
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={sc.priceText}
+                          onChange={(e) =>
+                            setCourtForm((prev) => {
+                              const next = [...prev.subCourts];
+                              next[idx] = { ...next[idx], priceText: e.target.value };
+                              return { ...prev, subCourts: next };
+                            })
+                          }
+                          className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white outline-none focus:border-cyan-300/50 text-center"
+                          placeholder="VD: 450000"
+                        />
+                        {/* Status toggle */}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCourtForm((prev) => {
+                              const next = [...prev.subCourts];
+                              next[idx] = { ...next[idx], status: next[idx].status === 'open' ? 'closed' : 'open' };
+                              return { ...prev, subCourts: next };
+                            })
+                          }
+                          className={`rounded-lg px-1.5 py-1.5 text-[10px] font-bold transition ${
+                            sc.status === 'open'
+                              ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/30'
+                              : 'bg-rose-500/20 text-rose-300 ring-1 ring-rose-400/30'
+                          }`}
+                        >
+                          {sc.status === 'open' ? 'Mở' : 'Đóng'}
+                        </button>
+                        {/* Delete */}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCourtForm((prev) => ({
+                              ...prev,
+                              subCourts: prev.subCourts.filter((_, i) => i !== idx),
+                            }))
+                          }
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-rose-400/30 bg-rose-500/10 text-rose-300 text-xs hover:bg-rose-500/20 transition"
+                          aria-label="Xóa sân nhỏ"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
 
               <p className="mt-4 text-sm text-slate-400">Các danh sách như môn thể thao, tiện ích và ảnh nhập bằng dấu phẩy.</p>
               {actionMessage ? <div className="mt-4 text-sm text-rose-300">{actionMessage}</div> : null}

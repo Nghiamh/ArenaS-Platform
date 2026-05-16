@@ -302,6 +302,19 @@ export type OwnerCourtCoordinates = {
 	longitude: number;
 };
 
+export type SubCourtType = 'football_5' | 'football_7' | 'other';
+
+export type SubCourtStatus = 'open' | 'closed';
+
+export type SubCourt = {
+	_id?: string;
+	name: string;
+	type: SubCourtType;
+	surface?: string;
+	price_per_hour: number;
+	status: SubCourtStatus;
+};
+
 export type OwnerCourt = {
 	id: string;
 	owner_id: string;
@@ -315,6 +328,7 @@ export type OwnerCourt = {
 	avg_rating: number;
 	status: OwnerCourtStatus;
 	number_of_courts: number;
+	sub_courts: SubCourt[];
 	createdAt?: string;
 	updatedAt?: string;
 };
@@ -328,6 +342,7 @@ export type OwnerCourtPayload = {
 	amenities?: string[];
 	images?: string[];
 	status?: OwnerCourtStatus;
+	sub_courts?: SubCourt[];
 };
 
 export type PublicCourt = OwnerCourt;
@@ -418,6 +433,76 @@ export async function deleteOwnerCourt(courtId: string): Promise<BasicMessageRes
 			headers: withAuthHeaders(),
 		});
 
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+// ---------------------------------------------------------------------------
+// COURT DASHBOARD / STATS
+// ---------------------------------------------------------------------------
+
+export type CourtDashboard = {
+	_id: string;
+	court_id: string;
+	sub_court_id: string;
+	date: string;
+	total_slots: number;
+	booked_slots: number;
+	available_slots: number;
+	blocked_slots: number;
+	total_bookings: number;
+	revenue: number;
+	last_updated: string;
+};
+
+// Booking APIs
+export type CourtSlotStatus = 'available' | 'booked' | 'locked';
+
+export type CourtSlotDetail = {
+	start: string;
+	end: string;
+	status: CourtSlotStatus;
+	booking_id?: string;
+};
+
+export type CourtSlotData = {
+	_id: string;
+	court_id: string;
+	sub_court_id: string;
+	date: string;
+	slots: CourtSlotDetail[];
+};
+
+export async function getCourtSlots(courtId: string, date: string): Promise<CourtSlotData[]> {
+	try {
+		const { data } = await axiosClient.get<CourtSlotData[]>(`/bookings/slots/${courtId}`, {
+			params: { date },
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function getCourtDashboard(courtId: string, date?: string): Promise<CourtDashboard[]> {
+	try {
+		const { data } = await axiosClient.get<CourtDashboard[]>(`/dashboard/${courtId}`, {
+			headers: withAuthHeaders(),
+			params: { date },
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function seedCourtDashboardData(courtId: string, payload?: Partial<CourtDashboard>): Promise<{ message: string, dashboard: CourtDashboard }> {
+	try {
+		const { data } = await axiosClient.post<{ message: string, dashboard: CourtDashboard }>(`/dashboard/${courtId}/seed`, payload, {
+			headers: withAuthHeaders(),
+		});
 		return data;
 	} catch (error: unknown) {
 		throw new Error(toErrorMessage(error));
