@@ -129,7 +129,7 @@ function parseCoordinates(value: unknown): ICourtCoordinates | undefined {
 	throw new Error("invalid_coordinates");
 }
 
-const VALID_SUB_COURT_TYPES: SubCourtType[] = ["football_5", "football_7", "other"];
+const VALID_SUB_COURT_TYPES = ["football_5", "football_7", "badminton", "tennis", "pickleball", "other"];
 const VALID_SUB_COURT_STATUSES: SubCourtStatus[] = ["open", "closed"];
 
 function parseSubCourts(value: unknown): ISubCourt[] {
@@ -199,6 +199,8 @@ function buildCourtResponse(court: {
 	coordinates?: ICourtCoordinates;
 	amenities: string[];
 	images: string[];
+	open_time?: string;
+	close_time?: string;
 	avg_rating: number;
 	status: CourtStatus;
 	number_of_courts?: number;
@@ -216,6 +218,8 @@ function buildCourtResponse(court: {
 		coordinates: toPublicCoordinates(court.coordinates),
 		amenities: court.amenities,
 		images: court.images,
+		open_time: court.open_time,
+		close_time: court.close_time,
 		avg_rating: court.avg_rating,
 		status: normalizeCourtStatus(court.status),
 		number_of_courts: court.number_of_courts ?? 0,
@@ -235,6 +239,8 @@ type CourtAggregate = {
 	coordinates?: ICourtCoordinates;
 	amenities: string[];
 	images: string[];
+	open_time?: string;
+	close_time?: string;
 	avg_rating: number;
 	status: CourtStatus;
 	number_of_courts?: number;
@@ -281,6 +287,34 @@ export async function getPublicCourts(req: Request, res: Response): Promise<void
 		const errorMessage = error instanceof Error ? error.message : "unknown error";
 		res.status(500).json({
 			message: "failed to load courts",
+			error: errorMessage,
+		});
+	}
+}
+
+export async function getPublicCourtById(req: Request, res: Response): Promise<void> {
+	try {
+		const { courtId } = req.params as { courtId?: string };
+
+		if (!courtId) {
+			res.status(400).json({ message: "courtId is required" });
+			return;
+		}
+
+		const court = await Court.findById(courtId);
+		if (!court || court.status === "closed") {
+			res.status(404).json({ message: "court not found" });
+			return;
+		}
+
+		res.status(200).json({
+			message: "court loaded successfully",
+			court: buildCourtResponse(court),
+		});
+	} catch (error: unknown) {
+		const errorMessage = getCourtIdErrorMessage(error);
+		res.status(errorMessage === "invalid_court_id" ? 400 : 500).json({
+			message: errorMessage === "invalid_court_id" ? "invalid court id" : "failed to load court",
 			error: errorMessage,
 		});
 	}
@@ -464,7 +498,7 @@ export async function createOwnerCourt(req: Request, res: Response): Promise<voi
 	try {
 		const user = req.user!;
 
-		const { name, sports, price_per_hour, location, coordinates, amenities, images, status, sub_courts } = req.body as {
+		const { name, sports, price_per_hour, location, coordinates, amenities, images, open_time, close_time, status, sub_courts } = req.body as {
 			name?: string;
 			sports?: unknown;
 			price_per_hour?: number | string;
@@ -472,6 +506,8 @@ export async function createOwnerCourt(req: Request, res: Response): Promise<voi
 			coordinates?: unknown;
 			amenities?: unknown;
 			images?: unknown;
+			open_time?: string;
+			close_time?: string;
 			status?: CourtStatus;
 			sub_courts?: unknown;
 		};
@@ -483,6 +519,8 @@ export async function createOwnerCourt(req: Request, res: Response): Promise<voi
 		const parsedCoordinates = parseCoordinates(coordinates);
 		const normalizedAmenities = amenities === undefined ? [] : normalizeTextArray(amenities, "amenities");
 		const normalizedImages = images === undefined ? [] : normalizeTextArray(images, "images");
+		const normalizedOpenTime = open_time ? open_time.trim() : "06:00";
+		const normalizedCloseTime = close_time ? close_time.trim() : "22:00";
 		const parsedStatus = parseStatus(status);
 		const parsedSubCourts = parseSubCourts(sub_courts);
 
@@ -495,8 +533,11 @@ export async function createOwnerCourt(req: Request, res: Response): Promise<voi
 			coordinates: parsedCoordinates,
 			amenities: normalizedAmenities,
 			images: normalizedImages,
+			open_time: normalizedOpenTime,
+			close_time: normalizedCloseTime,
 			avg_rating: 0,
 			status: parsedStatus,
+			number_of_courts: parsedSubCourts.length,
 			sub_courts: parsedSubCourts,
 		});
 
@@ -553,7 +594,7 @@ export async function updateOwnerCourt(req: Request, res: Response): Promise<voi
 			return;
 		}
 
-		const { name, sports, price_per_hour, location, coordinates, amenities, images, status, sub_courts } = req.body as {
+		const { name, sports, price_per_hour, location, coordinates, amenities, images, open_time, close_time, status, sub_courts } = req.body as {
 			name?: string;
 			sports?: unknown;
 			price_per_hour?: number | string;
@@ -561,6 +602,8 @@ export async function updateOwnerCourt(req: Request, res: Response): Promise<voi
 			coordinates?: unknown;
 			amenities?: unknown;
 			images?: unknown;
+			open_time?: string;
+			close_time?: string;
 			status?: CourtStatus;
 			sub_courts?: unknown;
 		};
@@ -617,6 +660,22 @@ export async function updateOwnerCourt(req: Request, res: Response): Promise<voi
 			const nextAmenities = JSON.stringify(normalizedAmenities);
 			if (currentAmenities !== nextAmenities) {
 				court.amenities = normalizedAmenities;
+				shouldSave = true;
+			}
+		}
+
+		if (open_time !== undefined) {
+			const normalizedOpenTime = open_time.trim();
+			if (court.open_time !== normalizedOpenTime) {
+				court.open_time = normalizedOpenTime;
+				shouldSave = true;
+			}
+		}
+
+		if (close_time !== undefined) {
+			const normalizedCloseTime = close_time.trim();
+			if (court.close_time !== normalizedCloseTime) {
+				court.close_time = normalizedCloseTime;
 				shouldSave = true;
 			}
 		}

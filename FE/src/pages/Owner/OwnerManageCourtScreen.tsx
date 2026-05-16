@@ -31,28 +31,34 @@ type CourtFormState = {
   pricePerHour: string;
   location: string;
   amenitiesText: string;
-  imagesText: string;
+  image1: string;
+  image2: string;
+  image3: string;
+  openTime: string;
+  closeTime: string;
   status: OwnerCourtStatus;
   latitude: string;
   longitude: string;
   subCourts: SubCourtFormItem[];
 };
 
-const SUB_COURT_TYPE_LABELS: Record<SubCourtType, string> = {
-  football_5: 'Sân 5 người',
-  football_7: 'Sân 7 người',
-  other: 'Khác',
-};
+
 
 const SUB_COURT_TYPE_PLAYER_COUNT: Record<SubCourtType, string> = {
   football_5: '5 Người',
   football_7: '7 Người',
+  badminton: 'Cầu lông',
+  tennis: 'Tennis',
+  pickleball: 'Pickleball',
   other: 'Khác',
 };
 
 const AVAILABLE_SUB_COURT_TYPES: Array<{ value: SubCourtType; label: string }> = [
-  { value: 'football_5', label: 'Sân 5 người' },
-  { value: 'football_7', label: 'Sân 7 người' },
+  { value: 'football_5', label: 'Bóng đá 5 người' },
+  { value: 'football_7', label: 'Bóng đá 7 người' },
+  { value: 'badminton', label: 'Cầu lông' },
+  { value: 'tennis', label: 'Tennis' },
+  { value: 'pickleball', label: 'Pickleball' },
   { value: 'other', label: 'Khác' },
 ];
 
@@ -100,6 +106,8 @@ const modalBackdropVariant = {
   exit: { opacity: 0 },
 };
 
+
+
 const modalCardVariant = {
   hidden: { opacity: 0, y: 24, scale: 0.98 },
   visible: { opacity: 1, y: 0, scale: 1 },
@@ -112,7 +120,11 @@ const createEmptyCourtForm = (): CourtFormState => ({
   pricePerHour: '0',
   location: '',
   amenitiesText: '',
-  imagesText: defaultCourtImage,
+  image1: defaultCourtImage,
+  image2: '',
+  image3: '',
+  openTime: '06:00',
+  closeTime: '22:00',
   status: 'available',
   latitude: '',
   longitude: '',
@@ -125,7 +137,11 @@ const toFormState = (court: OwnerCourt): CourtFormState => ({
   pricePerHour: String(court.price_per_hour),
   location: court.location,
   amenitiesText: court.amenities.join(', '),
-  imagesText: court.images.join(', '),
+  image1: court.images[0] || '',
+  image2: court.images[1] || '',
+  image3: court.images[2] || '',
+  openTime: court.open_time || '06:00',
+  closeTime: court.close_time || '22:00',
   status: court.status === 'open' ? 'available' : court.status,
   latitude: court.coordinates ? String(court.coordinates.latitude) : '',
   longitude: court.coordinates ? String(court.coordinates.longitude) : '',
@@ -138,14 +154,16 @@ const toFormState = (court: OwnerCourt): CourtFormState => ({
   })),
 });
 
-const parseList = (value: string) =>
-  value
+const parseList = (text: string): string[] =>
+  text
     .split(',')
     .map((item) => item.trim())
-    .filter(Boolean);
+    .filter((item) => item.length > 0);
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
     maximumFractionDigits: 0,
   }).format(value);
 
@@ -173,7 +191,7 @@ const buildPayload = (form: CourtFormState): OwnerCourtPayload => {
   const sports = parseList(form.sportsText);
   const pricePerHour = Number(form.pricePerHour);
   const amenities = parseList(form.amenitiesText);
-  const images = parseList(form.imagesText);
+  const images = [form.image1, form.image2, form.image3].filter(img => img.trim().length > 0);
   const hasLatitude = form.latitude.trim().length > 0;
   const hasLongitude = form.longitude.trim().length > 0;
 
@@ -220,6 +238,8 @@ const buildPayload = (form: CourtFormState): OwnerCourtPayload => {
     coordinates,
     amenities,
     images: images.length ? images : [defaultCourtImage],
+    open_time: form.openTime || "06:00",
+    close_time: form.closeTime || "22:00",
     status: form.status,
     sub_courts: form.subCourts.map((sc) => ({
       name: sc.name,
@@ -898,13 +918,54 @@ export const OwnerManageCourtScreen: React.FC = () => {
                   />
                 </label>
 
+                <div className="md:col-span-2 grid grid-cols-2 gap-3">
+                  <label className="space-y-1">
+                    <span className="text-sm font-semibold text-slate-300">Giờ mở cửa</span>
+                    <input
+                      type="time"
+                      value={courtForm.openTime}
+                      onChange={(event) => setCourtForm((prev) => ({ ...prev, openTime: event.target.value }))}
+                      className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-300/50"
+                    />
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-sm font-semibold text-slate-300">Giờ đóng cửa</span>
+                    <input
+                      type="time"
+                      value={courtForm.closeTime}
+                      onChange={(event) => setCourtForm((prev) => ({ ...prev, closeTime: event.target.value }))}
+                      className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-300/50"
+                    />
+                  </label>
+                </div>
+
                 <label className="space-y-1 md:col-span-2">
-                  <span className="text-sm font-semibold text-slate-300">Ảnh</span>
+                  <span className="text-sm font-semibold text-slate-300">Link Ảnh 1 (Ảnh chính)</span>
                   <input
-                    value={courtForm.imagesText}
-                    onChange={(event) => setCourtForm((prev) => ({ ...prev, imagesText: event.target.value }))}
+                    value={courtForm.image1}
+                    onChange={(event) => setCourtForm((prev) => ({ ...prev, image1: event.target.value }))}
                     className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-300/50"
-                    placeholder="URL ảnh, URL ảnh khác"
+                    placeholder="URL ảnh 1"
+                  />
+                </label>
+                
+                <label className="space-y-1 md:col-span-2">
+                  <span className="text-sm font-semibold text-slate-300">Link Ảnh 2</span>
+                  <input
+                    value={courtForm.image2}
+                    onChange={(event) => setCourtForm((prev) => ({ ...prev, image2: event.target.value }))}
+                    className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-300/50"
+                    placeholder="URL ảnh 2"
+                  />
+                </label>
+                
+                <label className="space-y-1 md:col-span-2">
+                  <span className="text-sm font-semibold text-slate-300">Link Ảnh 3</span>
+                  <input
+                    value={courtForm.image3}
+                    onChange={(event) => setCourtForm((prev) => ({ ...prev, image3: event.target.value }))}
+                    className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-300/50"
+                    placeholder="URL ảnh 3"
                   />
                 </label>
 

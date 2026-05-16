@@ -302,7 +302,7 @@ export type OwnerCourtCoordinates = {
 	longitude: number;
 };
 
-export type SubCourtType = 'football_5' | 'football_7' | 'other';
+export type SubCourtType = 'football_5' | 'football_7' | 'badminton' | 'tennis' | 'pickleball' | 'other';
 
 export type SubCourtStatus = 'open' | 'closed';
 
@@ -317,14 +317,18 @@ export type SubCourt = {
 
 export type OwnerCourt = {
 	id: string;
-	owner_id: string;
 	name: string;
 	sports: string[];
 	price_per_hour: number;
 	location: string;
-	coordinates: OwnerCourtCoordinates | null;
+	coordinates?: {
+		latitude: number;
+		longitude: number;
+	};
 	amenities: string[];
 	images: string[];
+	open_time?: string;
+	close_time?: string;
 	avg_rating: number;
 	status: OwnerCourtStatus;
 	number_of_courts: number;
@@ -338,11 +342,22 @@ export type OwnerCourtPayload = {
 	sports: string[];
 	price_per_hour: number;
 	location: string;
-	coordinates?: OwnerCourtCoordinates;
-	amenities?: string[];
-	images?: string[];
-	status?: OwnerCourtStatus;
-	sub_courts?: SubCourt[];
+	coordinates?: {
+		latitude: number;
+		longitude: number;
+	};
+	amenities: string[];
+	images: string[];
+	open_time?: string;
+	close_time?: string;
+	status: OwnerCourtStatus;
+	sub_courts: Array<{
+		name: string;
+		type: SubCourtType;
+		surface?: string;
+		price_per_hour: number;
+		status: SubCourtStatus;
+	}>;
 };
 
 export type PublicCourt = OwnerCourt;
@@ -386,6 +401,15 @@ export async function getPublicCourts(params?: { sport?: string }): Promise<Publ
 		});
 
 		return data.courts;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function getPublicCourtById(courtId: string): Promise<PublicCourt> {
+	try {
+		const { data } = await axiosClient.get<{ message: string; court: PublicCourt }>(`/courts/public/${courtId}`);
+		return data.court;
 	} catch (error: unknown) {
 		throw new Error(toErrorMessage(error));
 	}

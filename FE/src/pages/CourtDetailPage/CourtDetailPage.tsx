@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { getPublicCourts, getCourtSlots, type PublicCourt, type CourtSlotData } from '../../Axios/Axios';
+import { getPublicCourtById, getCourtSlots, type PublicCourt, type CourtSlotData } from '../../Axios/Axios';
 
 type LocationState = { court?: PublicCourt };
 
@@ -15,15 +15,7 @@ const EXTRA_IMGS = [
 
 const fmt = (v: number) => new Intl.NumberFormat('vi-VN').format(v);
 
-function seedBooked(date: string): Set<number> {
-  let h = 0;
-  for (let i = 0; i < date.length; i++) h = ((h * 31) + date.charCodeAt(i)) | 0;
-  const s = new Set<number>();
-  [12, 13, 17, 18, 19, 20].forEach((hr, i) => { if ((h >> i) & 1) s.add(hr); });
-  return s;
-}
 
-const OPEN_HR = 5, CLOSE_HR = 24;
 
 const REVIEWS = [
   { id: 1, avatar: 'M', name: 'Minh Tuấn', date: '12/05/2026', rating: 5, text: 'Sân đẹp, mặt cỏ xịn, giá cả hợp lý.' },
@@ -70,10 +62,24 @@ const CourtDetailPage: React.FC = () => {
     return day === 0 ? 'Chủ nhật' : `Thứ ${day + 1}`;
   };
 
+  const { openHour, closeHour } = useMemo(() => {
+    const o = court?.open_time ? parseInt(court.open_time.split(':')[0], 10) : 6;
+    const c = court?.close_time ? parseInt(court.close_time.split(':')[0], 10) : 22;
+    return { openHour: o, closeHour: c };
+  }, [court]);
+
   const currentHours = useMemo(() => {
-    if (shift === 'morning') return Array.from({ length: 7 }, (_, i) => 5 + i);
-    return Array.from({ length: 12 }, (_, i) => 12 + i);
-  }, [shift]);
+    // Or just divide by 2 for balanced visual grid:
+    const splitHour = Math.floor((openHour + closeHour) / 2);
+    
+    if (shift === 'morning') {
+      const length = Math.max(0, splitHour - openHour);
+      return Array.from({ length }, (_, i) => openHour + i);
+    }
+    
+    const length = Math.max(0, closeHour - splitHour);
+    return Array.from({ length }, (_, i) => splitHour + i);
+  }, [shift, openHour, closeHour]);
 
   // Real booking data based on selected date
   const selectedDateStr = weekDays[selectedDayIdx].toISOString().slice(0, 10);
@@ -94,21 +100,19 @@ const CourtDetailPage: React.FC = () => {
   }, [courtId, selectedDateStr]);
 
   useEffect(() => {
-    if (court || !courtId) { setLoading(false); return; }
+    if (!courtId) { setLoading(false); return; }
     let dead = false;
-    setLoading(true);
-    getPublicCourts()
-      .then(list => {
+    if (!court) setLoading(true);
+    getPublicCourtById(courtId)
+      .then(f => {
         if (!dead) {
-          const f = list.find(c => c.id === courtId) ?? null;
           setCourt(f);
-          if (!f) setError('Không tìm thấy sân.');
         }
       })
-      .catch(e => { if (!dead) setError(e instanceof Error ? e.message : 'Lỗi tải sân.'); })
+      .catch(e => { if (!dead && !court) setError(e instanceof Error ? e.message : 'Lỗi tải sân.'); })
       .finally(() => { if (!dead) setLoading(false); });
     return () => { dead = true; };
-  }, [court, courtId]);
+  }, [courtId]);
 
   const gallery = useMemo(() => {
     const raw = (court?.images ?? []).filter(i => i?.trim());
@@ -120,7 +124,6 @@ const CourtDetailPage: React.FC = () => {
 
   const price = court?.price_per_hour ?? 0;
   const rating = Number.isFinite(court?.avg_rating) ? court!.avg_rating : 4.5;
-  const reviewCount = 1; // Mock
 
   // ── Loading / Error ─────────────────────────────────────────────────────────
   if (loading) return (
@@ -216,12 +219,12 @@ const CourtDetailPage: React.FC = () => {
                   <h3 className="font-bold text-white border-l-4 border-[#1D9E75] pl-3 text-lg leading-none">Thông tin sân</h3>
                   <div className="space-y-4 text-sm">
                      <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                        <span className="text-slate-400">Giờ mở cửa:</span>
-                        <span className="font-semibold text-white">{OPEN_HR}h - {CLOSE_HR}h</span>
+                        <span className="text-slate-400">Giờ hoạt động:</span>
+                        <span className="font-semibold text-white">{court.open_time || '06:00'} - {court.close_time || '22:00'}</span>
                      </div>
                      <div className="flex items-center justify-between border-b border-white/5 pb-2">
                         <span className="text-slate-400">Số sân thi đấu:</span>
-                        <span className="font-semibold text-white">{court.number_of_courts || 8} Sân</span>
+                        <span className="font-semibold text-white">{court.sub_courts?.length || court.number_of_courts || 0} Sân</span>
                      </div>
                      <div className="flex items-center justify-between border-b border-white/5 pb-2">
                         <span className="text-slate-400">Giá sân:</span>
@@ -335,14 +338,14 @@ const CourtDetailPage: React.FC = () => {
 
              {/* Court Rows */}
              {(court.sub_courts && court.sub_courts.length > 0 ? court.sub_courts : Array.from({ length: court.number_of_courts || 8 })).map((subCourt: any, courtIdx) => {
-               const scId = subCourt._id;
+               const scId = subCourt?._id;
                const scData = scId ? slotData[scId] : undefined;
                
                return (
                  <div key={scId || courtIdx} className="flex border-b border-white/5 last:border-b-0">
                     <div className="w-16 flex-shrink-0 flex items-center justify-center font-bold text-slate-300 text-sm border-r border-white/5 bg-[#141e2b] truncate px-1">
                        <span className="w-2 h-4 bg-amber-400 rounded-sm mr-2 flex-shrink-0"></span>
-                       {subCourt.name || `0${courtIdx + 1}`}
+                       {subCourt?.name || `Sân ${courtIdx + 1}`}
                     </div>
                     {currentHours.map((hr) => {
                        // Look up the 2 slots for this hour

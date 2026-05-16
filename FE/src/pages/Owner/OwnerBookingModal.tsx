@@ -32,7 +32,7 @@ type OwnerBookingModalProps = {
 };
 
 /* ── Constants ── */
-const HOURS = Array.from({ length: 16 }, (_, i) => i + 7);
+
 const fmt = (h: number) => `${String(h).padStart(2, '0')}:00`;
 
 const TONE_OPTIONS: { value: BookingTone; label: string; tw: string }[] = [
