@@ -46,6 +46,7 @@ export type AuthUser = {
 	avatarUrl?: string;
 	email: string;
 	phone?: string;
+	address?: string;
 	userName: string;
 	role: 'user' | 'owner' | 'admin';
 	createdAt: string;
@@ -98,6 +99,7 @@ export type UpdateProfilePayload = {
 	phone?: string;
 	dateOfBirth?: string;
 	avatarUrl?: string;
+	address?: string;
 };
 
 export type UserSkill = {
