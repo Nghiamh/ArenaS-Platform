@@ -1,0 +1,112 @@
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-deep: #030712;
+  --text-main: #e2e8f0;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Be Vietnam Pro', 'Segoe UI', sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.login-input:-webkit-autofill,
+.login-input:-webkit-autofill:hover,
+.login-input:-webkit-autofill:focus,
+.login-input:-webkit-autofill:active {
+  -webkit-text-fill-color: #ffffff;
+  caret-color: #ffffff;
+  box-shadow: 0 0 0 1000px rgba(15, 23, 42, 0.12) inset !important;
+  -webkit-box-shadow: 0 0 0 1000px rgba(15, 23, 42, 0.12) inset !important;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+.login-input:-webkit-autofill::first-line {
+  font-family: 'Be Vietnam Pro', 'Segoe UI', sans-serif;
+  font-size: 1rem;
+}
+
+.glass-panel {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: linear-gradient(
+    135deg,
+    rgba(15, 23, 42, 0.82) 0%,
+    rgba(15, 23, 42, 0.62) 100%
+  );
+  backdrop-filter: blur(14px);
+}
+
+.glass-soft {
+  background: linear-gradient(
+    145deg,
+    rgba(30, 41, 59, 0.72) 0%,
+    rgba(15, 23, 42, 0.62) 100%
+  );
+  backdrop-filter: blur(10px);
+}
+
+.bg-grid-pattern {
+  background-image: linear-gradient(
+      rgba(148, 163, 184, 0.08) 1px,
+      transparent 1px
+    ),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.arena-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(59, 130, 246, 0.75) rgba(15, 23, 42, 0.5);
+}
+
+.arena-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.arena-scroll::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 999px;
+}
+
+.arena-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.95), rgba(37, 99, 235, 0.7));
+  border-radius: 999px;
+}
+
+.arena-map-bg {
+  background-image: radial-gradient(circle at 20% 10%, rgba(56, 189, 248, 0.14), transparent 30%),
+    radial-gradient(circle at 70% 35%, rgba(37, 99, 235, 0.14), transparent 35%),
+    linear-gradient(rgba(59, 130, 246, 0.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59, 130, 246, 0.18) 1px, transparent 1px),
+    linear-gradient(180deg, #030a18 0%, #020617 100%);
+  background-size: auto, auto, 64px 64px, 64px 64px, auto;
+  animation: arena-map-pulse 8s ease-in-out infinite;
+}
+
+@keyframes arena-map-pulse {
+  0%,
+  100% {
+    filter: saturate(0.95) brightness(0.95);
+  }
+  50% {
+    filter: saturate(1.12) brightness(1.05);
+  }
+}
