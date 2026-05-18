@@ -53,8 +53,17 @@ export const CheckoutPage: React.FC = () => {
       // Giả lập xử lý thanh toán
       setTimeout(() => {
         setIsProcessing(false);
-        alert(`Thanh toán thành công qua ${paymentMethod.toUpperCase()}! Chào mừng bạn đến với ArenaS.`);
-        navigate('/');
+        navigate('/payment-success', {
+          state: {
+            planName: plan.name,
+            price: plan.price,
+            paymentMethod: paymentMethod,
+            transactionId: 'TXN-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
+            date: new Date().toLocaleDateString('vi-VN', {
+              hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
+            })
+          }
+        });
       }, 2000);
     },
   });

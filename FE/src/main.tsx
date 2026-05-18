@@ -20,6 +20,7 @@ import { PriceListPage } from './pages/HomePage/PriceListPage';
 import CourtDetailPage from './pages/CourtDetailPage/CourtDetailPage';
 import { WalletPage } from './pages/WalletPage/WalletPage';
 import { CheckoutPage } from './pages/CheckoutPage/CheckoutPage';
+import { PaymentSuccessPage } from './pages/CheckoutPage/PaymentSuccessPage';
 import './index.css';
 
 function App() {
@@ -83,6 +84,7 @@ function App() {
           }
         />
         <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/payment-success" element={<PaymentSuccessPage />} />
         <Route
           path="/courts/:courtId"
           element={
