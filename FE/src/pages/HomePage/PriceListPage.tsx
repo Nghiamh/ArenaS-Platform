@@ -322,6 +322,12 @@ export const PriceListPage: React.FC = () => {
             }
           ];
 
+          // Sort features: included features first, non-included (greyed out) features at the end
+          const sortedFeatures = [...features].sort((a, b) => {
+            if (a.included === b.included) return 0;
+            return a.included ? -1 : 1;
+          });
+
           return {
             name: displayName,
             subtitle: displayDescription,
@@ -338,7 +344,7 @@ export const PriceListPage: React.FC = () => {
             iconTone,
             tag,
             tagTone,
-            features,
+            features: sortedFeatures,
             highlight: isPro || nameSlug.includes('professional') || nameSlug.includes('pro')
           };
         });
