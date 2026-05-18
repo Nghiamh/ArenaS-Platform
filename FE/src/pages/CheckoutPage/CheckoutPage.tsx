@@ -32,21 +32,16 @@ export const CheckoutPage: React.FC = () => {
     }),
     onSubmit: () => {
       setIsProcessing(true);
-      // Giả lập xử lý thanh toán
       setTimeout(() => {
         setIsProcessing(false);
-        navigate('/payment-success', {
+        navigate('/payment-qr', {
           state: {
             planName: plan.name,
             price: plan.price,
-            paymentMethod: 'banking',
-            transactionId: 'TXN-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
-            date: new Date().toLocaleDateString('vi-VN', {
-              hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
-            })
+            totalAmount: parseInt(plan.price.replace(/\./g, ''))
           }
         });
-      }, 2000);
+      }, 500);
     },
   });
 

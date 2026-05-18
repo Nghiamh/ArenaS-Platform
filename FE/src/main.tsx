@@ -21,6 +21,7 @@ import CourtDetailPage from './pages/CourtDetailPage/CourtDetailPage';
 import { WalletPage } from './pages/WalletPage/WalletPage';
 import { CheckoutPage } from './pages/CheckoutPage/CheckoutPage';
 import { PaymentSuccessPage } from './pages/CheckoutPage/PaymentSuccessPage';
+import { VietQRPaymentPage } from './pages/CheckoutPage/VietQRPaymentPage';
 import './index.css';
 
 function App() {
@@ -84,6 +85,7 @@ function App() {
           }
         />
         <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/payment-qr" element={<VietQRPaymentPage />} />
         <Route path="/payment-success" element={<PaymentSuccessPage />} />
         <Route
           path="/courts/:courtId"

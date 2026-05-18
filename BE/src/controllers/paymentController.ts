@@ -334,3 +334,98 @@ export async function fakeWebhook(req: Request, res: Response): Promise<void> {
 		});
 	}
 }
+
+/**
+ * POST /api/payment/create-order
+ * Mock order creation for checkout page
+ */
+export async function createOrderPayment(req: Request, res: Response): Promise<void> {
+	try {
+		const { totalAmount } = req.body as { totalAmount?: number };
+
+		if (!totalAmount || typeof totalAmount !== "number") {
+			res.status(400).json({
+				success: false,
+				message: "totalAmount is required and must be a number",
+			});
+			return;
+		}
+
+		let systemWallet = await Wallet.findOne({ userId: new mongoose.Types.ObjectId("000000000000000000000000") });
+		if (!systemWallet) {
+			systemWallet = await Wallet.create({
+				userId: new mongoose.Types.ObjectId("000000000000000000000000"),
+				balance: 0,
+				status: "active",
+			});
+		}
+
+		const paymentCode = generateTransferCode();
+		const qrUrl = buildVietQRUrl(totalAmount, paymentCode);
+		const expiredAt = new Date(Date.now() + 5 * 60 * 1000);
+
+		await WalletTransaction.create({
+			walletId: systemWallet._id,
+			amount: totalAmount,
+			type: "payment",
+			status: "pending",
+			transferCode: paymentCode,
+			expiredAt,
+		});
+
+		res.status(200).json({
+			success: true,
+			orderId: new mongoose.Types.ObjectId().toString(),
+			paymentCode,
+			qrUrl,
+			totalAmount,
+		});
+	} catch (error: unknown) {
+		const errorMessage = error instanceof Error ? error.message : "unknown error";
+		res.status(500).json({
+			success: false,
+			message: "failed to create order",
+			error: errorMessage,
+		});
+	}
+}
+
+export async function getOrderPaymentStatus(req: Request, res: Response): Promise<void> {
+	try {
+		const { transferCode } = req.params as { transferCode?: string };
+
+		if (!transferCode) {
+			res.status(400).json({
+				message: "transferCode is required",
+				error: "missing_transfer_code",
+			});
+			return;
+		}
+
+		const transaction = await WalletTransaction.findOne({ transferCode });
+
+		if (!transaction) {
+			res.status(404).json({
+				message: "transaction not found",
+				error: "transaction_not_found",
+			});
+			return;
+		}
+
+		res.status(200).json({
+			message: "order status loaded",
+			transaction: {
+				id: String(transaction._id),
+				amount: transaction.amount,
+				status: transaction.status,
+				transferCode: transaction.transferCode,
+			},
+		});
+	} catch (error: unknown) {
+		const errorMessage = error instanceof Error ? error.message : "unknown error";
+		res.status(500).json({
+			message: "failed to get order status",
+			error: errorMessage,
+		});
+	}
+}

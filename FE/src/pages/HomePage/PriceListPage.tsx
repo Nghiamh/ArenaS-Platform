@@ -137,10 +137,10 @@ const plans: PricePlan[] = [
   {
     name: 'Cơ Bản',
     subtitle: 'Phù hợp cho cơ sở thể thao nhỏ đang phát triển.',
-    monthlyPrice: '299.000',
+    monthlyPrice: '10.000',
     monthlyPeriod: '/Tháng',
-    monthlyNote: 'hoặc 249.000 /Tháng khi trả năm',
-    yearlyPrice: '249.000',
+    monthlyNote: 'hoặc 8.000 /Tháng khi trả năm',
+    yearlyPrice: '8.000',
     yearlyPeriod: '/Tháng khi trả năm',
     yearlyNote: 'Tiết kiệm khoảng 17% so với thanh toán theo tháng',
     cta: 'Mua Ngay',
@@ -310,15 +310,13 @@ export const PriceListPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setBillingCycle((current) => (current === 'monthly' ? 'yearly' : 'monthly'))}
-                className={`relative h-11 w-28 shrink-0 overflow-hidden rounded-full border transition-colors duration-300 ${
-                  isYearly ? 'border-blue-200/70 bg-blue-500' : 'border-slate-400/50 bg-slate-700/85'
-                }`}
+                className={`relative h-11 w-28 shrink-0 overflow-hidden rounded-full border transition-colors duration-300 ${isYearly ? 'border-blue-200/70 bg-blue-500' : 'border-slate-400/50 bg-slate-700/85'
+                  }`}
                 aria-label="Chuyển đổi giữa thanh toán tháng và năm"
               >
                 <span
-                  className={`absolute left-1 top-1 h-9 w-9 rounded-full bg-white shadow-[0_4px_12px_-6px_rgba(15,23,42,0.65)] transition-transform duration-300 will-change-transform ${
-                    isYearly ? 'translate-x-[64px]' : 'translate-x-0'
-                  }`}
+                  className={`absolute left-1 top-1 h-9 w-9 rounded-full bg-white shadow-[0_4px_12px_-6px_rgba(15,23,42,0.65)] transition-transform duration-300 will-change-transform ${isYearly ? 'translate-x-[64px]' : 'translate-x-0'
+                    }`}
                 />
               </button>
               <span className={`text-sm font-semibold transition-colors ${isYearly ? 'text-slate-100' : 'text-slate-400'}`}>
@@ -353,14 +351,12 @@ export const PriceListPage: React.FC = () => {
                   whileHover={{ y: -8, scale: 1.015 }}
                   whileTap={{ scale: 0.992 }}
                   transition={{ type: 'spring', stiffness: 220, damping: 24, mass: 0.9 }}
-                  className={`relative overflow-hidden rounded-[2rem] border bg-[linear-gradient(180deg,rgba(8,15,33,0.98),rgba(4,9,20,0.98))] p-5 shadow-[0_22px_70px_-30px_rgba(2,8,23,0.82)] transition-[border-color,box-shadow,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-white/20 sm:p-6 ${
-                    isPopular ? 'border-blue-300/95 ring-2 ring-blue-400/45 shadow-[0_34px_110px_-34px_rgba(37,99,235,0.52)] scale-[1.01]' : 'border-white/10'
-                  }`}
+                  className={`relative overflow-hidden rounded-[2rem] border bg-[linear-gradient(180deg,rgba(8,15,33,0.98),rgba(4,9,20,0.98))] p-5 shadow-[0_22px_70px_-30px_rgba(2,8,23,0.82)] transition-[border-color,box-shadow,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-white/20 sm:p-6 ${isPopular ? 'border-blue-300/95 ring-2 ring-blue-400/45 shadow-[0_34px_110px_-34px_rgba(37,99,235,0.52)] scale-[1.01]' : 'border-white/10'
+                    }`}
                 >
                   <div
-                    className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${plan.accent} ${
-                      isPopular ? 'opacity-100' : 'opacity-75'
-                    }`}
+                    className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${plan.accent} ${isPopular ? 'opacity-100' : 'opacity-75'
+                      }`}
                   />
 
                   {plan.tag && (
@@ -405,10 +401,10 @@ export const PriceListPage: React.FC = () => {
                           // Tính toán giá gốc (trước giảm giá) nếu thanh toán năm
                           const numericMonthly = parseInt(plan.monthlyPrice.replace(/\./g, '')) || 0;
                           const originalYearly = (numericMonthly * 12).toLocaleString('vi-VN').replace(/,/g, '.');
-                          const finalPrice = isYearly 
+                          const finalPrice = isYearly
                             ? (parseInt(plan.yearlyPrice.replace(/\./g, '')) * 12).toLocaleString('vi-VN').replace(/,/g, '.')
                             : plan.monthlyPrice;
-                          
+
                           navigate('/checkout', {
                             state: {
                               plan: {
@@ -423,13 +419,12 @@ export const PriceListPage: React.FC = () => {
                           // Xử lý logic cho các nút khác
                         }
                       }}
-                      className={`w-full rounded-2xl border px-4 py-3.5 text-sm font-bold tracking-wide transition-colors duration-300 ${
-                        isPopular
+                      className={`w-full rounded-2xl border px-4 py-3.5 text-sm font-bold tracking-wide transition-colors duration-300 ${isPopular
                           ? 'border-blue-300/40 bg-blue-500 text-white shadow-[0_16px_40px_-18px_rgba(37,99,235,0.95)] hover:bg-blue-400'
                           : isEnterprisePrice
                             ? 'border-violet-300/40 bg-violet-500/15 text-violet-100 hover:bg-violet-500/30 hover:border-violet-300/70'
                             : 'border-blue-500/50 bg-blue-500/10 text-blue-300 hover:border-blue-400/80 hover:bg-blue-500/20 hover:text-blue-200'
-                      }`}
+                        }`}
                     >
                       {plan.cta}
                     </button>
@@ -455,9 +450,8 @@ export const PriceListPage: React.FC = () => {
                         className={`flex items-start gap-3 text-sm ${feature.included ? 'text-slate-100' : 'text-slate-500'}`}
                       >
                         <span
-                          className={`mt-[2px] flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${
-                            feature.included ? 'bg-emerald-400/15 text-emerald-300' : 'bg-white/5 text-slate-500'
-                          }`}
+                          className={`mt-[2px] flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${feature.included ? 'bg-emerald-400/15 text-emerald-300' : 'bg-white/5 text-slate-500'
+                            }`}
                         >
                           {feature.included ? '✓' : '×'}
                         </span>
@@ -506,13 +500,12 @@ export const PriceListPage: React.FC = () => {
                     return (
                       <div key={`${row.label}-${index}`} className="flex justify-center text-center text-sm font-semibold">
                         <span
-                          className={`inline-flex min-h-8 items-center justify-center rounded-full px-3 py-1 ${
-                            positive
+                          className={`inline-flex min-h-8 items-center justify-center rounded-full px-3 py-1 ${positive
                               ? 'bg-emerald-400/12 text-emerald-300'
                               : negative
                                 ? 'bg-white/5 text-slate-500'
                                 : 'bg-blue-500/10 text-slate-200'
-                          }`}
+                            }`}
                         >
                           {value}
                         </span>
