@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 
@@ -16,7 +15,6 @@ export const CheckoutPage: React.FC = () => {
     originalPrice: '8.388.000',
   };
 
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'momo' | 'banking'>('card');
   const [isProcessing, setIsProcessing] = useState(false);
 
   const formik = useFormik({
@@ -24,9 +22,6 @@ export const CheckoutPage: React.FC = () => {
       email: '',
       fullname: '',
       phone: '',
-      cardnumber: '',
-      expiry: '',
-      cvc: '',
     },
     validationSchema: Yup.object({
       email: Yup.string().email('Email không hợp lệ').required('Vui lòng nhập email'),
@@ -34,19 +29,6 @@ export const CheckoutPage: React.FC = () => {
       phone: Yup.string()
         .matches(/(84|0[3|5|7|8|9])+([0-9]{8})\b/, 'Số điện thoại không hợp lệ')
         .required('Vui lòng nhập số điện thoại'),
-      // Giả lập validation cho thẻ (chỉ bắt buộc nếu chọn thanh toán bằng thẻ)
-      cardnumber: Yup.string().when('paymentMethod', {
-        is: () => paymentMethod === 'card',
-        then: () => Yup.string().required('Vui lòng nhập số thẻ').min(16, 'Số thẻ quá ngắn'),
-      }),
-      expiry: Yup.string().when('paymentMethod', {
-        is: () => paymentMethod === 'card',
-        then: () => Yup.string().required('Vui lòng nhập ngày hết hạn').matches(/^(0[1-9]|1[0-2])\/?([0-9]{2})$/, 'Định dạng MM/YY'),
-      }),
-      cvc: Yup.string().when('paymentMethod', {
-        is: () => paymentMethod === 'card',
-        then: () => Yup.string().required('Vui lòng nhập CVC').min(3, 'CVC không hợp lệ'),
-      }),
     }),
     onSubmit: () => {
       setIsProcessing(true);
@@ -57,7 +39,7 @@ export const CheckoutPage: React.FC = () => {
           state: {
             planName: plan.name,
             price: plan.price,
-            paymentMethod: paymentMethod,
+            paymentMethod: 'banking',
             transactionId: 'TXN-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
             date: new Date().toLocaleDateString('vi-VN', {
               hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
@@ -168,46 +150,10 @@ export const CheckoutPage: React.FC = () => {
             {/* Payment Method */}
             <section>
               <h2 className="mb-5 text-[21px] font-semibold tracking-tight text-white">Thanh toán bằng</h2>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3">
                 <button
                   type="button"
-                  onClick={() => setPaymentMethod('card')}
-                  className={`flex flex-col items-center justify-center rounded-2xl border p-4 transition-all duration-300 ${paymentMethod === 'card'
-                    ? 'border-blue-500 bg-blue-500/10 text-blue-400 shadow-[0_0_0_1px_rgba(59,130,246,0.3)]'
-                    : 'border-white/10 bg-white/4 text-slate-300 hover:border-white/20 hover:bg-white/10'
-                    }`}
-                >
-                  <svg className="mb-2.5 h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                  </svg>
-                  <span className="text-[13px] font-semibold">Thẻ tín dụng</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPaymentMethod('momo');
-                    formik.setErrors({}); // Xóa lỗi form thẻ nếu chọn momo
-                  }}
-                  className={`flex flex-col items-center justify-center rounded-2xl border p-4 transition-all duration-300 ${paymentMethod === 'momo'
-                    ? 'border-pink-500 bg-pink-500/10 text-pink-400 shadow-[0_0_0_1px_rgba(236,72,153,0.3)]'
-                    : 'border-white/10 bg-white/4 text-slate-300 hover:border-white/20 hover:bg-white/10'
-                    }`}
-                >
-                  <svg className="mb-2.5 h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
-                  <span className="text-[13px] font-semibold">Ví MoMo</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPaymentMethod('banking');
-                    formik.setErrors({}); // Xóa lỗi form thẻ nếu chọn banking
-                  }}
-                  className={`flex flex-col items-center justify-center rounded-2xl border p-4 transition-all duration-300 ${paymentMethod === 'banking'
-                    ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400 shadow-[0_0_0_1px_rgba(16,185,129,0.3)]'
-                    : 'border-white/10 bg-white/4 text-slate-300 hover:border-white/20 hover:bg-white/10'
-                    }`}
+                  className="flex flex-col items-center justify-center rounded-2xl border p-4 transition-all duration-300 border-emerald-500 bg-emerald-500/10 text-emerald-400 shadow-[0_0_0_1px_rgba(16,185,129,0.3)]"
                 >
                   <svg className="mb-2.5 h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
@@ -215,89 +161,6 @@ export const CheckoutPage: React.FC = () => {
                   <span className="text-[13px] font-semibold">Banking</span>
                 </button>
               </div>
-
-              {/* Card Form */}
-              <AnimatePresence>
-                {paymentMethod === 'card' && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="mt-5 space-y-4 overflow-hidden"
-                  >
-                    <div>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          id="cardnumber"
-                          {...formik.getFieldProps('cardnumber')}
-                          className={`peer w-full rounded-xl border bg-slate-800/40 px-4 pb-2.5 pl-12 pt-6 text-[17px] text-white placeholder-transparent outline-none transition focus:ring-1 ${formik.touched.cardnumber && formik.errors.cardnumber
-                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                            : 'border-white/10 focus:border-blue-500 focus:ring-blue-500'
-                            }`}
-                          placeholder="Số thẻ"
-                        />
-                        <label htmlFor="cardnumber" className={`absolute left-12 top-2 text-[13px] font-medium transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-[17px] peer-focus:top-2 peer-focus:text-[13px] ${formik.touched.cardnumber && formik.errors.cardnumber ? 'text-red-400' : 'text-slate-400 peer-focus:text-blue-400'
-                          }`}>
-                          Số thẻ tín dụng
-                        </label>
-                        <svg className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                        </svg>
-                      </div>
-                      {formik.touched.cardnumber && formik.errors.cardnumber && (
-                        <p className="mt-1 text-xs text-red-400">{formik.errors.cardnumber}</p>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <div className="relative">
-                          <input
-                            type="text"
-                            id="expiry"
-                            {...formik.getFieldProps('expiry')}
-                            className={`peer w-full rounded-xl border bg-slate-800/40 px-4 pb-2.5 pt-6 text-[17px] text-white placeholder-transparent outline-none transition focus:ring-1 ${formik.touched.expiry && formik.errors.expiry
-                              ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                              : 'border-white/10 focus:border-blue-500 focus:ring-blue-500'
-                              }`}
-                            placeholder="MM/YY"
-                          />
-                          <label htmlFor="expiry" className={`absolute left-4 top-2 text-[13px] font-medium transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-[17px] peer-focus:top-2 peer-focus:text-[13px] ${formik.touched.expiry && formik.errors.expiry ? 'text-red-400' : 'text-slate-400 peer-focus:text-blue-400'
-                            }`}>
-                            Ngày hết hạn
-                          </label>
-                        </div>
-                        {formik.touched.expiry && formik.errors.expiry && (
-                          <p className="mt-1 text-xs text-red-400">{formik.errors.expiry}</p>
-                        )}
-                      </div>
-
-                      <div>
-                        <div className="relative">
-                          <input
-                            type="text"
-                            id="cvc"
-                            {...formik.getFieldProps('cvc')}
-                            className={`peer w-full rounded-xl border bg-slate-800/40 px-4 pb-2.5 pt-6 text-[17px] text-white placeholder-transparent outline-none transition focus:ring-1 ${formik.touched.cvc && formik.errors.cvc
-                              ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                              : 'border-white/10 focus:border-blue-500 focus:ring-blue-500'
-                              }`}
-                            placeholder="CVC"
-                          />
-                          <label htmlFor="cvc" className={`absolute left-4 top-2 text-[13px] font-medium transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-[17px] peer-focus:top-2 peer-focus:text-[13px] ${formik.touched.cvc && formik.errors.cvc ? 'text-red-400' : 'text-slate-400 peer-focus:text-blue-400'
-                            }`}>
-                            Mã bảo mật (CVC)
-                          </label>
-                        </div>
-                        {formik.touched.cvc && formik.errors.cvc && (
-                          <p className="mt-1 text-xs text-red-400">{formik.errors.cvc}</p>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </section>
 
             <div className="pt-6">
