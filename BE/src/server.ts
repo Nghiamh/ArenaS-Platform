@@ -13,6 +13,8 @@ import userSkillRoutes from "./routes/userSkillRoutes.js";
 import walletRoutes from "./routes/walletRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
+import subscriptionRoutes from "./routes/subscriptionRoutes.js";
+import planRoutes from "./routes/planRoutes.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
@@ -31,6 +33,8 @@ app.use("/api/profile/skills", userSkillRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/bookings", bookingRoutes);
+app.use("/api/subscriptions", subscriptionRoutes);
+app.use("/api/plans", planRoutes);
 app.get("/api/health", (_req, res) => {
 	res.status(200).json({ status: "ok", service: "arena-backend" });
 });
