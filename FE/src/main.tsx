@@ -19,6 +19,7 @@ import { AdminManageStadiumPage } from './pages/Admin/AdminManageStadiumPage';
 import { PriceListPage } from './pages/HomePage/PriceListPage';
 import CourtDetailPage from './pages/CourtDetailPage/CourtDetailPage';
 import { WalletPage } from './pages/WalletPage/WalletPage';
+import { CheckoutPage } from './pages/CheckoutPage/CheckoutPage';
 import './index.css';
 
 function App() {
@@ -81,6 +82,7 @@ function App() {
             </Layout>
           }
         />
+        <Route path="/checkout" element={<CheckoutPage />} />
         <Route
           path="/courts/:courtId"
           element={

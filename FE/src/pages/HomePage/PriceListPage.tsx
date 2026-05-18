@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, type Variants } from 'framer-motion';
 
 type PriceFeature = {
@@ -20,6 +21,7 @@ type PricePlan = {
   yearlyPeriod: string;
   yearlyNote?: string;
   cta: string;
+  secondaryCta?: string;
   accent: string;
   features: PriceFeature[];
   highlight?: boolean;
@@ -141,7 +143,8 @@ const plans: PricePlan[] = [
     yearlyPrice: '249.000',
     yearlyPeriod: '/Tháng khi trả năm',
     yearlyNote: 'Tiết kiệm khoảng 17% so với thanh toán theo tháng',
-    cta: 'Dùng Thử 14 Ngày',
+    cta: 'Mua Ngay',
+    secondaryCta: 'Dùng Thử 14 Ngày',
     accent: 'from-blue-600 to-cyan-500',
     iconName: 'basic',
     iconTone: 'blue',
@@ -168,7 +171,8 @@ const plans: PricePlan[] = [
     yearlyPrice: '579.000',
     yearlyPeriod: '/Tháng khi trả năm',
     yearlyNote: 'Tiết kiệm khoảng 17% so với thanh toán theo tháng',
-    cta: 'Dùng Thử 14 Ngày',
+    cta: 'Mua Ngay',
+    secondaryCta: 'Dùng Thử 14 Ngày',
     accent: 'from-blue-500 via-blue-600 to-indigo-500',
     iconName: 'pro',
     iconTone: 'gold',
@@ -272,6 +276,7 @@ const planTagClass: Record<NonNullable<PricePlan['tagTone']>, string> = {
 };
 
 export const PriceListPage: React.FC = () => {
+  const navigate = useNavigate();
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
 
@@ -392,18 +397,51 @@ export const PriceListPage: React.FC = () => {
                     {displayNote && <p className="mt-1 text-sm text-emerald-200">{displayNote}</p>}
                   </div>
 
-                  <button
-                    type="button"
-                    className={`mt-8 w-full rounded-2xl border px-4 py-3.5 text-sm font-bold tracking-wide transition-colors duration-300 ${
-                      isPopular
-                        ? 'border-blue-300/40 bg-blue-500 text-white shadow-[0_16px_40px_-18px_rgba(37,99,235,0.95)] hover:bg-blue-400'
-                        : isEnterprisePrice
-                          ? 'border-violet-300/40 bg-violet-500/15 text-violet-100 hover:bg-violet-500/30 hover:border-violet-300/70'
-                          : 'border-white/10 bg-white/4 text-white hover:border-blue-300/40 hover:bg-blue-500/18 hover:text-blue-100'
-                    }`}
-                  >
-                    {plan.cta}
-                  </button>
+                  <div className="mt-8 flex flex-col gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (plan.cta === 'Mua Ngay') {
+                          // Tính toán giá gốc (trước giảm giá) nếu thanh toán năm
+                          const numericMonthly = parseInt(plan.monthlyPrice.replace(/\./g, '')) || 0;
+                          const originalYearly = (numericMonthly * 12).toLocaleString('vi-VN').replace(/,/g, '.');
+                          const finalPrice = isYearly 
+                            ? (parseInt(plan.yearlyPrice.replace(/\./g, '')) * 12).toLocaleString('vi-VN').replace(/,/g, '.')
+                            : plan.monthlyPrice;
+                          
+                          navigate('/checkout', {
+                            state: {
+                              plan: {
+                                name: plan.name,
+                                price: finalPrice,
+                                period: isYearly ? '/ năm' : '/ tháng',
+                                originalPrice: isYearly ? originalYearly : null,
+                              }
+                            }
+                          });
+                        } else {
+                          // Xử lý logic cho các nút khác
+                        }
+                      }}
+                      className={`w-full rounded-2xl border px-4 py-3.5 text-sm font-bold tracking-wide transition-colors duration-300 ${
+                        isPopular
+                          ? 'border-blue-300/40 bg-blue-500 text-white shadow-[0_16px_40px_-18px_rgba(37,99,235,0.95)] hover:bg-blue-400'
+                          : isEnterprisePrice
+                            ? 'border-violet-300/40 bg-violet-500/15 text-violet-100 hover:bg-violet-500/30 hover:border-violet-300/70'
+                            : 'border-blue-500/50 bg-blue-500/10 text-blue-300 hover:border-blue-400/80 hover:bg-blue-500/20 hover:text-blue-200'
+                      }`}
+                    >
+                      {plan.cta}
+                    </button>
+                    {plan.secondaryCta && (
+                      <button
+                        type="button"
+                        className="w-full rounded-2xl border border-white/10 bg-white/4 px-4 py-3 text-sm font-bold tracking-wide text-white transition-colors duration-300 hover:border-white/20 hover:bg-white/10"
+                      >
+                        {plan.secondaryCta}
+                      </button>
+                    )}
+                  </div>
 
                   <div className="mt-7 space-y-3">
                     {plan.features.map((feature, index) => (
