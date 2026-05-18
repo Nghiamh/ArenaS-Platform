@@ -773,10 +773,10 @@ export const ProfilePage: React.FC = () => {
     icon: string;
     hidden?: boolean;
   }[] = [
-    { key: "profile", label: "Hồ sơ", icon: "" },
-    { key: "skills", label: "Skill", icon: "", hidden: !isRegularUser },
-    { key: "wallet", label: "Ví", icon: "" },
-  ];
+      { key: "profile", label: "Hồ sơ", icon: "" },
+      { key: "skills", label: "Skill", icon: "", hidden: !isRegularUser },
+      { key: "wallet", label: "Ví", icon: "" },
+    ];
 
   return (
     <div className="relative overflow-x-clip bg-[radial-gradient(circle_at_15%_10%,rgba(37,99,235,0.22),transparent_30%),radial-gradient(circle_at_90%_10%,rgba(14,165,233,0.18),transparent_28%),linear-gradient(180deg,#020617_0%,#061136_45%,#030712_100%)] px-4 py-14 text-slate-100 md:px-8 md:py-20">
@@ -835,11 +835,10 @@ export const ProfilePage: React.FC = () => {
                     key={item.key}
                     type="button"
                     onClick={() => setActiveTab(item.key)}
-                    className={`flex-1 md:flex-none flex items-center gap-4 px-6 py-4 text-base font-bold transition border-b-2 md:border-b-0 md:border-l-[3px] ${
-                      activeTab === item.key
+                    className={`flex-1 md:flex-none flex items-center gap-4 px-6 py-4 text-base font-bold transition border-b-2 md:border-b-0 md:border-l-[3px] ${activeTab === item.key
                         ? "border-blue-500 bg-blue-500/10 text-white"
                         : "border-transparent text-slate-400 hover:text-white hover:bg-white/5"
-                    }`}
+                      }`}
                   >
                     <span className="text-xl">{item.icon}</span>
                     {item.label}
@@ -943,8 +942,8 @@ export const ProfilePage: React.FC = () => {
                                 onClick={() => {
                                   const input = dateOfBirthInputRef.current as
                                     | (HTMLInputElement & {
-                                        showPicker?: () => void;
-                                      })
+                                      showPicker?: () => void;
+                                    })
                                     | null;
                                   input?.showPicker?.();
                                   input?.focus();
@@ -1391,7 +1390,7 @@ export const ProfilePage: React.FC = () => {
                               onClick={() => void fetchWallet()}
                               className="text-xs text-slate-400 hover:text-emerald-400 transition-colors"
                             >
-                              🔄 Làm mới
+                              Làm mới
                             </button>
                           </div>
 
