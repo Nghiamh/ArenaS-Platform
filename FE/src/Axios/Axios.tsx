@@ -586,3 +586,50 @@ export async function createOwnerBooking(payload: CreateOwnerBookingPayload): Pr
 		throw new Error(toErrorMessage(error));
 	}
 }
+
+// ---------------------------------------------------------------------------
+// PRICING PLANS
+// ---------------------------------------------------------------------------
+
+export type FEPlan = {
+	_id: string;
+	name: string;
+	displayName: string;
+	description: string;
+	pricing: {
+		monthly: number;
+		yearly: number;
+	};
+	features: {
+		max_locations: number;
+		max_courts: number;
+		max_bookings_per_month: number;
+		online_booking: boolean;
+		ai_matchmaking: boolean;
+		api_integration: boolean;
+		analytics_dashboard: boolean;
+		priority_support: boolean;
+		custom_branding: boolean;
+	};
+	isCustom: boolean;
+	isActive: boolean;
+	sortOrder: number;
+	createdAt?: string;
+	updatedAt?: string;
+};
+
+export type PricingPlansResponse = {
+	success: boolean;
+	count: number;
+	plans: FEPlan[];
+};
+
+export async function getPricingPlans(): Promise<FEPlan[]> {
+	try {
+		const { data } = await axiosClient.get<PricingPlansResponse>('/plans');
+		return data.plans;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+

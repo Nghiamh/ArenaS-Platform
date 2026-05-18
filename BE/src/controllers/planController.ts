@@ -86,9 +86,9 @@ export async function createPlan(req: Request, res: Response): Promise<void> {
 		if (!body.name) missingFields.push("name");
 		if (!body.displayName) missingFields.push("displayName");
 		if (!body.description) missingFields.push("description");
-		if (!body.pricing?.monthly === undefined) missingFields.push("pricing.monthly");
-		if (!body.pricing?.yearly === undefined) missingFields.push("pricing.yearly");
+		if (body.pricing?.monthly === undefined) missingFields.push("pricing.monthly");
 		if (!body.features) missingFields.push("features");
+		// NOTE: pricing.yearly is NOT required — it is auto-computed from monthly.
 
 		if (missingFields.length > 0) {
 			res.status(400).json({
@@ -114,7 +114,8 @@ export async function createPlan(req: Request, res: Response): Promise<void> {
 			name: body.name,
 			displayName: body.displayName,
 			description: body.description,
-			pricing: body.pricing,
+			// Only store monthly; yearly is a virtual computed from monthly.
+			pricing: { monthly: body.pricing?.monthly ?? 0 },
 			features: body.features,
 			isCustom: body.isCustom ?? false,
 			isActive: body.isActive ?? true,
@@ -170,11 +171,11 @@ export async function updatePlan(req: Request, res: Response): Promise<void> {
 		if (body.isActive !== undefined) setMap["isActive"] = body.isActive;
 		if (body.sortOrder !== undefined) setMap["sortOrder"] = body.sortOrder;
 
-		// Pricing — merge individual fields
+		// Pricing — only monthly is stored; yearly is a virtual auto-computed from monthly
 		if (body.pricing) {
 			const p = body.pricing;
 			if (p.monthly !== undefined) setMap["pricing.monthly"] = p.monthly;
-			if (p.yearly !== undefined) setMap["pricing.yearly"] = p.yearly;
+			// NOTE: p.yearly is intentionally ignored — it is not stored in DB.
 		}
 
 		// Features — merge individual flags

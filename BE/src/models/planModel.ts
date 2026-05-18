@@ -24,7 +24,11 @@ export interface IPlanFeatures {
 
 export interface IPlanPricing {
 	monthly: number; // VND per month
-	yearly: number;  // VND per year (discounted)
+	/**
+	 * Virtual — computed as Math.round(monthly * 12 * 0.83).
+	 * NOT stored in DB; always derived from `monthly` with 20% annual discount.
+	 */
+	yearly?: number;
 }
 
 // ─── Plan Tiers ───────────────────────────────────────────────────────────────
@@ -46,7 +50,7 @@ export interface IPlan extends Document {
 	updatedAt?: Date;
 }
 
-interface IPlanModel extends Model<IPlan> {}
+interface IPlanModel extends Model<IPlan> { }
 
 // ─── Feature Sub-Schema ───────────────────────────────────────────────────────
 
@@ -113,14 +117,23 @@ const planPricingSchema = new Schema<IPlanPricing>(
 			required: true,
 			min: 0,
 		},
-		yearly: {
-			type: Number,
-			required: true,
-			min: 0,
-		},
+		// NOTE: `yearly` is NOT stored — it is a virtual computed on read.
 	},
-	{ _id: false }
+	{
+		_id: false,
+		// Expose virtuals when converting to JSON or plain object
+		toJSON: { virtuals: true },
+		toObject: { virtuals: true },
+	}
 );
+
+/**
+ * Virtual: yearly = monthly * 12 with 17% annual discount.
+ * Formula: monthly × 12 × 0.83  (rounded to nearest integer VND)
+ */
+planPricingSchema.virtual('yearly').get(function (this: { monthly: number }) {
+	return Math.round(this.monthly * 12 * 0.8);
+});
 
 // ─── Plan Schema ──────────────────────────────────────────────────────────────
 
@@ -175,6 +188,8 @@ const planSchema = new Schema<IPlan, IPlanModel>(
 	{
 		timestamps: true,
 		collection: "plans",
+		toJSON: { virtuals: true },
+		toObject: { virtuals: true },
 	}
 );
 

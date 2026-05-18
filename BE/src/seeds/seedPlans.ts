@@ -15,11 +15,11 @@ const MONGODB_URI = process.env.MONGODB_URI;
 const plans: Omit<IPlan, keyof mongoose.Document>[] = [
 	{
 		name: "starter",
-		displayName: "Starter",
-		description: "Perfect for individual court owners just getting started.",
+		displayName: "Khởi Nghiệp",
+		description: "Dành cho chủ sân mới bắt đầu, muốn trải nghiệm nền tảng.",
 		pricing: {
 			monthly: 0,
-			yearly: 0,
+			// yearly is a virtual: Math.round(0 * 12 * 0.83) = 0
 		},
 		features: {
 			max_locations: 1,
@@ -38,11 +38,11 @@ const plans: Omit<IPlan, keyof mongoose.Document>[] = [
 	},
 	{
 		name: "basic",
-		displayName: "Basic",
-		description: "Great for growing facilities with multiple courts.",
+		displayName: "Cơ Bản",
+		description: "Phù hợp cho cơ sở thể thao nhỏ đang phát triển.",
 		pricing: {
 			monthly: 299_000,
-			yearly: 2_990_000, // ~2 months free
+			// yearly is a virtual: Math.round(299000 * 12 * 0.83) = 2_978_040
 		},
 		features: {
 			max_locations: 1,
@@ -61,11 +61,11 @@ const plans: Omit<IPlan, keyof mongoose.Document>[] = [
 	},
 	{
 		name: "professional",
-		displayName: "Professional",
-		description: "For serious sports facilities managing multiple locations.",
+		displayName: "Chuyên Nghiệp",
+		description: "Giải pháp toàn diện cho cơ sở thể thao chuyên nghiệp.",
 		pricing: {
 			monthly: 799_000,
-			yearly: 7_990_000,
+			// yearly is a virtual: Math.round(799000 * 12 * 0.83) = 7_954_440
 		},
 		features: {
 			max_locations: 5,
@@ -84,11 +84,11 @@ const plans: Omit<IPlan, keyof mongoose.Document>[] = [
 	},
 	{
 		name: "enterprise",
-		displayName: "Enterprise",
-		description: "Custom solution for large-scale sports networks. Contact us for pricing.",
+		displayName: "Doanh Nghiệp",
+		description: "Cho hệ thống sân thể thao lớn và tập đoàn quản lý nhiều cơ sở.",
 		pricing: {
 			monthly: 0, // Negotiated per customer
-			yearly: 0,
+			// yearly is a virtual: 0
 		},
 		features: {
 			max_locations: -1, // unlimited
