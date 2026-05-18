@@ -369,6 +369,7 @@ export const HomePage: React.FC = () => {
           </div>
 
           <motion.div
+            key={isFeaturedLoading ? 'loading' : 'loaded'}
             className="grid gap-6 lg:grid-cols-3"
             variants={container}
             initial="hidden"
