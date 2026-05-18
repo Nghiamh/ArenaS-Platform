@@ -48,7 +48,7 @@ export const CheckoutPage: React.FC = () => {
         then: () => Yup.string().required('Vui lòng nhập CVC').min(3, 'CVC không hợp lệ'),
       }),
     }),
-    onSubmit: (values) => {
+    onSubmit: () => {
       setIsProcessing(true);
       // Giả lập xử lý thanh toán
       setTimeout(() => {

@@ -1,9 +1,8 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { getOwnerCourts, getOwnerBookings, createOwnerBooking, type OwnerCourt, type OwnerBooking } from '../../Axios/Axios';
+import { getOwnerCourts, getOwnerBookings, createOwnerBooking, type OwnerCourt } from '../../Axios/Axios';
 import {
   bookingHours,
-  bookingScheduleFacilities,
   bookingWeekDays,
   bookingWeekScheduleFacilities,
   type BookingTone,
@@ -268,7 +267,7 @@ type BookingViewMode = 'day' | 'week';
 export const OwnerBookingScheduleBoard: React.FC<{ viewMode: BookingViewMode }> = ({ viewMode }) => {
   const [schedule, setSchedule] = useState<ScheduleState>([]);
   const [ownerCourts, setOwnerCourts] = useState<OwnerCourt[]>([]);
-  const [currentDate, setCurrentDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [currentDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [modal, setModal] = useState<ModalState>(CLOSED);
 
   const fetchScheduleData = useCallback(async () => {
