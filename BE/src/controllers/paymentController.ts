@@ -209,16 +209,18 @@ async function processWebhookTransfer(transferCode: string): Promise<{
 			transaction.status = "completed";
 			await transaction.save({ session });
 
-			// Add balance to wallet
-			const wallet = await Wallet.findById(transaction.walletId).session(session);
-			if (!wallet) {
-				throw new Error("wallet_not_found");
+			// Add balance to wallet ONLY IF it is a deposit
+			if (transaction.type === "deposit") {
+				const wallet = await Wallet.findById(transaction.walletId).session(session);
+				if (!wallet) {
+					throw new Error("wallet_not_found");
+				}
+
+				wallet.balance += transaction.amount;
+				await wallet.save({ session });
 			}
 
-			wallet.balance += transaction.amount;
-			await wallet.save({ session });
-
-			result = { success: true, message: "deposit_confirmed" };
+			result = { success: true, message: transaction.type === "deposit" ? "deposit_confirmed" : "payment_confirmed" };
 		});
 
 		return result;
@@ -238,8 +240,8 @@ export async function handleWebhook(req: Request, res: Response): Promise<void> 
 		// Log the webhook
 		let transferCode: string | undefined;
 
-		// Attempt to extract transferCode (format: DEP-YYYYMMDD-XXXXX or DEPYYYYMMDDXXXXX) from common SEPay/Bank webhook fields
-		const codeRegex = /DEP-?\d{8}-?[A-Z0-9]{5}/i;
+		// Attempt to extract transferCode (format: (DEP|PAY)-YYYYMMDD-XXXXX or (DEP|PAY)YYYYMMDDXXXXX) from common SEPay/Bank webhook fields
+		const codeRegex = /(?:DEP|PAY)-?\d{8}-?[A-Z0-9]{5}/i;
 		const searchFields = [
 			rawData?.transferCode,
 			rawData?.addInfo,
@@ -341,7 +343,7 @@ export async function fakeWebhook(req: Request, res: Response): Promise<void> {
  */
 export async function createOrderPayment(req: Request, res: Response): Promise<void> {
 	try {
-		const { totalAmount } = req.body as { totalAmount?: number };
+		const { totalAmount, userId } = req.body as { totalAmount?: number; userId?: string };
 
 		if (!totalAmount || typeof totalAmount !== "number") {
 			res.status(400).json({
@@ -351,21 +353,32 @@ export async function createOrderPayment(req: Request, res: Response): Promise<v
 			return;
 		}
 
-		let systemWallet = await Wallet.findOne({ userId: new mongoose.Types.ObjectId("000000000000000000000000") });
-		if (!systemWallet) {
-			systemWallet = await Wallet.create({
-				userId: new mongoose.Types.ObjectId("000000000000000000000000"),
-				balance: 0,
-				status: "active",
-			});
+		let targetWallet;
+		const targetUserId = userId || (req.user ? String(req.user._id) : null);
+
+		if (targetUserId) {
+			targetWallet = await Wallet.findOne({ userId: targetUserId });
 		}
 
-		const paymentCode = generateTransferCode();
+		if (!targetWallet) {
+			// Fallback to system wallet
+			let systemWallet = await Wallet.findOne({ userId: new mongoose.Types.ObjectId("000000000000000000000000") });
+			if (!systemWallet) {
+				systemWallet = await Wallet.create({
+					userId: new mongoose.Types.ObjectId("000000000000000000000000"),
+					balance: 0,
+					status: "active",
+				});
+			}
+			targetWallet = systemWallet;
+		}
+
+		const paymentCode = generateTransferCode("payment");
 		const qrUrl = buildVietQRUrl(totalAmount, paymentCode);
 		const expiredAt = new Date(Date.now() + 5 * 60 * 1000);
 
 		await WalletTransaction.create({
-			walletId: systemWallet._id,
+			walletId: targetWallet._id,
 			amount: totalAmount,
 			type: "payment",
 			status: "pending",

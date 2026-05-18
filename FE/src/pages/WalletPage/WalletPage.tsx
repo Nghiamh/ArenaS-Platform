@@ -167,7 +167,7 @@ export function WalletPage() {
 						onClick={() => void fetchWallet()}
 						className="text-xs text-slate-400 hover:text-emerald-400 transition-colors flex items-center gap-1"
 					>
-						🔄 Làm mới
+						Làm mới
 					</button>
 				</div>
 
@@ -232,9 +232,8 @@ export function WalletPage() {
 									{/* Amount */}
 									<div className="text-right shrink-0">
 										<span
-											className={`text-base font-bold ${
-												isPositive ? 'text-emerald-400' : 'text-rose-400'
-											}`}
+											className={`text-base font-bold ${isPositive ? 'text-emerald-400' : 'text-rose-400'
+												}`}
 										>
 											{isPositive ? '+' : '-'}
 											{formatVND(tx.amount)}

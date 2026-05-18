@@ -24,12 +24,13 @@ function formatDate(date: Date): string {
 }
 
 /**
- * Generate a unique transfer code in the format DEP-YYYYMMDD-XXXXX
+ * Generate a unique transfer code in the format (DEP|PAY)YYYYMMDDXXXXX
  */
-export function generateTransferCode(): string {
+export function generateTransferCode(type: "deposit" | "payment" = "deposit"): string {
+	const prefix = type === "deposit" ? "DEP" : "PAY";
 	const datePart = formatDate(new Date());
 	const randomPart = randomAlphanumeric(5);
-	return `DEP${datePart}${randomPart}`;
+	return `${prefix}${datePart}${randomPart}`;
 }
 
 /**

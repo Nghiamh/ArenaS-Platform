@@ -160,7 +160,7 @@ export function DepositModal({ isOpen, onClose, onSuccess }: DepositModalProps) 
 				{/* Header */}
 				<div className="flex items-center justify-between px-6 py-4 border-b border-slate-700/50">
 					<h2 className="text-lg font-semibold text-white flex items-center gap-2">
-						<span className="text-xl">💰</span>
+						<span className="text-xl"></span>
 						{step === 'amount' && 'Nạp tiền vào ví'}
 						{step === 'qr' && 'Quét mã thanh toán'}
 						{step === 'success' && 'Nạp tiền thành công!'}
@@ -202,11 +202,10 @@ export function DepositModal({ isOpen, onClose, onSuccess }: DepositModalProps) 
 									<button
 										key={preset}
 										onClick={() => handleSelectAmount(preset)}
-										className={`py-2.5 px-4 rounded-xl text-sm font-semibold transition-all ${
-											amount === preset
+										className={`py-2.5 px-4 rounded-xl text-sm font-semibold transition-all ${amount === preset
 												? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-lg shadow-emerald-500/10'
 												: 'bg-slate-800/60 text-slate-300 border border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600/60'
-										}`}
+											}`}
 									>
 										{formatVND(preset)}
 									</button>
@@ -252,11 +251,10 @@ export function DepositModal({ isOpen, onClose, onSuccess }: DepositModalProps) 
 							<div className="flex items-center justify-center gap-2 text-sm">
 								<span className="text-slate-400">Hết hạn sau</span>
 								<span
-									className={`font-mono font-bold px-2 py-0.5 rounded-md ${
-										countdown < 60
+									className={`font-mono font-bold px-2 py-0.5 rounded-md ${countdown < 60
 											? 'text-red-400 bg-red-500/10'
 											: 'text-amber-400 bg-amber-500/10'
-									}`}
+										}`}
 								>
 									{countdownDisplay}
 								</span>
