@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { OwnerSidebar } from './OwnerSidebar';
-import { 
-  getCurrentUserProfile, 
-  getMySubscription, 
-  cancelMySubscription, 
-  type AuthUser, 
-  type FESubscription 
+import {
+  getCurrentUserProfile,
+  getMySubscription,
+  cancelMySubscription,
+  type AuthUser,
+  type FESubscription
 } from '../../Axios/Axios';
 
 export const OwnerSettingsScreen: React.FC = () => {
@@ -18,6 +18,10 @@ export const OwnerSettingsScreen: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState<boolean>(false);
+  const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
+  const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
+  const [showErrorModal, setShowErrorModal] = useState<boolean>(false);
+  const [modalErrorMessage, setModalErrorMessage] = useState<string>('');
 
   useEffect(() => {
     localStorage.setItem('ownerSidebarCollapsed', sidebarCollapsed ? '1' : '0');
@@ -27,7 +31,7 @@ export const OwnerSettingsScreen: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Load user profile
       const profileResponse = await getCurrentUserProfile();
       setCurrentUser(profileResponse.user);
@@ -61,18 +65,20 @@ export const OwnerSettingsScreen: React.FC = () => {
     };
   }, []);
 
-  const handleCancelSubscription = async () => {
-    if (!window.confirm('Bạn có chắc chắn muốn hủy gói đăng ký hiện tại? Giới hạn tính năng của bạn sẽ bị hạ về mặc định sau khi gói hết hạn.')) {
-      return;
-    }
+  const handleCancelClick = () => {
+    setShowConfirmModal(true);
+  };
 
+  const handleConfirmCancel = async () => {
+    setShowConfirmModal(false);
     try {
       setCancelling(true);
       await cancelMySubscription();
-      alert('Đã hủy gia hạn gói thành công. Quyền lợi của bạn vẫn được giữ nguyên cho đến hết chu kỳ.');
+      setShowSuccessModal(true);
       await loadData();
     } catch (err: any) {
-      alert(err.message || 'Hủy đăng ký thất bại. Vui lòng liên hệ hỗ trợ.');
+      setModalErrorMessage(err.message || 'Hủy đăng ký thất bại. Vui lòng liên hệ hỗ trợ.');
+      setShowErrorModal(true);
     } finally {
       setCancelling(false);
     }
@@ -120,7 +126,7 @@ export const OwnerSettingsScreen: React.FC = () => {
 
         <main className="arena-scroll min-h-screen px-4 py-6 md:px-6 lg:px-8 xl:max-h-screen xl:overflow-y-auto">
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-8">
-            
+
             {/* Header */}
             <header className="border-b border-white/10 pb-5">
               <h1 className="text-4xl font-black tracking-tight text-white sm:text-3xl">Cài Đặt Hệ Thống</h1>
@@ -145,11 +151,11 @@ export const OwnerSettingsScreen: React.FC = () => {
               </div>
             ) : (
               <div className="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
-                
+
                 {/* Left Section - Profile Info */}
                 <div className="space-y-6">
                   <h2 className="text-[22px] font-black text-white tracking-tight flex items-center gap-2">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 text-sm">👤</span>
+                    {/* <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 text-sm"></span> */}
                     Thông Tin Chủ Sân
                   </h2>
 
@@ -180,7 +186,7 @@ export const OwnerSettingsScreen: React.FC = () => {
                           {currentUser?.role || 'owner'}
                         </span>
                       </div>
-                      
+
                       <div className="h-px bg-white/10" />
 
                       <div className="flex items-center justify-between text-sm">
@@ -188,7 +194,7 @@ export const OwnerSettingsScreen: React.FC = () => {
                           <p className="font-semibold text-slate-200">Mật khẩu</p>
                           <p className="text-xs text-slate-400">Thay đổi thông tin đăng nhập định kỳ</p>
                         </div>
-                        <button 
+                        <button
                           onClick={() => alert('Chức năng đổi mật khẩu đang được phát triển.')}
                           className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white"
                         >
@@ -202,7 +208,7 @@ export const OwnerSettingsScreen: React.FC = () => {
                 {/* Right Section - Subscription Dashboard */}
                 <div className="space-y-6">
                   <h2 className="text-[22px] font-black text-white tracking-tight flex items-center gap-2">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 text-sm">💎</span>
+                    {/* <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 text-sm">💎</span> */}
                     Gói Đăng Ký Hệ Thống
                   </h2>
 
@@ -216,7 +222,7 @@ export const OwnerSettingsScreen: React.FC = () => {
                         className="relative overflow-hidden rounded-3xl border border-blue-400/40 bg-[linear-gradient(180deg,rgba(8,23,52,0.95),rgba(4,14,35,0.95))] p-6 shadow-[0_22px_60px_-25px_rgba(37,99,235,0.45)]"
                       >
                         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-400" />
-                        
+
                         <div className="flex flex-wrap items-start justify-between gap-4">
                           <div>
                             <span className="inline-flex rounded-full border border-blue-400/30 bg-blue-500/10 px-3.5 py-0.5 text-[10px] font-extrabold tracking-[0.2em] text-blue-200 uppercase">
@@ -229,52 +235,54 @@ export const OwnerSettingsScreen: React.FC = () => {
                           {getStatusBadge(subscription.status)}
                         </div>
 
-                        {/* Usage statistics bar */}
-                        <div className="mt-8 space-y-2">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="font-medium text-slate-300">
-                              Thời gian sử dụng còn lại: <strong className="text-white font-bold">{subscription.daysRemaining} ngày</strong>
-                            </span>
-                            <span className="text-xs font-semibold text-blue-300">
-                              {Math.max(0, Math.round((subscription.daysRemaining / (subscription.billingCycle === 'yearly' ? 365 : 30)) * 100))}%
-                            </span>
-                          </div>
-                          
-                          <div className="h-3 w-full overflow-hidden rounded-full bg-white/10">
-                            <motion.div
-                              className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400"
-                              initial={{ width: 0 }}
-                              animate={{ width: `${Math.min(100, Math.max(0, Math.round((subscription.daysRemaining / (subscription.billingCycle === 'yearly' ? 365 : 30)) * 100)))}%` }}
-                              transition={{ duration: 1.2, ease: 'easeOut' }}
-                            />
-                          </div>
-
-                          <div className="flex items-center justify-between text-[11px] text-slate-400">
-                            <span>Bắt đầu: {new Date(subscription.startDate).toLocaleDateString('vi-VN')}</span>
-                            <span>Hết hạn: {new Date(subscription.endDate).toLocaleDateString('vi-VN')}</span>
+                        {/* Usage statistics - simplified and ultra premium */}
+                        <div className="mt-6 space-y-4">
+                          <div className="rounded-2xl bg-white/5 p-4 border border-white/5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-slate-400">Thời gian sử dụng còn lại</span>
+                              <span className="text-lg font-black text-blue-400">{subscription.daysRemaining} ngày</span>
+                            </div>
+                            <div className="mt-3 h-px bg-white/10" />
+                            <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
+                              <span>Bắt đầu: <strong className="text-slate-200">{new Date(subscription.startDate).toLocaleDateString('vi-VN')}</strong></span>
+                              <span>Hết hạn: <strong className="text-slate-200">{new Date(subscription.endDate).toLocaleDateString('vi-VN')}</strong></span>
+                            </div>
                           </div>
                         </div>
 
                         {/* Plan Specs snapshot */}
-                        <div className="mt-8 rounded-2xl border border-white/5 bg-slate-900/60 p-4">
-                          <h4 className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400 mb-3">Thông số giới hạn được cấp</h4>
-                          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 text-xs">
-                            <div className="flex items-center gap-2 text-slate-200">
-                              <span className="text-emerald-400 text-base">✓</span>
-                              Tối đa: <strong>{subscription.currentFeatures.max_locations === -1 ? 'Không giới hạn' : `${subscription.currentFeatures.max_locations} cơ sở`}</strong>
+                        <div className="mt-6 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                          <h4 className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400 mb-4">Các tính năng của gói</h4>
+                          <div className="grid gap-x-6 gap-y-3.5 grid-cols-1 sm:grid-cols-2 text-xs">
+                            {/* Locations */}
+                            <div className="flex items-center justify-between text-slate-200 py-1.5 border-b border-white/5">
+                              <span className="text-slate-400">Số cơ sở tối đa:</span>
+                              <strong className="text-slate-100">{subscription.currentFeatures.max_locations === -1 ? 'Không giới hạn' : `${subscription.currentFeatures.max_locations} cơ sở`}</strong>
                             </div>
-                            <div className="flex items-center gap-2 text-slate-200">
-                              <span className="text-emerald-400 text-base">✓</span>
-                              Tối đa: <strong>{subscription.currentFeatures.max_courts === -1 ? 'Không giới hạn' : `${subscription.currentFeatures.max_courts} sân bóng`}</strong>
+                            
+                            {/* Courts */}
+                            <div className="flex items-center justify-between text-slate-200 py-1.5 border-b border-white/5">
+                              <span className="text-slate-400">Số sân tối đa:</span>
+                              <strong className="text-slate-100">{subscription.currentFeatures.max_courts === -1 ? 'Không giới hạn' : `${subscription.currentFeatures.max_courts} sân`}</strong>
                             </div>
-                            <div className="flex items-center gap-2 text-slate-200">
-                              <span className="text-emerald-400 text-base">✓</span>
-                              Đặt sân online 24/7: <strong>{subscription.currentFeatures.online_booking ? 'Bật' : 'Tắt'}</strong>
-                            </div>
-                            <div className="flex items-center gap-2 text-slate-200">
-                              <span className="text-emerald-400 text-base">✓</span>
-                              Ghép đội AI Matchmaking: <strong>{subscription.currentFeatures.ai_matchmaking ? 'Bật' : 'Tắt'}</strong>
-                            </div>
+
+                             {/* Feature items */}
+                             {[
+                               { label: 'Đặt sân online 24/7', enabled: subscription.currentFeatures.online_booking },
+                               { label: 'Phân tích & Thống kê doanh thu', enabled: subscription.currentFeatures.analytics_dashboard },
+                               { label: 'Ghép đội AI Matchmaking', enabled: subscription.currentFeatures.ai_matchmaking },
+                               { label: 'Tích hợp API ngoài', enabled: subscription.currentFeatures.api_integration },
+                               { label: 'Hỗ trợ ưu tiên 24/7', enabled: subscription.currentFeatures.priority_support },
+                               { label: 'Thương hiệu riêng (Whitelabel)', enabled: subscription.currentFeatures.custom_branding },
+                             ].filter(feat => feat.enabled).map((feat, idx) => (
+                               <div 
+                                 key={idx} 
+                                 className="flex items-center justify-between py-1 transition-all text-slate-200 font-medium"
+                               >
+                                 <span>{feat.label}</span>
+                                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold ring-1 ring-emerald-400/20">✓</span>
+                               </div>
+                             ))}
                           </div>
                         </div>
 
@@ -283,7 +291,7 @@ export const OwnerSettingsScreen: React.FC = () => {
                           <div className="mt-8 flex justify-end">
                             <button
                               type="button"
-                              onClick={handleCancelSubscription}
+                              onClick={handleCancelClick}
                               disabled={cancelling}
                               className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-5 py-3 text-xs font-bold text-rose-300 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                             >
@@ -303,7 +311,7 @@ export const OwnerSettingsScreen: React.FC = () => {
                         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/10 text-3xl">
                           ⚠️
                         </div>
-                        
+
                         <div>
                           <h3 className="text-xl font-bold text-white">Chưa Đăng Ký Gói Dịch Vụ</h3>
                           <p className="mt-2 text-sm leading-relaxed text-slate-400">
@@ -329,6 +337,133 @@ export const OwnerSettingsScreen: React.FC = () => {
           </motion.div>
         </main>
       </div>
+
+      {/* Confirm Modal */}
+      <AnimatePresence>
+        {showConfirmModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowConfirmModal(false)}
+              className="absolute inset-0 bg-[#02050E]/85 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              className="relative w-full max-w-md overflow-hidden rounded-3xl border border-rose-500/20 bg-[#0A1224] p-6 shadow-2xl z-10"
+            >
+              {/* <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-400 text-2xl mb-4">
+                ⚠️
+              </div> */}
+              <h3 className="text-xl font-black text-white">Xác Nhận Hủy Gia Hạn</h3>
+              <p className="mt-3 text-sm leading-relaxed text-slate-300">
+                Bạn có chắc chắn muốn hủy gia hạn tự động cho gói đăng ký hiện tại?
+              </p>
+              <div className="mt-4 rounded-2xl bg-rose-500/5 p-4 border border-rose-500/10">
+                <p className="text-xs text-rose-300 leading-relaxed font-semibold">
+                  Quyền lợi giới hạn tính năng của bạn sẽ bị hạ về mức mặc định sau khi chu kỳ gói hiện tại kết thúc vào ngày{' '}
+                  <strong>{subscription ? new Date(subscription.endDate).toLocaleDateString('vi-VN') : ''}</strong>.
+                </p>
+              </div>
+              <div className="mt-6 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmModal(false)}
+                  className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-xs font-bold text-slate-300 transition hover:bg-white/10 hover:text-white"
+                >
+                  Không, quay lại
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmCancel}
+                  className="rounded-2xl bg-rose-600 px-5 py-3 text-xs font-bold text-white transition hover:bg-rose-500 hover:scale-[1.01]"
+                >
+                  Xác nhận hủy
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Success Modal */}
+      <AnimatePresence>
+        {showSuccessModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowSuccessModal(false)}
+              className="absolute inset-0 bg-[#02050E]/85 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              className="relative w-full max-w-md overflow-hidden rounded-3xl border border-emerald-500/20 bg-[#0A1224] p-6 shadow-2xl text-center z-10"
+            >
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400 text-3xl mb-4 animate-bounce">
+                ✓
+              </div>
+              <h3 className="text-xl font-black text-white">Đã Hủy Gia Hạn Thành Công</h3>
+              <p className="mt-3 text-sm leading-relaxed text-slate-300 px-2">
+                Gói dịch vụ của bạn đã được hủy gia hạn tự động thành công.
+              </p>
+              <p className="mt-2 text-xs leading-relaxed text-slate-400">
+                Mọi đặc quyền và quyền lợi của gói vẫn được giữ nguyên cho đến hết chu kỳ vào ngày{' '}
+                <strong className="text-emerald-400 font-bold">{subscription ? new Date(subscription.endDate).toLocaleDateString('vi-VN') : ''}</strong>.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowSuccessModal(false)}
+                className="mt-6 w-full rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 py-3.5 text-xs font-bold text-white shadow-[0_8px_20px_-8px_rgba(59,130,246,0.6)] transition hover:from-blue-500 hover:to-blue-400"
+              >
+                Đồng ý & Đóng
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Error Modal */}
+      <AnimatePresence>
+        {showErrorModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowErrorModal(false)}
+              className="absolute inset-0 bg-[#02050E]/85 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              className="relative w-full max-w-md overflow-hidden rounded-3xl border border-rose-500/20 bg-[#0A1224] p-6 shadow-2xl text-center z-10"
+            >
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/10 text-rose-400 text-3xl mb-4">
+                ⚠️
+              </div>
+              <h3 className="text-xl font-black text-white">Hủy Đăng Ký Thất Bại</h3>
+              <p className="mt-3 text-sm leading-relaxed text-rose-300">
+                {modalErrorMessage}
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowErrorModal(false)}
+                className="mt-6 w-full rounded-2xl bg-white/5 border border-white/10 py-3.5 text-xs font-bold text-slate-300 transition hover:bg-white/10 hover:text-white"
+              >
+                Đóng
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
