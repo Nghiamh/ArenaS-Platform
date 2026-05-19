@@ -15,8 +15,13 @@ import { OwnerRevenueScreen } from './pages/Owner/OwnerRevenueScreen';
 import { OwnerBookingScheduleScreen } from './pages/Owner/OwnerBookingScheduleScreen';
 import { OwnerSettingsScreen } from './pages/Owner/OwnerSettingsScreen';
 import { AdminDashboardPage } from './pages/Admin/AdminDashboardPage';
+import { AdminManageStadiumPage } from './pages/Admin/AdminManageStadiumPage';
 import { PriceListPage } from './pages/HomePage/PriceListPage';
 import CourtDetailPage from './pages/CourtDetailPage/CourtDetailPage';
+import { WalletPage } from './pages/WalletPage/WalletPage';
+import { CheckoutPage } from './pages/CheckoutPage/CheckoutPage';
+import { PaymentSuccessPage } from './pages/CheckoutPage/PaymentSuccessPage';
+import { VietQRPaymentPage } from './pages/CheckoutPage/VietQRPaymentPage';
 import './index.css';
 
 function App() {
@@ -46,6 +51,7 @@ function App() {
         <Route path="/owner/bookings" element={<OwnerBookingScheduleScreen />} />
         <Route path="/owner/settings" element={<OwnerSettingsScreen />} />
         <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+        <Route path="/admin/manage-stadiums" element={<AdminManageStadiumPage />} />
         <Route
           path="/profile"
           element={
@@ -78,11 +84,22 @@ function App() {
             </Layout>
           }
         />
+        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/payment-qr" element={<VietQRPaymentPage />} />
+        <Route path="/payment-success" element={<PaymentSuccessPage />} />
         <Route
           path="/courts/:courtId"
           element={
             <Layout>
               <CourtDetailPage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/wallet"
+          element={
+            <Layout>
+              <WalletPage />
             </Layout>
           }
         />

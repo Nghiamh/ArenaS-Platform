@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, type Variants } from 'framer-motion';
+import { getPricingPlans } from '../../Axios/Axios';
 
 type PriceFeature = {
   label: string;
@@ -7,6 +9,7 @@ type PriceFeature = {
 };
 
 type PricePlan = {
+  id: string;
   tag?: string;
   tagTone?: 'blue' | 'violet' | 'gold';
   iconTone?: 'slate' | 'blue' | 'gold' | 'violet';
@@ -20,6 +23,7 @@ type PricePlan = {
   yearlyPeriod: string;
   yearlyNote?: string;
   cta: string;
+  secondaryCta?: string;
   accent: string;
   features: PriceFeature[];
   highlight?: boolean;
@@ -108,109 +112,7 @@ const planIcons: Record<PricePlan['iconName'], React.ReactNode> = {
   ),
 };
 
-const plans: PricePlan[] = [
-  {
-    name: 'Khởi Nghiệp',
-    subtitle: 'Dành cho chủ sân mới bắt đầu, muốn trải nghiệm nền tảng.',
-    monthlyPrice: '0đ',
-    monthlyPeriod: 'Mãi mãi miễn phí',
-    yearlyPrice: '0đ',
-    yearlyPeriod: 'Mãi mãi miễn phí',
-    cta: 'Bắt Đầu Miễn Phí',
-    accent: 'from-slate-600 to-slate-800',
-    iconName: 'startup',
-    iconTone: 'slate',
-    features: [
-      { label: '1 cơ sở', included: true },
-      { label: '2 sân nhỏ', included: true },
-      { label: '30 lượt đặt / tháng', included: true },
-      { label: 'Lịch đặt sân cơ bản', included: true },
-      { label: 'Báo cáo doanh thu đơn giản', included: true },
-      { label: 'Hỗ trợ cộng đồng', included: true },
-      { label: 'Không tích hợp thanh toán online', included: false },
-      { label: 'Không có phân tích nâng cao', included: false },
-      { label: 'Không có AI Matchmaking', included: false },
-    ],
-  },
-  {
-    name: 'Cơ Bản',
-    subtitle: 'Phù hợp cho cơ sở thể thao nhỏ đang phát triển.',
-    monthlyPrice: '299.000',
-    monthlyPeriod: '/Tháng',
-    monthlyNote: 'hoặc 249.000 /Tháng khi trả năm',
-    yearlyPrice: '249.000',
-    yearlyPeriod: '/Tháng khi trả năm',
-    yearlyNote: 'Tiết kiệm khoảng 17% so với thanh toán theo tháng',
-    cta: 'Dùng Thử 14 Ngày',
-    accent: 'from-blue-600 to-cyan-500',
-    iconName: 'basic',
-    iconTone: 'blue',
-    features: [
-      { label: '1 cơ sở', included: true },
-      { label: '5 sân nhỏ', included: true },
-      { label: 'Không giới hạn lượt đặt', included: true },
-      { label: 'Quản lý lịch nâng cao', included: true },
-      { label: 'Báo cáo doanh thu chi tiết', included: true },
-      { label: 'Thanh toán online (MoMo, Banking)', included: true },
-      { label: 'Hỗ trợ qua email', included: true },
-      { label: 'Không có AI Matchmaking', included: false },
-      { label: 'Không có gợi ý giá thông minh', included: false },
-    ],
-  },
-  {
-    tag: 'PHỔ BIẾN NHẤT',
-    tagTone: 'gold',
-    name: 'Chuyên Nghiệp',
-    subtitle: 'Giải pháp toàn diện cho cơ sở thể thao chuyên nghiệp.',
-    monthlyPrice: '699.000',
-    monthlyPeriod: '/Tháng',
-    monthlyNote: 'hoặc 579.000 /Tháng khi trả năm',
-    yearlyPrice: '579.000',
-    yearlyPeriod: '/Tháng khi trả năm',
-    yearlyNote: 'Tiết kiệm khoảng 17% so với thanh toán theo tháng',
-    cta: 'Dùng Thử 14 Ngày',
-    accent: 'from-blue-500 via-blue-600 to-indigo-500',
-    iconName: 'pro',
-    iconTone: 'gold',
-    highlight: true,
-    features: [
-      { label: '3 cơ sở', included: true },
-      { label: '15 sân nhỏ', included: true },
-      { label: 'Không giới hạn lượt đặt', included: true },
-      { label: 'AI Matchmaking & Ghép đội tự động', included: true },
-      { label: 'Gợi ý giá thông minh theo AI', included: true },
-      { label: 'Phân tích & dự báo doanh thu', included: true },
-      { label: 'Chiến dịch khuyến mãi & mã giảm giá', included: true },
-      { label: 'Tích điểm CourtPoints cho khách', included: true },
-      { label: 'Hỗ trợ ưu tiên 24/7', included: true },
-      { label: 'Tích hợp API', included: true },
-    ],
-  },
-  {
-    tag: 'TÙY CHỈNH',
-    tagTone: 'violet',
-    name: 'Doanh Nghiệp',
-    subtitle: 'Cho hệ thống sân thể thao lớn và tập đoàn quản lý nhiều cơ sở.',
-    monthlyPrice: 'Liên Hệ',
-    monthlyPeriod: 'Tư vấn miễn phí',
-    yearlyPrice: 'Liên Hệ',
-    yearlyPeriod: 'Tư vấn miễn phí',
-    cta: 'Liên Hệ Tư Vấn',
-    accent: 'from-violet-600 to-fuchsia-500',
-    iconName: 'enterprise',
-    iconTone: 'violet',
-    features: [
-      { label: 'Không giới hạn cơ sở & sân nhỏ', included: true },
-      { label: 'Tất cả tính năng Chuyên Nghiệp', included: true },
-      { label: 'Onboarding & đào tạo tận nơi', included: true },
-      { label: 'SLA đảm bảo 99.9% uptime', included: true },
-      { label: 'Tích hợp hệ thống tùy chỉnh', included: true },
-      { label: 'Quản lý tài khoản chuyên dụng', included: true },
-      { label: 'Báo cáo thương hiệu trắng (White-label)', included: true },
-      { label: 'Hỗ trợ qua hotline riêng', included: true },
-    ],
-  },
-];
+
 
 const compareRows: CompareRow[] = [
   { section: 'QUẢN LÝ CƠ SỞ', label: 'Số cơ sở tối đa', values: ['1', '1', '3', 'Không giới hạn'] },
@@ -272,11 +174,195 @@ const planTagClass: Record<NonNullable<PricePlan['tagTone']>, string> = {
 };
 
 export const PriceListPage: React.FC = () => {
+  const navigate = useNavigate();
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
 
+  const [plans, setPlans] = useState<PricePlan[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const isYearly = billingCycle === 'yearly';
   const savingsLabelClass = isYearly ? 'text-emerald-200' : 'text-emerald-100';
+
+  useEffect(() => {
+    async function fetchPlans() {
+      try {
+        setLoading(true);
+        const fetchedPlans = await getPricingPlans();
+
+        const mappedPlans: PricePlan[] = fetchedPlans.map((plan) => {
+          const nameSlug = (plan.name || '').toLowerCase();
+          // Match both English slugs (new seed) and Vietnamese slugs (legacy DB)
+          const isStarter = nameSlug === 'starter' || nameSlug.includes('khoi') || nameSlug === 'khởi_nghiệp';
+          const isBasic = nameSlug === 'basic' || nameSlug.includes('co_ban') || nameSlug.includes('cơ_bản');
+          const isPro = nameSlug === 'professional' || nameSlug === 'pro' || nameSlug.includes('chuyen') || nameSlug.includes('chuyên');
+          const isEnterprise = nameSlug === 'enterprise' || nameSlug.includes('doanh');
+
+          // Fallbacks for display fields (legacy documents)
+          const displayName = plan.displayName || plan.name || 'Gói Dịch Vụ';
+          const displayDescription = plan.description || 'Không có mô tả cho gói này.';
+
+          // Pricing & features safety for legacy DB documents
+          const planPricing = plan.pricing || (plan as any).prices || { monthly: 0, yearly: 0 };
+          const planFeatures = (plan.features || (plan as any).features || {}) as any;
+
+          // Pricing
+          let monthlyPrice = '';
+          let monthlyPeriod = '/Tháng';
+          let monthlyNote = undefined;
+          let yearlyPrice = '';
+          let yearlyPeriod = '/Tháng khi trả năm';
+          let yearlyNote = undefined;
+
+          if (isStarter) {
+            monthlyPrice = '0đ';
+            monthlyPeriod = 'Mãi mãi miễn phí';
+            yearlyPrice = '0đ';
+            yearlyPeriod = 'Mãi mãi miễn phí';
+          } else if (plan.isCustom) {
+            monthlyPrice = 'Liên Hệ';
+            monthlyPeriod = 'Tư vấn miễn phí';
+            yearlyPrice = 'Liên Hệ';
+            yearlyPeriod = 'Tư vấn miễn phí';
+            monthlyNote = 'Giải pháp cấu hình riêng';
+            yearlyNote = 'Liên hệ để nhận báo giá chi tiết';
+          } else {
+            // Yearly price = monthly * 0.83 (17% discount) — same formula as backend virtual
+            const yearlyMonthlyEquiv = Math.round(planPricing.monthly * 0.8);
+            const yearlyTotal = yearlyMonthlyEquiv * 12;
+            monthlyPrice = planPricing.monthly.toLocaleString('vi-VN') + 'đ';
+            monthlyNote = `hoặc ${yearlyMonthlyEquiv.toLocaleString('vi-VN')}đ /Tháng khi trả năm`;
+            yearlyPrice = yearlyMonthlyEquiv.toLocaleString('vi-VN') + 'đ';
+            yearlyNote = `Tiết kiệm 20% (Thanh toán cả năm: ${yearlyTotal.toLocaleString('vi-VN')}đ)`;
+          }
+
+          // Icon Name & Tone
+          let iconName: 'startup' | 'basic' | 'pro' | 'enterprise' = 'startup';
+          let iconTone: 'slate' | 'blue' | 'gold' | 'violet' = 'slate';
+          let tag = undefined;
+          let tagTone: 'blue' | 'violet' | 'gold' | undefined = undefined;
+          let accent = 'from-slate-600 to-slate-800';
+
+          if (isStarter) {
+            iconName = 'startup';
+            iconTone = 'slate';
+            accent = 'from-slate-600 to-slate-800';
+          } else if (isBasic) {
+            iconName = 'basic';
+            iconTone = 'blue';
+            accent = 'from-blue-600 to-cyan-500';
+          } else if (isPro || plan.name.includes('professional') || plan.name.includes('pro')) {
+            iconName = 'pro';
+            iconTone = 'gold';
+            accent = 'from-blue-500 via-blue-600 to-indigo-500';
+            tag = 'PHỔ BIẾN NHẤT';
+            tagTone = 'gold';
+          } else if (isEnterprise || plan.isCustom) {
+            iconName = 'enterprise';
+            iconTone = 'violet';
+            accent = 'from-violet-600 to-fuchsia-500';
+            tag = 'TÙY CHỈNH';
+            tagTone = 'violet';
+          } else {
+            iconName = 'pro';
+            iconTone = 'blue';
+            accent = 'from-emerald-600 to-teal-500';
+          }
+
+          // CTAs
+          let cta = 'Mua Ngay';
+          if (isStarter) {
+            cta = 'Bắt Đầu Miễn Phí';
+          } else if (plan.isCustom) {
+            cta = 'Liên Hệ Tư Vấn';
+          }
+
+          let secondaryCta = undefined;
+          if (!isStarter && !plan.isCustom) {
+            secondaryCta = 'Dùng Thử 14 Ngày';
+          }
+
+          // Dynamic features construction
+          const features = [
+            {
+              label: planFeatures.max_locations === -1 || planFeatures.max_locations === undefined ? 'Không giới hạn cơ sở' : `${planFeatures.max_locations} cơ sở`,
+              included: true
+            },
+            {
+              label: planFeatures.max_courts === -1 || planFeatures.max_courts === undefined ? 'Không giới hạn sân nhỏ' : `${planFeatures.max_courts} sân nhỏ`,
+              included: true
+            },
+            {
+              label: planFeatures.max_bookings_per_month === -1 || planFeatures.max_bookings_per_month === undefined ? 'Không giới hạn lượt đặt' : `${planFeatures.max_bookings_per_month} lượt đặt / tháng`,
+              included: true
+            },
+            {
+              label: 'Đặt sân online 24/7',
+              included: !!planFeatures.online_booking || !!planFeatures.online_payment
+            },
+            {
+              label: 'Báo cáo & Phân tích doanh thu',
+              included: !!planFeatures.analytics_dashboard || !!planFeatures.detailed_revenue_report
+            },
+            {
+              label: 'AI Matchmaking & Ghép đội tự động',
+              included: !!planFeatures.ai_matchmaking
+            },
+            {
+              label: 'Hỗ trợ tích hợp API',
+              included: !!planFeatures.api_integration
+            },
+            {
+              label: 'Báo cáo thương hiệu riêng (White-label)',
+              included: !!planFeatures.custom_branding
+            },
+            {
+              label: 'Hỗ trợ ưu tiên 24/7',
+              included: !!planFeatures.priority_support || !!planFeatures.email_support
+            }
+          ];
+
+          // Sort features: included features first, non-included (greyed out) features at the end
+          const sortedFeatures = [...features].sort((a, b) => {
+            if (a.included === b.included) return 0;
+            return a.included ? -1 : 1;
+          });
+
+          return {
+            id: plan._id.toString(),
+            name: displayName,
+            subtitle: displayDescription,
+            monthlyPrice,
+            monthlyPeriod,
+            monthlyNote,
+            yearlyPrice,
+            yearlyPeriod,
+            yearlyNote,
+            cta,
+            secondaryCta,
+            accent,
+            iconName,
+            iconTone,
+            tag,
+            tagTone,
+            features: sortedFeatures,
+            highlight: isPro || nameSlug.includes('professional') || nameSlug.includes('pro')
+          };
+        });
+
+        setPlans(mappedPlans);
+        setError(null);
+      } catch (err: any) {
+        console.error('Error fetching plans:', err);
+        setError('Không thể tải danh sách bảng giá. Vui lòng thử lại sau.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchPlans();
+  }, []);
 
   return (
     <div className="relative overflow-hidden bg-[#071024] text-white">
@@ -305,15 +391,13 @@ export const PriceListPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setBillingCycle((current) => (current === 'monthly' ? 'yearly' : 'monthly'))}
-                className={`relative h-11 w-28 shrink-0 overflow-hidden rounded-full border transition-colors duration-300 ${
-                  isYearly ? 'border-blue-200/70 bg-blue-500' : 'border-slate-400/50 bg-slate-700/85'
-                }`}
+                className={`relative h-11 w-28 shrink-0 overflow-hidden rounded-full border transition-colors duration-300 ${isYearly ? 'border-blue-200/70 bg-blue-500' : 'border-slate-400/50 bg-slate-700/85'
+                  }`}
                 aria-label="Chuyển đổi giữa thanh toán tháng và năm"
               >
                 <span
-                  className={`absolute left-1 top-1 h-9 w-9 rounded-full bg-white shadow-[0_4px_12px_-6px_rgba(15,23,42,0.65)] transition-transform duration-300 will-change-transform ${
-                    isYearly ? 'translate-x-[64px]' : 'translate-x-0'
-                  }`}
+                  className={`absolute left-1 top-1 h-9 w-9 rounded-full bg-white shadow-[0_4px_12px_-6px_rgba(15,23,42,0.65)] transition-transform duration-300 will-change-transform ${isYearly ? 'translate-x-[64px]' : 'translate-x-0'
+                    }`}
                 />
               </button>
               <span className={`text-sm font-semibold transition-colors ${isYearly ? 'text-slate-100' : 'text-slate-400'}`}>
@@ -326,112 +410,164 @@ export const PriceListPage: React.FC = () => {
           </div>
 
           <motion.div
-            className="mt-10 grid gap-5 xl:grid-cols-4 lg:grid-cols-2"
+            className="mt-10 grid gap-5 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4"
             variants={gridVariants}
             initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.18 }}
+            animate="show"
           >
-            {plans.map((plan) => {
-              const isPopular = Boolean(plan.highlight);
-              const tagTone = plan.tagTone ?? 'blue';
-              const iconTone = plan.iconTone ?? 'blue';
-              const isEnterprisePrice = plan.monthlyPrice === 'Liên Hệ';
-              const displayPrice = isYearly ? plan.yearlyPrice : plan.monthlyPrice;
-              const displayPeriod = isYearly ? plan.yearlyPeriod : plan.monthlyPeriod;
-              const displayNote = isYearly ? plan.yearlyNote : plan.monthlyNote;
-
-              return (
-                <motion.article
-                  key={plan.name}
-                  variants={cardVariants}
-                  whileHover={{ y: -8, scale: 1.015 }}
-                  whileTap={{ scale: 0.992 }}
-                  transition={{ type: 'spring', stiffness: 220, damping: 24, mass: 0.9 }}
-                  className={`relative overflow-hidden rounded-[2rem] border bg-[linear-gradient(180deg,rgba(8,15,33,0.98),rgba(4,9,20,0.98))] p-5 shadow-[0_22px_70px_-30px_rgba(2,8,23,0.82)] transition-[border-color,box-shadow,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-white/20 sm:p-6 ${
-                    isPopular ? 'border-blue-300/95 ring-2 ring-blue-400/45 shadow-[0_34px_110px_-34px_rgba(37,99,235,0.52)] scale-[1.01]' : 'border-white/10'
-                  }`}
+            {loading ? (
+              <div className="col-span-full flex flex-col items-center justify-center py-20">
+                <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+                <p className="mt-4 text-slate-400 font-semibold">Đang tải danh sách bảng giá từ máy chủ...</p>
+              </div>
+            ) : error ? (
+              <div className="col-span-full flex flex-col items-center justify-center py-20 text-center">
+                <span className="text-4xl">⚠️</span>
+                <p className="mt-4 text-rose-400 font-bold">{error}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-xs font-semibold text-rose-300 hover:bg-rose-500/20"
                 >
-                  <div
-                    className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${plan.accent} ${
-                      isPopular ? 'opacity-100' : 'opacity-75'
-                    }`}
-                  />
+                  Thử lại
+                </button>
+              </div>
+            ) : plans.length === 0 ? (
+              <div className="col-span-full flex flex-col items-center justify-center py-20 text-center">
+                <span className="text-4xl">📂</span>
+                <p className="mt-4 text-slate-400 font-semibold">Hiện chưa có gói dịch vụ nào hoạt động.</p>
+              </div>
+            ) : (
+              plans.map((plan) => {
+                const isPopular = Boolean(plan.highlight);
+                const tagTone = plan.tagTone ?? 'blue';
+                const iconTone = plan.iconTone ?? 'blue';
+                const isEnterprisePrice = plan.monthlyPrice === 'Liên Hệ';
+                const displayPrice = isYearly ? plan.yearlyPrice : plan.monthlyPrice;
+                const displayPeriod = isYearly ? plan.yearlyPeriod : plan.monthlyPeriod;
+                const displayNote = isYearly ? plan.yearlyNote : plan.monthlyNote;
 
-                  {plan.tag && (
-                    <div className="mb-5 flex justify-center">
-                      <span className={`rounded-full border px-4 py-1 text-xs font-extrabold tracking-[0.18em] ${planTagClass[tagTone]}`}>
-                        {plan.tag}
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="flex items-start gap-4">
-                    <div className={`${iconBaseClass} ${iconToneClass[iconTone]}`}>
-                      {planIcons[plan.iconName]}
-                    </div>
-                    <div>
-                      <h2 className="text-[1.65rem] font-bold leading-tight tracking-tight text-white">
-                        {plan.name}
-                      </h2>
-                      <p className="mt-1 max-w-[16ch] text-sm leading-6 text-slate-400 sm:max-w-none">
-                        {plan.subtitle}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-8">
-                    <div className="flex flex-col items-start gap-1">
-                      <span className={`font-black tracking-tight text-white ${isEnterprisePrice ? 'text-3xl leading-none sm:text-4xl' : 'text-3xl leading-none sm:text-[2.6rem]'}`}>
-                        {displayPrice}
-                      </span>
-                      <span className={`whitespace-nowrap font-medium text-slate-300 ${isEnterprisePrice ? 'text-xs sm:text-sm' : 'text-sm sm:text-base'}`}>
-                        {displayPeriod}
-                      </span>
-                    </div>
-                    {displayNote && <p className="mt-1 text-sm text-emerald-200">{displayNote}</p>}
-                  </div>
-
-                  <button
-                    type="button"
-                    className={`mt-8 w-full rounded-2xl border px-4 py-3.5 text-sm font-bold tracking-wide transition-colors duration-300 ${
-                      isPopular
-                        ? 'border-blue-300/40 bg-blue-500 text-white shadow-[0_16px_40px_-18px_rgba(37,99,235,0.95)] hover:bg-blue-400'
-                        : isEnterprisePrice
-                          ? 'border-violet-300/40 bg-violet-500/15 text-violet-100 hover:bg-violet-500/30 hover:border-violet-300/70'
-                          : 'border-white/10 bg-white/4 text-white hover:border-blue-300/40 hover:bg-blue-500/18 hover:text-blue-100'
-                    }`}
+                return (
+                  <motion.article
+                    key={plan.name}
+                    variants={cardVariants}
+                    whileHover={{ y: -8, scale: 1.015 }}
+                    whileTap={{ scale: 0.992 }}
+                    transition={{ type: 'spring', stiffness: 220, damping: 24, mass: 0.9 }}
+                    className={`relative overflow-hidden rounded-[2rem] border bg-[linear-gradient(180deg,rgba(8,15,33,0.98),rgba(4,9,20,0.98))] p-5 shadow-[0_22px_70px_-30px_rgba(2,8,23,0.82)] transition-[border-color,box-shadow,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-white/20 sm:p-6 ${isPopular ? 'border-blue-300/95 ring-2 ring-blue-400/45 shadow-[0_34px_110px_-34px_rgba(37,99,235,0.52)] scale-[1.01]' : 'border-white/10'
+                      }`}
                   >
-                    {plan.cta}
-                  </button>
+                    <div
+                      className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${plan.accent} ${isPopular ? 'opacity-100' : 'opacity-75'
+                        }`}
+                    />
 
-                  <div className="mt-7 space-y-3">
-                    {plan.features.map((feature, index) => (
-                      <motion.div
-                        key={feature.label}
-                        custom={index}
-                        variants={featureVariants}
-                        initial="hidden"
-                        whileInView="show"
-                        viewport={{ once: true, amount: 0.2 }}
-                        className={`flex items-start gap-3 text-sm ${feature.included ? 'text-slate-100' : 'text-slate-500'}`}
-                      >
-                        <span
-                          className={`mt-[2px] flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${
-                            feature.included ? 'bg-emerald-400/15 text-emerald-300' : 'bg-white/5 text-slate-500'
+                    {plan.tag && (
+                      <div className="mb-5 flex justify-center">
+                        <span className={`rounded-full border px-4 py-1 text-xs font-extrabold tracking-[0.18em] ${planTagClass[tagTone]}`}>
+                          {plan.tag}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex items-start gap-4">
+                      <div className={`${iconBaseClass} ${iconToneClass[iconTone]}`}>
+                        {planIcons[plan.iconName]}
+                      </div>
+                      <div>
+                        <h2 className="text-[1.65rem] font-bold leading-tight tracking-tight text-white">
+                          {plan.name}
+                        </h2>
+                        <p className="mt-1 max-w-[16ch] text-sm leading-6 text-slate-400 sm:max-w-none">
+                          {plan.subtitle}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-8">
+                      <div className="flex flex-col items-start gap-1">
+                        <span className={`font-black tracking-tight text-white ${isEnterprisePrice ? 'text-3xl leading-none sm:text-4xl' : 'text-3xl leading-none sm:text-[2.6rem]'}`}>
+                          {displayPrice}
+                        </span>
+                        <span className={`whitespace-nowrap font-medium text-slate-300 ${isEnterprisePrice ? 'text-xs sm:text-sm' : 'text-sm sm:text-base'}`}>
+                          {displayPeriod}
+                        </span>
+                      </div>
+                      {displayNote && <p className="mt-1 text-sm text-emerald-200">{displayNote}</p>}
+                    </div>
+
+                    <div className="mt-8 flex flex-col gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (plan.cta === 'Mua Ngay') {
+                            // Tính toán giá gốc (trước giảm giá) nếu thanh toán năm
+                            const numericMonthly = parseInt(plan.monthlyPrice.replace(/\./g, '')) || 0;
+                            const originalYearly = (numericMonthly * 12).toLocaleString('vi-VN').replace(/,/g, '.');
+                            const finalPrice = isYearly
+                              ? (parseInt(plan.yearlyPrice.replace(/\./g, '')) * 12).toLocaleString('vi-VN').replace(/,/g, '.')
+                              : plan.monthlyPrice;
+
+                            navigate('/checkout', {
+                              state: {
+                                plan: {
+                                  id: plan.id,
+                                  name: plan.name,
+                                  price: finalPrice,
+                                  period: isYearly ? '/ năm' : '/ tháng',
+                                  originalPrice: isYearly ? originalYearly : null,
+                                }
+                              }
+                            });
+                          } else {
+                            // Xử lý logic cho các nút khác
+                          }
+                        }}
+                        className={`w-full rounded-2xl border px-4 py-3.5 text-sm font-bold tracking-wide transition-colors duration-300 ${isPopular
+                          ? 'border-blue-300/40 bg-blue-500 text-white shadow-[0_16px_40px_-18px_rgba(37,99,235,0.95)] hover:bg-blue-400'
+                          : isEnterprisePrice
+                            ? 'border-violet-300/40 bg-violet-500/15 text-violet-100 hover:bg-violet-500/30 hover:border-violet-300/70'
+                            : 'border-blue-500/50 bg-blue-500/10 text-blue-300 hover:border-blue-400/80 hover:bg-blue-500/20 hover:text-blue-200'
                           }`}
+                      >
+                        {plan.cta}
+                      </button>
+                      {plan.secondaryCta && (
+                        <button
+                          type="button"
+                          className="w-full rounded-2xl border border-white/10 bg-white/4 px-4 py-3 text-sm font-bold tracking-wide text-white transition-colors duration-300 hover:border-white/20 hover:bg-white/10"
                         >
-                          {feature.included ? '✓' : '×'}
-                        </span>
-                        <span className={feature.included ? 'leading-6' : 'leading-6 line-through decoration-slate-600/70'}>
-                          {feature.label}
-                        </span>
-                      </motion.div>
-                    ))}
-                  </div>
-                </motion.article>
-              );
-            })}
+                          {plan.secondaryCta}
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="mt-7 space-y-3">
+                      {plan.features.map((feature, index) => (
+                        <motion.div
+                          key={feature.label}
+                          custom={index}
+                          variants={featureVariants}
+                          initial="hidden"
+                          whileInView="show"
+                          viewport={{ once: true, amount: 0.2 }}
+                          className={`flex items-start gap-3 text-sm ${feature.included ? 'text-slate-100' : 'text-slate-500'}`}
+                        >
+                          <span
+                            className={`mt-[2px] flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${feature.included ? 'bg-emerald-400/15 text-emerald-300' : 'bg-white/5 text-slate-500'
+                              }`}
+                          >
+                            {feature.included ? '✓' : '×'}
+                          </span>
+                          <span className={feature.included ? 'leading-6' : 'leading-6 line-through decoration-slate-600/70'}>
+                            {feature.label}
+                          </span>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </motion.article>
+                );
+              })
+            )}
           </motion.div>
         </div>
       </section>
@@ -468,13 +604,12 @@ export const PriceListPage: React.FC = () => {
                     return (
                       <div key={`${row.label}-${index}`} className="flex justify-center text-center text-sm font-semibold">
                         <span
-                          className={`inline-flex min-h-8 items-center justify-center rounded-full px-3 py-1 ${
-                            positive
-                              ? 'bg-emerald-400/12 text-emerald-300'
-                              : negative
-                                ? 'bg-white/5 text-slate-500'
-                                : 'bg-blue-500/10 text-slate-200'
-                          }`}
+                          className={`inline-flex min-h-8 items-center justify-center rounded-full px-3 py-1 ${positive
+                            ? 'bg-emerald-400/12 text-emerald-300'
+                            : negative
+                              ? 'bg-white/5 text-slate-500'
+                              : 'bg-blue-500/10 text-slate-200'
+                            }`}
                         >
                           {value}
                         </span>

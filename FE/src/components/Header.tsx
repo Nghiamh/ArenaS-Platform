@@ -114,12 +114,12 @@ export const Header: React.FC = () => {
                 >
                   Bảng Giá
                 </Link>
-                <Link
+                {/* <Link
                   to="#"
                   className="hover:text-blue-400 transition duration-300 font-medium"
                 >
                   Dành Cho Chủ Sân
-                </Link>
+                </Link> */}
               </>
             )}
           </nav>

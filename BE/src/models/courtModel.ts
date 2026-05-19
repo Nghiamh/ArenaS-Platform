@@ -2,6 +2,18 @@ import mongoose, { Document, Model, Schema, Types } from "mongoose";
 
 export type CourtStatus = "available" | "closed" | "open";
 
+export type SubCourtType = "football_5" | "football_7" | "badminton" | "tennis" | "pickleball" | "other";
+
+export type SubCourtStatus = "open" | "closed";
+
+export interface ISubCourt {
+	name: string;
+	type: SubCourtType;
+	surface?: string;
+	price_per_hour: number;
+	status: SubCourtStatus;
+}
+
 export interface ICourtCoordinates {
 	type: "Point";
 	coordinates: [number, number];
@@ -16,8 +28,12 @@ export interface ICourt extends Document {
 	coordinates?: ICourtCoordinates;
 	amenities: string[];
 	images: string[];
+	open_time?: string;
+	close_time?: string;
 	avg_rating: number;
 	status: CourtStatus;
+	number_of_courts: number;
+	sub_courts: ISubCourt[];
 	createdAt?: Date;
 	updatedAt?: Date;
 }
@@ -94,6 +110,16 @@ const courtSchema = new Schema<ICourt, ICourtModel>(
 			required: true,
 			default: [],
 		},
+		open_time: {
+			type: String,
+			required: false,
+			default: "06:00",
+		},
+		close_time: {
+			type: String,
+			required: false,
+			default: "22:00",
+		},
 		avg_rating: {
 			type: Number,
 			required: true,
@@ -106,6 +132,48 @@ const courtSchema = new Schema<ICourt, ICourtModel>(
 			required: true,
 			default: "available",
 			enum: ["available", "closed", "open"],
+		},
+		number_of_courts: {
+			type: Number,
+			required: true,
+			default: 8,
+			min: 1,
+		},
+		sub_courts: {
+			type: [
+				new Schema<ISubCourt>(
+					{
+						name: {
+							type: String,
+							required: true,
+							trim: true,
+						},
+						type: {
+							type: String,
+							required: true,
+							enum: ["football_5", "football_7", "badminton", "tennis", "pickleball", "other"],
+						},
+						surface: {
+							type: String,
+							required: false,
+							trim: true,
+						},
+						price_per_hour: {
+							type: Number,
+							required: true,
+							min: 0,
+						},
+						status: {
+							type: String,
+							required: true,
+							default: "open",
+							enum: ["open", "closed"],
+						},
+					},
+					{ _id: false }
+				),
+			],
+			default: [],
 		},
 	},
 	{

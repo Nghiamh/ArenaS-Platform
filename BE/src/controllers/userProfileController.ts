@@ -20,6 +20,7 @@ function buildUserProfileResponse(user: {
 	avatarUrl?: string;
 	email: string;
 	phone?: string;
+	address?: string;
 	userName: string;
 	role?: IUserRole;
 	createdAt?: Date;
@@ -34,6 +35,7 @@ function buildUserProfileResponse(user: {
 		avatarUrl: user.avatarUrl?.trim() || "",
 		email: user.email,
 		phone: user.phone?.trim() || "",
+		address: user.address?.trim() || "",
 		userName: user.userName,
 		role,
 		redirectPath: resolveRedirectPathByRole(role),
@@ -96,16 +98,18 @@ export async function getCurrentUserProfile(req: Request, res: Response): Promis
 export async function updateCurrentUserProfile(req: Request, res: Response): Promise<void> {
 	try {
 		const user = req.user!;
-		const { name, phone, dateOfBirth, avatarUrl } = req.body as {
+		const { name, phone, dateOfBirth, avatarUrl, address } = req.body as {
 			name?: string;
 			phone?: string;
 			dateOfBirth?: string;
 			avatarUrl?: string;
+			address?: string;
 		};
 
 		const normalizedName = normalizeOptionalText(name);
 		const normalizedPhone = normalizeOptionalText(phone);
 		const parsedDateOfBirth = parseDateOfBirth(dateOfBirth);
+		const normalizedAddress = normalizeOptionalText(address);
 		let shouldSave = false;
 
 		if (normalizedName && user.name !== normalizedName) {
@@ -117,6 +121,14 @@ export async function updateCurrentUserProfile(req: Request, res: Response): Pro
 			const nextPhone = normalizedPhone ?? undefined;
 			if (user.phone !== nextPhone) {
 				user.phone = nextPhone;
+				shouldSave = true;
+			}
+		}
+
+		if (address !== undefined) {
+			const nextAddress = normalizedAddress ?? undefined;
+			if (user.address !== nextAddress) {
+				user.address = nextAddress;
 				shouldSave = true;
 			}
 		}
@@ -134,7 +146,7 @@ export async function updateCurrentUserProfile(req: Request, res: Response): Pro
 
 		if (avatarUrl !== undefined) {
 			const normalizedAvatarUrl = normalizeOptionalText(avatarUrl);
-			if (normalizedAvatarUrl && normalizedAvatarUrl.length > 2_000_000) {
+			if (normalizedAvatarUrl && normalizedAvatarUrl.length > 5_000_000) {
 				throw new Error("avatar_too_large");
 			}
 

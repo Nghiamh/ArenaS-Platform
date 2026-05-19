@@ -5,6 +5,7 @@ import {
 	getCourtsByArea,
 	getNearbyCourts,
 	getPublicCourts,
+	getPublicCourtById,
 	getOwnerCourtById,
 	getOwnerCourts,
 	updateOwnerCourt,
@@ -19,6 +20,7 @@ const ownerRole = requireRole({
 });
 
 courtRoutes.get("/public", getPublicCourts);
+courtRoutes.get("/public/:courtId", getPublicCourtById);
 courtRoutes.get("/nearby", getNearbyCourts);
 courtRoutes.get("/search", getCourtsByArea);
 courtRoutes.get("/", requireAuth, ownerRole, getOwnerCourts);

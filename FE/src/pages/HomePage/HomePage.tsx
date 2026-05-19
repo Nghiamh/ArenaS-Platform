@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
-import { createSearchParams, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { getPublicCourts, type PublicCourt } from '../../Axios/Axios';
 
 type SportCategory = {
@@ -184,31 +184,7 @@ const heroRotatingWords = ['Đặt Sân', 'Nhanh Chóng', 'Tiện Lợi'];
 
 const sectionTitleClass = 'text-3xl md:text-5xl font-extrabold tracking-tight text-white';
 
-const hcmcLocationOptions = [
-  'Gần đây',
-  'TP Thủ Đức (gồm Q2, Q9, Thủ Đức)',
-  'Quận 1',
-  'Quận 3',
-  'Quận 4',
-  'Quận 5',
-  'Quận 6',
-  'Quận 7',
-  'Quận 8',
-  'Quận 10',
-  'Quận 11',
-  'Quận 12',
-  'Bình Thạnh',
-  'Phú Nhuận',
-  'Tân Bình',
-  'Tân Phú',
-  'Gò Vấp',
-  'Bình Tân',
-  'Hóc Môn',
-  'Bình Chánh',
-  'Nhà Bè',
-  'Củ Chi',
-  'Cần Giờ',
-];
+
 
 type HomeLocationState = {
   toastMessage?: string;
@@ -223,12 +199,7 @@ export const HomePage: React.FC = () => {
   const [featuredVenues, setFeaturedVenues] = useState<Venue[]>([]);
   const [isFeaturedLoading, setIsFeaturedLoading] = useState(true);
   const [featuredError, setFeaturedError] = useState<string | null>(null);
-  const today = new Date().toISOString().slice(0, 10);
-  const [form, setForm] = useState({
-    sport: 'Bóng Đá',
-    location: 'Gần đây',
-    date: today,
-  });
+
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -294,18 +265,7 @@ export const HomePage: React.FC = () => {
     return () => window.clearTimeout(timeout);
   }, [toastMessage]);
 
-  const handleSearch = (event: React.FormEvent) => {
-    event.preventDefault();
 
-    navigate({
-      pathname: '/tim-san',
-      search: `?${createSearchParams({
-        sport: form.sport,
-        location: form.location,
-        date: form.date,
-      })}`,
-    });
-  };
 
   return (
     <div className="relative overflow-x-clip bg-[radial-gradient(circle_at_15%_10%,rgba(37,99,235,0.22),transparent_30%),radial-gradient(circle_at_90%_10%,rgba(14,165,233,0.18),transparent_28%),linear-gradient(180deg,#020617_0%,#061136_45%,#030712_100%)] text-slate-100">
@@ -379,62 +339,7 @@ export const HomePage: React.FC = () => {
             </motion.p>
           </motion.div>
 
-          <motion.form
-            onSubmit={handleSearch}
-            className="glass-panel relative z-10 grid gap-3 rounded-3xl p-4 shadow-[0_30px_80px_-30px_rgba(37,99,235,0.65)] md:grid-cols-[1.3fr_1.3fr_1fr_auto] md:items-end md:gap-4 md:p-5"
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
-            <label className="space-y-2 text-xs uppercase tracking-[0.14em] text-slate-400">
-              Môn thể thao
-              <select
-                value={form.sport}
-                onChange={(event) => setForm((prev) => ({ ...prev, sport: event.target.value }))}
-                className="h-12 w-full rounded-xl border border-white/10 bg-slate-900/70 px-4 text-sm text-white outline-none transition focus:border-blue-400/70"
-              >
-                <option>Bóng Đá</option>
-                <option>Tennis</option>
-                <option>Cầu Lông</option>
-                <option>Pickleball</option>
-              </select>
-            </label>
 
-            <label className="space-y-2 text-xs uppercase tracking-[0.14em] text-slate-400">
-              Khu vực
-              <select
-                value={form.location}
-                onChange={(event) => setForm((prev) => ({ ...prev, location: event.target.value }))}
-                className="h-12 w-full rounded-xl border border-white/10 bg-slate-900/70 px-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-blue-400/70"
-              >
-                {hcmcLocationOptions.map((option) => (
-                  <option key={option} value={option} className="bg-slate-950 text-white">
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="space-y-2 text-xs uppercase tracking-[0.14em] text-slate-400">
-              Ngày
-              <input
-                type="date"
-                min={today}
-                value={form.date}
-                onChange={(event) => setForm((prev) => ({ ...prev, date: event.target.value }))}
-                className="h-12 w-full rounded-xl border border-white/10 bg-slate-900/70 px-4 text-sm text-white outline-none transition focus:border-blue-400/70"
-              />
-            </label>
-
-            <motion.button
-              type="submit"
-              whileHover={{ y: -2, scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="h-12 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-400 px-6 text-sm font-bold uppercase tracking-[0.08em] text-white shadow-[0_12px_30px_-12px_rgba(59,130,246,0.8)]"
-            >
-              Tìm sân
-            </motion.button>
-          </motion.form>
 
           <motion.div
             className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
@@ -460,10 +365,11 @@ export const HomePage: React.FC = () => {
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">Nổi bật</p>
               <h2 className={sectionTitleClass}>Sân được chọn lọc</h2>
             </div>
-            <button className="text-sm font-semibold text-blue-300 transition hover:text-white">Xem tất cả sân →</button>
+            <button onClick={() => navigate('/tim-san')} className="text-sm font-semibold text-blue-300 transition hover:text-white">Xem tất cả sân →</button>
           </div>
 
           <motion.div
+            key={isFeaturedLoading ? 'loading' : 'loaded'}
             className="grid gap-6 lg:grid-cols-3"
             variants={container}
             initial="hidden"

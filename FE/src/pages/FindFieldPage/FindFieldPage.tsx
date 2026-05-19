@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { getPublicCourts, type PublicCourt } from '../../Axios/Axios';
@@ -9,6 +9,7 @@ type FindFieldLocationState = {
   selectedVenueId?: string;
   sport?: string;
   directionsCourt?: any;
+  showMap?: boolean;
 };
 
 type SortOption = 'distanceAsc' | 'priceAsc' | 'priceDesc' | 'ratingDesc';
@@ -20,7 +21,6 @@ const sortOptions: Array<{ value: SortOption; label: string }> = [
   { value: 'ratingDesc', label: 'Đánh Giá Cao' },
 ];
 
-const formatVndInput = (value: number) => new Intl.NumberFormat('vi-VN').format(value);
 
 type SportName = 'Bóng Đá' | 'Tennis' | 'Cầu Lông' | 'Pickleball';
 
@@ -90,22 +90,22 @@ const locationAliases: Record<string, string[]> = {
 };
 
 const matchLocation = (venueLocation: string, selectedLocation: string) => {
-  const normalizedSelected = normalizeLocationText(selectedLocation);
-
-  if (!normalizedSelected || normalizedSelected === 'gan day') {
+  // Check raw string first – 'Gần đây' / 'Gần đây' should show all
+  const raw = selectedLocation.trim().toLowerCase();
+  if (!raw || raw === 'gần đây' || raw.includes('đây') || raw === 'gan day' || raw === 'gan ay') {
     return true;
   }
 
+  const normalizedSelected = normalizeLocationText(selectedLocation);
+  if (!normalizedSelected) return true;
+
   const normalizedVenue = normalizeLocationText(venueLocation);
+  if (!normalizedVenue) return false;
 
-  if (!normalizedVenue) {
-    return false;
-  }
-
-  const matchedAlias = Object.keys(locationAliases).find((key) => normalizedSelected.includes(key));
+  const matchedAlias = Object.keys(locationAliases).find(key => normalizedSelected.includes(key));
   const tokens = matchedAlias ? locationAliases[matchedAlias] : [normalizedSelected];
 
-  return tokens.some((token) => normalizedVenue.includes(token));
+  return tokens.some(token => normalizedVenue.includes(token));
 };
 
 const pickSportCategory = (sports: string[]): SportName => {
@@ -184,43 +184,21 @@ const buildVenue = (court: PublicCourt, userCoordinates: UserCoordinates | null)
   };
 };
 
-const sportFilters: Record<SportName, string[]> = {
-  'Bóng Đá': ['5 Người', '7 Người', 'Có Nhân Tạo', 'Trong Nhà', 'Có Chỗ Trống'],
-  Tennis: ['Sân Cứng', 'Sân Đất Nện', 'Có Đèn', 'Trong Nhà', 'Có Chỗ Trống'],
-  'Cầu Lông': ['Sàn Thảm', 'Sàn Gỗ', 'Có Máy Lạnh', 'Trong Nhà', 'Có Chỗ Trống'],
-  Pickleball: ['Trong Nhà', 'Ngoài Trời', 'Có Huấn Luyện', 'Cho Thuê Vợt', 'Có Chỗ Trống'],
+// Map Vietnamese chip label → English API param
+const SPORT_TO_API: Partial<Record<SportName, string>> = {
+  'Bóng Đá': 'football',
+  'Tennis': 'tennis',
+  'Cầu Lông': 'badminton',
+  'Pickleball': 'pickleball',
 };
 
-const sportFilterPredicates: Record<SportName, Record<string, (venue: Venue) => boolean>> = {
-  'Bóng Đá': {
-    '5 Người': (venue) => venue.formatLabel === '5 Người',
-    '7 Người': (venue) => venue.formatLabel === '7 Người',
-    'Có Nhân Tạo': (venue) => venue.amenities.includes('Có Nhân Tạo'),
-    'Trong Nhà': (venue) => venue.indoor,
-    'Có Chỗ Trống': (venue) => venue.hasSlot,
-  },
-  Tennis: {
-    'Sân Cứng': (venue) => venue.amenities.includes('Sân Cứng'),
-    'Sân Đất Nện': (venue) => venue.amenities.includes('Sân Đất Nện'),
-    'Có Đèn': (venue) => venue.amenities.includes('Có Đèn'),
-    'Trong Nhà': (venue) => venue.indoor,
-    'Có Chỗ Trống': (venue) => venue.hasSlot,
-  },
-  'Cầu Lông': {
-    'Sàn Thảm': (venue) => venue.amenities.includes('Sàn Thảm'),
-    'Sàn Gỗ': (venue) => venue.amenities.includes('Sàn Gỗ'),
-    'Có Máy Lạnh': (venue) => venue.amenities.includes('Có Máy Lạnh'),
-    'Trong Nhà': (venue) => venue.indoor,
-    'Có Chỗ Trống': (venue) => venue.hasSlot,
-  },
-  Pickleball: {
-    'Trong Nhà': (venue) => venue.indoor,
-    'Ngoài Trời': (venue) => !venue.indoor,
-    'Có Huấn Luyện': (venue) => venue.amenities.includes('Có Huấn Luyện'),
-    'Cho Thuê Vợt': (venue) => venue.amenities.includes('Cho Thuê Vợt'),
-    'Có Chỗ Trống': (venue) => venue.hasSlot,
-  },
-};
+const SPORT_CHIPS: Array<{ value: SportName | 'all'; label: string; icon: string }> = [
+  { value: 'all',       label: 'Tất cả',       icon: '' },
+  { value: 'Pickleball', label: 'Sân pickleball', icon: '' },
+  { value: 'Cầu Lông',  label: 'Sân cầu lông',  icon: '' },
+  { value: 'Bóng Đá',   label: 'Sân bóng đá',   icon: '' },
+  { value: 'Tennis',    label: 'Sân tennis',     icon: '' },
+];
 
 export const FindFieldPage: React.FC = () => {
   const navigate = useNavigate();
@@ -233,19 +211,17 @@ export const FindFieldPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [userCoordinates, setUserCoordinates] = useState<UserCoordinates | null>(null);
-  const [activeSport, setActiveSport] = useState<SportName>(defaultSports[0]);
-  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>('distanceAsc');
-  const [maxPriceFilter, setMaxPriceFilter] = useState<number>(400);
-  const [priceInputValue, setPriceInputValue] = useState<string>('400.000');
+  const [maxPriceFilter] = useState<number>(9999);
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
-  const [isSportDropdownOpen, setIsSportDropdownOpen] = useState(false);
-  const [isExtraFilterOpen, setIsExtraFilterOpen] = useState(false);
-  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
   const [directionsCourt, setDirectionsCourt] = useState<any | null>(null);
-  const sportDropdownRef = useRef<HTMLDivElement | null>(null);
-  const extraFilterRef = useRef<HTMLDivElement | null>(null);
-  const sortDropdownRef = useRef<HTMLDivElement | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [searchText, setSearchText] = useState('');
+  const [activeSportFilter, setActiveSportFilter] = useState<SportName | 'all'>('all');
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   useEffect(() => {
     const state = location.state as FindFieldLocationState | null;
@@ -258,8 +234,12 @@ export const FindFieldPage: React.FC = () => {
       setDirectionsCourt(state.directionsCourt);
     }
 
+    if (state?.showMap) {
+      setViewMode('map');
+    }
+
     if (state?.sport && defaultSports.includes(state.sport as SportName)) {
-      setActiveSport(state.sport as SportName);
+      setActiveSportFilter(state.sport as SportName);
     }
 
     if (!state?.toastMessage || lastToastLocationKey === location.key) {
@@ -279,28 +259,22 @@ export const FindFieldPage: React.FC = () => {
       setLoadError(null);
 
       try {
-        const data = await getPublicCourts();
+        const apiSport = activeSportFilter !== 'all' ? SPORT_TO_API[activeSportFilter as SportName] : undefined;
+        const data = await getPublicCourts(apiSport ? { sport: apiSport } : undefined);
 
-        if (isMounted) {
-          setCourts(data);
-        }
+        if (isMounted) setCourts(data);
       } catch (error: unknown) {
         if (isMounted) {
           setLoadError(error instanceof Error ? error.message : 'Không thể tải dữ liệu sân.');
         }
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        if (isMounted) setIsLoading(false);
       }
     };
 
     void loadCourts();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    return () => { isMounted = false; };
+  }, [activeSportFilter]);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -329,37 +303,23 @@ export const FindFieldPage: React.FC = () => {
 
   const selectedLocation = searchParams.get('location') ?? 'Gần đây';
 
-  const availableSports = useMemo(() => {
-    const uniqueSports = new Set<SportName>();
+  // Pre-fill searchText from ?location= URL param (when coming from HomePage)
+  useEffect(() => {
+    const loc = searchParams.get('location');
+    if (loc && loc !== 'Gần đây' && loc !== 'Gần đây') {
+      setSearchText(loc);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    venues.forEach((venue) => {
-      uniqueSports.add(venue.sport);
-    });
-
-    return uniqueSports.size > 0 ? Array.from(uniqueSports) : defaultSports;
-  }, [venues]);
-
+  // Read ?sport= param from URL and activate the matching chip
   useEffect(() => {
     const sportParam = searchParams.get('sport');
+    if (!sportParam) return;
+    const matched = defaultSports.find(s => s.toLowerCase() === sportParam.toLowerCase()
+      || SPORT_TO_API[s]?.toLowerCase() === sportParam.toLowerCase());
+    if (matched) setActiveSportFilter(matched);
+  }, [searchParams]);
 
-    if (!sportParam) {
-      return;
-    }
-
-    const matchedSport = availableSports.find(
-      (sport) => sport.toLowerCase() === sportParam.toLowerCase(),
-    );
-
-    if (matchedSport) {
-      setActiveSport(matchedSport);
-    }
-  }, [availableSports, searchParams]);
-
-  useEffect(() => {
-    if (!availableSports.includes(activeSport)) {
-      setActiveSport(availableSports[0]);
-    }
-  }, [activeSport, availableSports]);
 
   useEffect(() => {
     if (!toastMessage) {
@@ -373,130 +333,32 @@ export const FindFieldPage: React.FC = () => {
     return () => window.clearTimeout(timeout);
   }, [toastMessage]);
 
-  useEffect(() => {
-    setSelectedFilters([]);
-    setIsExtraFilterOpen(false);
-  }, [activeSport]);
+  const sportVenues = useMemo(() => {
+    if (activeSportFilter === 'all') return venues;
+    return venues.filter(v => v.id === directionsCourt?.id || v.sport === activeSportFilter);
+  }, [activeSportFilter, venues, directionsCourt]);
 
-  const sportVenues = useMemo(() => venues.filter((venue) => venue.id === directionsCourt?.id || venue.sport === activeSport), [activeSport, venues, directionsCourt]);
   const locationFilteredVenues = useMemo(
-    () => sportVenues.filter((venue) => venue.id === directionsCourt?.id || matchLocation(venue.locationText, selectedLocation)),
+    () => sportVenues.filter(v => v.id === directionsCourt?.id || matchLocation(v.locationText, selectedLocation)),
     [selectedLocation, sportVenues, directionsCourt],
   );
-  const priceScopeVenues = locationFilteredVenues.length > 0 ? locationFilteredVenues : sportVenues;
-  const maxSportPrice = useMemo(() => {
-    if (priceScopeVenues.length === 0) {
-      return 100;
-    }
-
-    return Math.max(...priceScopeVenues.map((venue) => venue.priceK), 100);
-  }, [priceScopeVenues]);
-  const minSportPrice = useMemo(() => {
-    if (priceScopeVenues.length === 0) {
-      return 0;
-    }
-
-    return Math.min(...priceScopeVenues.map((venue) => venue.priceK), 0);
-  }, [priceScopeVenues]);
-  const quickFilters = useMemo(() => sportFilters[activeSport].slice(0, 3), [activeSport]);
-  const extraFilters = useMemo(() => sportFilters[activeSport].slice(3), [activeSport]);
-  const priceFillPercent = useMemo(() => {
-    if (maxSportPrice === minSportPrice) {
-      return 100;
-    }
-
-    return ((maxPriceFilter - minSportPrice) / (maxSportPrice - minSportPrice)) * 100;
-  }, [maxPriceFilter, maxSportPrice, minSportPrice]);
-  const selectedSortLabel = useMemo(
-    () => sortOptions.find((option) => option.value === sortBy)?.label ?? 'Gần Nhất',
-    [sortBy],
-  );
-
-  useEffect(() => {
-    setMaxPriceFilter(maxSportPrice);
-    setPriceInputValue(formatVndInput(maxSportPrice * 1000));
-  }, [maxSportPrice]);
-
-  const toggleFilter = (filter: string) => {
-    setSelectedFilters((prev) =>
-      prev.includes(filter) ? prev.filter((selectedFilter) => selectedFilter !== filter) : [...prev, filter],
-    );
-  };
 
   const filteredVenues = useMemo(() => {
-    const byFilters = locationFilteredVenues.filter((venue) => {
-      if (venue.id === directionsCourt?.id) {
-        return true;
-      }
-
-      if (selectedFilters.length === 0) {
-        return true;
-      }
-
-      return selectedFilters.every((filter) => {
-        const filterPredicate = sportFilterPredicates[activeSport]?.[filter];
-
-        if (!filterPredicate) {
-          return true;
-        }
-
-        return filterPredicate(venue);
-      });
+    const q = searchText.trim().toLowerCase();
+    const bySearch = locationFilteredVenues.filter(v => {
+      if (v.id === directionsCourt?.id) return true;
+      if (!q) return true;
+      return v.name.toLowerCase().includes(q) || v.locationText.toLowerCase().includes(q);
     });
-
-    const byPrice = byFilters.filter((venue) => venue.id === directionsCourt?.id || venue.priceK <= maxPriceFilter);
-
+    const byPrice = bySearch.filter(v => v.id === directionsCourt?.id || v.priceK <= maxPriceFilter);
     return [...byPrice].sort((a, b) => {
-      if (sortBy === 'priceAsc') {
-        return a.priceK - b.priceK;
-      }
-
-      if (sortBy === 'priceDesc') {
-        return b.priceK - a.priceK;
-      }
-
-      if (sortBy === 'ratingDesc') {
-        return b.rating - a.rating;
-      }
-
+      if (sortBy === 'priceAsc') return a.priceK - b.priceK;
+      if (sortBy === 'priceDesc') return b.priceK - a.priceK;
+      if (sortBy === 'ratingDesc') return b.rating - a.rating;
       return a.distanceKm - b.distanceKm;
     });
-  }, [activeSport, locationFilteredVenues, maxPriceFilter, selectedFilters, sortBy]);
+  }, [locationFilteredVenues, maxPriceFilter, sortBy, searchText, directionsCourt]);
 
-  const handlePriceSliderChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = Number(event.target.value);
-    setMaxPriceFilter(value);
-    setPriceInputValue(formatVndInput(value * 1000));
-  };
-
-  const handlePriceInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const nextValue = event.target.value.replace(/[^\d]/g, '');
-
-    if (!nextValue) {
-      setPriceInputValue('');
-      return;
-    }
-
-    const numericValueInVnd = Number(nextValue);
-    const numericValueInK = Math.round(numericValueInVnd / 1000);
-    const clampedValue = Math.min(Math.max(numericValueInK, minSportPrice), maxSportPrice);
-    setMaxPriceFilter(clampedValue);
-    setPriceInputValue(formatVndInput(clampedValue * 1000));
-  };
-
-  const handlePriceInputBlur = () => {
-    if (!priceInputValue) {
-      setMaxPriceFilter(maxSportPrice);
-      setPriceInputValue(formatVndInput(maxSportPrice * 1000));
-      return;
-    }
-
-    const numericValueInVnd = Number(priceInputValue.replace(/[^\d]/g, ''));
-    const numericValueInK = Math.round(numericValueInVnd / 1000);
-    const clampedValue = Math.min(Math.max(numericValueInK, minSportPrice), maxSportPrice);
-    setMaxPriceFilter(clampedValue);
-    setPriceInputValue(formatVndInput(clampedValue * 1000));
-  };
 
   useEffect(() => {
     if (filteredVenues.length === 0) {
@@ -513,435 +375,172 @@ export const FindFieldPage: React.FC = () => {
     }
   }, [filteredVenues, selectedVenueId]);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (!sportDropdownRef.current?.contains(event.target as Node)) {
-        setIsSportDropdownOpen(false);
-      }
-
-      if (!extraFilterRef.current?.contains(event.target as Node)) {
-        setIsExtraFilterOpen(false);
-      }
-
-      if (!sortDropdownRef.current?.contains(event.target as Node)) {
-        setIsSortDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
   const selectedVenue = selectedVenueId
-    ? filteredVenues.find((venue) => venue.id === selectedVenueId)
+    ? filteredVenues.find(v => v.id === selectedVenueId)
     : filteredVenues[0];
 
-  return (
-    <div className="relative min-h-screen overflow-hidden bg-[#020817] text-slate-100">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_0%,rgba(37,99,235,0.24),transparent_30%),radial-gradient(circle_at_95%_15%,rgba(56,189,248,0.18),transparent_26%),linear-gradient(180deg,#020617_0%,#020b1d_45%,#020617_100%)]" />
-      <div className="pointer-events-none absolute inset-0 bg-grid-pattern opacity-35" />
+  void selectedVenue;
 
+  // Shared top bar content
+  const topBar = (
+    <div className={`${viewMode === 'map' ? 'flex-shrink-0' : 'sticky top-0 z-30'} border-b border-white/8 bg-[#0f1923]/95 backdrop-blur`}>
+      <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-center gap-x-2 gap-y-2 px-4 py-3">
+
+        <div className="flex flex-shrink-0 rounded-xl border border-white/10 bg-white/5 p-0.5">
+          {(['list', 'map'] as const).map(mode => (
+            <button
+              key={mode}
+              onClick={() => setViewMode(mode)}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
+                viewMode === mode ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              {mode === 'list' ? '📋 Danh sách' : '🗺️ Bản đồ'}
+            </button>
+          ))}
+        </div>
+
+        {/* Search input */}
+        <input
+          type="text"
+          placeholder="Nhập tên sân, quận, hoặc từ khóa..."
+          value={searchText}
+          onChange={e => setSearchText(e.target.value)}
+          className="w-56 min-w-0 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white placeholder-slate-500 outline-none focus:border-blue-500/60 transition"
+        />
+        <button className="flex-shrink-0 rounded-xl bg-blue-500 px-4 py-2 text-sm font-semibold text-white hover:brightness-110 transition">
+          Tìm kiếm
+        </button>
+
+        {/* Divider */}
+        <span className="h-5 w-px bg-white/10 flex-shrink-0" />
+
+        {/* Sport chips */}
+        {SPORT_CHIPS.map(chip => {
+          const active = activeSportFilter === chip.value;
+          return (
+            <button
+              key={chip.value}
+              onClick={() => setActiveSportFilter(chip.value)}
+              className={`flex flex-shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap transition ${
+                active
+                  ? 'bg-blue-500 text-white shadow-[0_4px_14px_-6px_rgba(59,130,246,0.7)]'
+                  : 'border border-white/10 bg-white/5 text-slate-400 hover:text-white hover:border-white/25'
+              }`}
+            >
+              <span>{chip.icon}</span>
+              <span>{chip.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Toast */}
       <AnimatePresence>
         {toastMessage && (
           <motion.div
-            initial={{ opacity: 0, y: -20, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.97 }}
-            transition={{ duration: 0.22 }}
-            className="fixed right-4 top-24 z-[90] rounded-2xl border border-emerald-300/40 bg-emerald-500/20 px-5 py-3 text-sm font-semibold text-emerald-100 shadow-[0_16px_42px_-20px_rgba(16,185,129,0.9)] backdrop-blur md:right-8"
+            initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }}
+            className="fixed right-4 top-4 z-[100] rounded-xl border border-emerald-400/30 bg-emerald-500/20 px-4 py-2.5 text-sm font-semibold text-emerald-100 backdrop-blur"
           >
             {toastMessage}
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="relative z-20 mx-auto max-w-[1500px] px-4 pb-4 pt-5 md:px-6">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-2 sm:w-[360px]">
-            <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Môn Thể Thao</label>
-            <div ref={sportDropdownRef} className="relative">
-              <button
-                type="button"
-                onClick={() => setIsSportDropdownOpen((prev) => !prev)}
-                className="group flex h-12 w-full items-center justify-between rounded-xl border border-blue-400/45 bg-gradient-to-br from-slate-900/90 to-[#0b1838]/90 px-4 text-lg font-extrabold text-white outline-none transition hover:border-blue-300/70 focus-visible:border-blue-300 focus-visible:ring-2 focus-visible:ring-blue-300/40"
-                aria-haspopup="listbox"
-                aria-expanded={isSportDropdownOpen}
-                aria-label="Chọn môn thể thao"
-              >
-                <span className="tracking-tight">{activeSport}</span>
-                <motion.span
-                  animate={{ rotate: isSportDropdownOpen ? 180 : 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="text-sm text-blue-200"
-                >
-                  ▼
-                </motion.span>
-              </button>
+      {/* ── LIST MODE: Always rendered underneath ── */}
+      <div className="min-h-screen bg-[#0f1923] text-slate-100">
+        {topBar}
 
-              <AnimatePresence>
-                {isSportDropdownOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                    transition={{ duration: 0.2 }}
-                    className="absolute left-0 top-[calc(100%+10px)] z-40 w-full overflow-hidden rounded-2xl border border-blue-300/35 bg-slate-900/95 p-1.5 shadow-[0_18px_44px_-22px_rgba(37,99,235,0.95)] backdrop-blur-xl"
-                  >
-                    <ul role="listbox" aria-label="Danh sách môn thể thao" className="space-y-1">
-                      {availableSports.map((sport) => {
-                        const isSelected = sport === activeSport;
-
-                        return (
-                          <li key={sport}>
-                            <button
-                              type="button"
-                              role="option"
-                              aria-selected={isSelected}
-                              onClick={() => {
-                                setActiveSport(sport);
-                                setIsSportDropdownOpen(false);
-                              }}
-                              className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-lg font-bold transition ${
-                                isSelected
-                                  ? 'bg-blue-500/20 text-blue-100'
-                                  : 'text-slate-200 hover:bg-slate-800/80 hover:text-white'
-                              }`}
-                            >
-                              <span>{sport}</span>
-                              {isSelected && <span className="text-xs font-black uppercase tracking-wider text-blue-200">Đang chọn</span>}
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+        <div className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6">
+          {/* Count + sort row */}
+          <div className="mb-4 flex items-center justify-between">
+            <p className="text-sm text-slate-400">
+              {isLoading ? 'Đang tải...' : `${filteredVenues.length} sân được tìm thấy`}
+            </p>
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as SortOption)}
+              className="rounded-xl border border-white/10 bg-[#1a2332] px-3 py-1.5 text-sm text-slate-300 outline-none focus:border-white/25 transition"
+            >
+              {sortOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+            </select>
           </div>
 
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="arena-scroll flex gap-2 overflow-x-auto pb-1">
-              {quickFilters.map((filter) => {
-                const isActive = selectedFilters.includes(filter);
+          {loadError && (
+            <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 p-10 text-center">
+              <p className="text-rose-300">{loadError}</p>
+            </div>
+          )}
 
-                return (
-                  <button
-                    key={filter}
-                    onClick={() => toggleFilter(filter)}
-                    className={`rounded-xl border px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition ${
-                      isActive
-                        ? 'border-blue-400/75 bg-blue-500/20 text-blue-100 shadow-[0_10px_26px_-18px_rgba(59,130,246,0.95)]'
-                        : 'border-white/10 bg-slate-900/75 text-slate-300 hover:border-white/25 hover:text-white'
-                    }`}
-                  >
-                    {filter}
-                  </button>
-                );
-              })}
-
-              <div ref={extraFilterRef} className="relative">
-                <button
-                  type="button"
-                  onClick={() => setIsExtraFilterOpen((prev) => !prev)}
-                  className={`rounded-xl border px-4 py-2 text-sm font-semibold whitespace-nowrap transition ${
-                    isExtraFilterOpen || selectedFilters.some((filter) => extraFilters.includes(filter))
-                      ? 'border-blue-400/70 bg-blue-500/18 text-blue-100'
-                      : 'border-white/10 bg-slate-900/75 text-slate-300 hover:border-white/25 hover:text-white'
-                  }`}
-                >
-                  Bộ Lọc Thêm {extraFilters.length > 0 ? `(${extraFilters.length})` : ''}
-                </button>
-
-                <AnimatePresence>
-                  {isExtraFilterOpen && extraFilters.length > 0 && (
+          {!loadError && (
+            <div className={`transition-opacity duration-200 ${isLoading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+              <AnimatePresence mode="popLayout">
+              {filteredVenues.length === 0 ? (
+                <div className="rounded-2xl border border-white/8 bg-white/3 p-12 text-center">
+                  <p className="text-slate-400">Không có sân phù hợp. Thử từ khóa khác.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {filteredVenues.map((venue, idx) => (
                     <motion.div
-                      initial={{ opacity: 0, y: -8, scale: 0.98 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                      transition={{ duration: 0.18 }}
-                      className="absolute left-0 top-[calc(100%+8px)] z-40 min-w-[260px] rounded-2xl border border-white/12 bg-slate-900/95 p-2 shadow-[0_20px_48px_-24px_rgba(15,23,42,0.9)] backdrop-blur"
+                      key={venue.id} layout
+                      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                      transition={{ delay: idx * 0.02, duration: 0.22 }}
+                      onClick={() => navigate(`/courts/${venue.id}`)}
+                      className="group cursor-pointer overflow-hidden rounded-2xl border border-white/8 bg-[#141e2b] transition hover:border-[#1D9E75]/50 hover:shadow-[0_12px_32px_-16px_rgba(29,158,117,0.25)]"
                     >
-                      <div className="flex flex-wrap gap-2">
-                        {extraFilters.map((filter) => {
-                          const isActive = selectedFilters.includes(filter);
-
-                          return (
-                            <button
-                              key={filter}
-                              type="button"
-                              onClick={() => toggleFilter(filter)}
-                              className={`rounded-xl border px-3 py-2 text-sm font-semibold whitespace-nowrap transition ${
-                                isActive
-                                  ? 'border-blue-400/75 bg-blue-500/20 text-blue-100'
-                                  : 'border-white/10 bg-slate-900/70 text-slate-300 hover:border-white/25 hover:text-white'
-                              }`}
-                            >
-                              {filter}
-                            </button>
-                          );
-                        })}
+                      <div className="relative h-44 overflow-hidden">
+                        <img src={venue.image} alt={venue.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                        <span className={`absolute right-2 top-2 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                          venue.tag === 'Đang mở' ? 'bg-[#1D9E75]/90 text-white' : 'bg-slate-700/90 text-slate-300'
+                        }`}>{venue.tag}</span>
+                        <span className="absolute left-2 bottom-2 rounded-md bg-black/50 px-2 py-0.5 text-xs text-slate-200 backdrop-blur">{venue.formatLabel}</span>
+                      </div>
+                      <div className="p-3 space-y-1.5">
+                        <h3 className="truncate font-semibold text-white text-sm">{venue.name}</h3>
+                        <p className="truncate text-xs text-slate-500">{venue.locationText}</p>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-400">⭐ {venue.rating.toFixed(1)} · {venue.distanceKm.toFixed(1)} km</span>
+                          <span className="font-bold text-[#1D9E75]">{new Intl.NumberFormat('vi-VN').format(venue.priceK * 1000)}đ/giờ</span>
+                        </div>
+                        {venue.amenities.length > 0 && (
+                          <p className="truncate text-[11px] text-slate-600">{venue.amenities.slice(0, 3).join(' · ')}</p>
+                        )}
                       </div>
                     </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-              <div className="rounded-2xl border border-blue-300/25 bg-gradient-to-br from-slate-900/92 to-[#0b1736]/90 px-3.5 py-2.5 shadow-[0_16px_34px_-24px_rgba(37,99,235,0.75)]">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Giá Tối Đa (VND)</p>
-                <div className="mt-2.5 flex items-center gap-2">
-                  <input
-                    type="range"
-                    min={minSportPrice}
-                    max={maxSportPrice}
-                    step={10}
-                    value={maxPriceFilter}
-                    onChange={handlePriceSliderChange}
-                    className="h-1.5 w-28 cursor-pointer appearance-none rounded-full bg-slate-600/40 accent-blue-500"
-                    style={{
-                      background: `linear-gradient(90deg, rgba(59,130,246,0.95) ${priceFillPercent}%, rgba(100,116,139,0.35) ${priceFillPercent}%)`,
-                    }}
-                    aria-label="Lọc giá tối đa"
-                  />
-                  <div className="flex items-center rounded-xl border border-blue-300/25 bg-slate-950/85 px-2 py-1 shadow-inner shadow-blue-400/10">
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={priceInputValue}
-                      onChange={handlePriceInputChange}
-                      onBlur={handlePriceInputBlur}
-                      className="w-[92px] bg-transparent text-right text-[0.95rem] font-bold tracking-tight text-slate-100 outline-none"
-                      aria-label="Nhập giá tối đa"
-                    />
-                    <span className="ml-1 text-[11px] font-black uppercase tracking-[0.12em] text-blue-200">VND</span>
-                  </div>
+                  ))}
                 </div>
-              </div>
-
-              {selectedFilters.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedFilters([])}
-                  className="rounded-xl border border-rose-300/40 bg-rose-500/15 px-4 py-2 text-sm font-semibold text-rose-100 transition hover:border-rose-200/70 hover:bg-rose-500/25"
-                >
-                  Xóa lựa chọn ({selectedFilters.length})
-                </button>
               )}
-
-              <div ref={sortDropdownRef} className="relative">
-                <div className="rounded-2xl border border-blue-300/25 bg-gradient-to-br from-slate-900/92 to-[#0b1736]/90 px-3.5 py-2.5 shadow-[0_16px_34px_-24px_rgba(37,99,235,0.75)]">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Sắp Xếp</p>
-                  <button
-                    type="button"
-                    onClick={() => setIsSortDropdownOpen((prev) => !prev)}
-                    className="mt-1.5 flex min-w-[170px] items-center justify-between rounded-xl border border-blue-300/35 bg-slate-950/80 px-3 py-2 text-sm font-bold text-white transition hover:border-blue-300/60"
-                    aria-haspopup="listbox"
-                    aria-expanded={isSortDropdownOpen}
-                    aria-label="Sắp xếp sân"
-                  >
-                    <span>{selectedSortLabel}</span>
-                    <motion.span
-                      animate={{ rotate: isSortDropdownOpen ? 180 : 0 }}
-                      transition={{ duration: 0.18 }}
-                      className="text-[10px] text-blue-200"
-                    >
-                      ▼
-                    </motion.span>
-                  </button>
-                </div>
-
-                <AnimatePresence>
-                  {isSortDropdownOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -8, scale: 0.98 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                      transition={{ duration: 0.18 }}
-                      className="absolute right-0 top-[calc(100%+8px)] z-40 min-w-[220px] rounded-2xl border border-blue-300/25 bg-slate-900/95 p-1.5 shadow-[0_20px_48px_-24px_rgba(15,23,42,0.9)] backdrop-blur"
-                    >
-                      <ul role="listbox" aria-label="Các tuỳ chọn sắp xếp" className="space-y-1">
-                        {sortOptions.map((option) => {
-                          const isSelected = option.value === sortBy;
-
-                          return (
-                            <li key={option.value}>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSortBy(option.value);
-                                  setIsSortDropdownOpen(false);
-                                }}
-                                className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-semibold transition ${
-                                  isSelected
-                                    ? 'bg-blue-500/20 text-blue-100'
-                                    : 'text-slate-200 hover:bg-slate-800/80 hover:text-white'
-                                }`}
-                              >
-                                <span>{option.label}</span>
-                                {isSelected && (
-                                  <span className="text-[10px] font-black uppercase tracking-wider text-blue-200">Đang chọn</span>
-                                )}
-                              </button>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+              </AnimatePresence>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
-      <main className="relative z-10 mx-auto grid max-w-[1500px] gap-4 px-4 pb-8 md:px-6 lg:grid-cols-[1.16fr_0.84fr]">
-        <section className="min-h-[680px] overflow-hidden rounded-[24px] border border-blue-400/25 bg-slate-950/70 shadow-[0_26px_80px_-40px_rgba(2,6,23,0.95)] backdrop-blur">
-          <div className="border-b border-white/10 px-4 py-4 md:px-5">
-            <h2 className="text-3xl font-black tracking-tight text-white">Sân {activeSport.toLowerCase()}</h2>
-            <p className="mt-1 text-sm text-blue-200/85">
-              Sắp xếp theo khoảng cách · {selectedLocation || 'TP. Hồ Chí Minh'}
-            </p>
-          </div>
-
-          <div className="arena-scroll max-h-[650px] space-y-3 overflow-y-auto px-3 py-3 md:px-4">
-            {isLoading && (
-              <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-8 text-center">
-                <p className="text-lg font-bold text-white">Đang tải danh sách sân...</p>
-                <p className="mt-2 text-sm text-slate-300">Vui lòng đợi trong giây lát.</p>
-              </div>
-            )}
-
-            {loadError && (
-              <div className="rounded-2xl border border-rose-300/25 bg-rose-500/10 p-8 text-center">
-                <p className="text-lg font-bold text-rose-100">Không thể tải danh sách sân</p>
-                <p className="mt-2 text-sm text-rose-200/80">{loadError}</p>
-              </div>
-            )}
-
-            {!isLoading && !loadError && (
-              <>
-                <AnimatePresence mode="popLayout">
-                  {filteredVenues.map((venue, index) => {
-                    const isSelected = selectedVenue?.id === venue.id;
-
-                    return (
-                      <motion.article
-                        layout
-                        key={venue.id}
-                        initial={{ opacity: 0, y: 18 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 18 }}
-                        transition={{ delay: index * 0.03, duration: 0.28 }}
-                        onMouseEnter={() => setSelectedVenueId(venue.id)}
-                        onClick={() => navigate(`/courts/${venue.id}`)}
-                        className={`cursor-pointer rounded-[20px] border bg-[#081128]/96 p-2.5 transition ${
-                          isSelected
-                            ? 'border-blue-500 shadow-[0_22px_44px_-26px_rgba(59,130,246,0.95)]'
-                            : 'border-white/10 hover:border-blue-400/45'
-                        }`}
-                      >
-                        <div className="flex flex-col gap-3 md:flex-row">
-                          <div className="relative h-36 overflow-hidden rounded-xl md:h-auto md:w-[180px] md:min-w-[180px]">
-                            <img
-                              src={venue.image}
-                              alt={venue.name}
-                              className="h-full w-full object-cover transition duration-700 hover:scale-105"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent" />
-                            <span className="absolute left-2 top-2 rounded-full bg-blue-600 px-3 py-1 text-xs font-bold text-white">
-                              {venue.formatLabel}
-                            </span>
-                            <span className="absolute right-2 top-2 rounded-full bg-blue-500/90 px-3 py-1 text-xs font-bold text-white">
-                              {venue.tag}
-                            </span>
-                          </div>
-
-                          <div className="flex min-w-0 flex-1 flex-col justify-between gap-3 px-1 py-1">
-                            <div className="flex flex-wrap items-start justify-between gap-2">
-                              <div className="min-w-0 flex-1 pr-2">
-                                <h3 className="truncate text-xl font-bold text-white">{venue.name}</h3>
-                                <p className="mt-1 text-sm text-slate-300">
-                                  ⭐ {venue.rating.toFixed(1)} ({venue.reviews}) · {venue.distanceKm.toFixed(1)} km
-                                </p>
-                              </div>
-
-                              <div className="text-right whitespace-nowrap shrink-0">
-                                <span className="text-xs text-slate-400 mr-1">từ</span>
-                                <span className="text-2xl font-black text-blue-400">
-                                  {new Intl.NumberFormat('vi-VN').format(venue.priceK * 1000)}
-                                </span>
-                                <span className="text-xs text-slate-400 ml-1">VND/giờ</span>
-                              </div>
-                            </div>
-
-                            <div className="flex flex-wrap gap-2">
-                              {venue.amenities.map((amenity) => (
-                                <span
-                                  key={amenity}
-                                  className="rounded-full border border-white/12 bg-slate-900/85 px-2 py-0.5 text-[11px] text-slate-200"
-                                >
-                                  {amenity}
-                                </span>
-                              ))}
-                            </div>
-
-                            <div className="flex flex-col gap-3 border-t border-white/10 pt-3 sm:flex-row sm:items-end sm:justify-between">
-                              <div>
-                                <p className="text-sm font-semibold text-emerald-300">Còn Trống Hôm Nay</p>
-                                <div className="mt-2 flex flex-wrap gap-2">
-                                  {venue.slots.length > 0 ? (
-                                    venue.slots.map((slot) => (
-                                      <span
-                                        key={slot}
-                                        className="rounded-xl border border-blue-400/25 bg-slate-900/70 px-2 py-1 text-xs text-slate-300"
-                                      >
-                                        {slot}
-                                      </span>
-                                    ))
-                                  ) : (
-                                    <span className="rounded-xl border border-white/10 bg-slate-900/70 px-2 py-1 text-xs text-slate-300">
-                                      {venue.hasSlot ? 'Liên hệ để xem giờ trống' : 'Chưa có lịch trống'}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-
-                              <motion.button
-                                whileHover={{ y: -2, scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                className="h-10 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-5 text-sm font-bold text-white shadow-[0_12px_34px_-20px_rgba(59,130,246,0.98)]"
-                              >
-                                Đặt Ngay
-                              </motion.button>
-                            </div>
-                          </div>
-                        </div>
-                      </motion.article>
-                    );
-                  })}
-                </AnimatePresence>
-
-                {filteredVenues.length === 0 && (
-                  <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-8 text-center">
-                    <p className="text-lg font-bold text-white">Không có sân phù hợp với bộ lọc hiện tại</p>
-                    <p className="mt-2 text-sm text-slate-300">Thử đổi sang bộ lọc khác để xem thêm kết quả.</p>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </section>
-
-        <section className="relative min-h-[680px] overflow-hidden rounded-[24px] border border-blue-400/25 bg-slate-950/75 shadow-[0_26px_80px_-40px_rgba(2,6,23,0.95)] backdrop-blur lg:sticky lg:top-24">
-          <CourtMap targetCourt={directionsCourt} />
-        </section>
-      </main>
-    </div>
+      {/* ── MAP MODE: slide-over overlay ── */}
+      <AnimatePresence>
+        {viewMode === 'map' && (
+          <motion.div
+            key="map-overlay"
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', bounce: 0, duration: 0.5 }}
+            className="fixed inset-0 z-[60] flex flex-col bg-[#0f1923]"
+          >
+            {topBar}
+            <div className="flex-1 overflow-hidden">
+              <CourtMap targetCourt={directionsCourt} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 };
+
