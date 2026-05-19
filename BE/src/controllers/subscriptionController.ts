@@ -184,7 +184,7 @@ export async function createCheckoutSession(req: Request, res: Response): Promis
 		// https://img.vietqr.io/image/<BANK_ID>-<ACCOUNT_NO>-qr_only.png?amount=${netAmount}&addInfo=${paymentCode}&accountName=${ACCOUNT_NAME}
 		// along with the calculated amount.
 		const encodedAccountName = encodeURIComponent(ACCOUNT_NAME);
-		const qrUrl = `https://img.vietqr.io/image/${BANK_ID}-${ACCOUNT_NO}-qr_only.png?amount=${netAmount}&addInfo=${paymentCode}&accountName=${encodedAccountName}`;
+		const qrUrl = `https://img.vietqr.io/image/${BANK_ID}-${ACCOUNT_NO}-compact2.jpg?amount=${netAmount}&addInfo=${paymentCode}&accountName=${encodedAccountName}`;
 
 		res.status(200).json({
 			success: true,
