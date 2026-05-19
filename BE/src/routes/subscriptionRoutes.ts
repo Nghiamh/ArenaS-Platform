@@ -10,6 +10,7 @@ import {
 	getCheckoutStatus,
 } from "../controllers/subscriptionController.js";
 import { handleSepayWebhook, fakeSubscriptionPayment } from "../controllers/webhookController.js";
+import { getCurrentSubscriptionStatus, validateSubscriptionAction } from "../controllers/subscriptionManagementController.js";
 
 const router = Router();
 
@@ -66,6 +67,22 @@ router.delete(
 	requireAuth,
 	requireRole({ role: "owner", error: "forbidden", message: "Only court owners have subscriptions." }),
 	cancelSubscription
+);
+
+/** GET /api/subscriptions/my-status — check the authenticated owner's full active status */
+router.get(
+	"/my-status",
+	requireAuth,
+	requireRole({ role: "owner", error: "forbidden", message: "Only court owners have subscriptions." }),
+	getCurrentSubscriptionStatus
+);
+
+/** POST /api/subscriptions/validate-action — validate cross-tier change actions */
+router.post(
+	"/validate-action",
+	requireAuth,
+	requireRole({ role: "owner", error: "forbidden", message: "Only court owners can purchase plans." }),
+	validateSubscriptionAction
 );
 
 export default router;
