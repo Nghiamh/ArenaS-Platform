@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Copy, Check, Loader2, QrCode, AlertCircle } from 'lucide-react';
+import { getSubscriptionCheckoutStatus, sendFakeSubscriptionPayment } from '../../Axios/Axios';
 
 interface OrderResponse {
   success: boolean;
@@ -16,85 +17,67 @@ export const VietQRPaymentPage: React.FC = () => {
   const planInfo = location.state || { planName: 'Gói Chuyên Nghiệp', price: '6.948.000', totalAmount: 6948000 };
   
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [orderData, setOrderData] = useState<OrderResponse | null>(null);
+  const error = null;
+  
+  // Initialize orderData from location state details passed from CheckoutPage
+  const [orderData, setOrderData] = useState<OrderResponse | null>(() => {
+    if (planInfo.paymentCode && planInfo.qrUrl) {
+      return {
+        success: true,
+        orderId: planInfo.paymentCode,
+        paymentCode: planInfo.paymentCode,
+        qrUrl: planInfo.qrUrl,
+        totalAmount: planInfo.totalAmount
+      };
+    }
+    return null;
+  });
+
   const [copiedField, setCopiedField] = useState<'amount' | 'code' | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [fakeLoading, setFakeLoading] = useState(false);
 
   useEffect(() => {
-    const fetchOrderData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+    if (orderData) {
+      setLoading(false);
+      return;
+    }
 
-        // Fetching to the backend API (this will fail if backend is not setup for this exact route yet)
-        const response = await fetch('http://localhost:5000/api/payment/create-order', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ totalAmount: planInfo.totalAmount || 1500000 }), 
-        });
-
-        if (!response.ok) {
-          // Mock data in case API fails during development
-          const mockData: OrderResponse = {
-            success: true,
-            orderId: "65db123456789",
-            paymentCode: "DH4A5E21",
-            qrUrl: `https://img.vietqr.io/image/vietcombank-1234567890-qr_only.png?amount=${planInfo.totalAmount || 1500000}&addInfo=DH4A5E21`,
-            totalAmount: planInfo.totalAmount || 1500000
-          };
-          setOrderData(mockData);
-          setLoading(false);
-          return;
-          // throw new Error('Không thể kết nối đến máy chủ thanh toán.');
-        }
-
-        const data: OrderResponse = await response.json();
-        
-        if (data.success) {
-          setOrderData(data);
-        } else {
-          throw new Error('Tạo đơn hàng thất bại.');
-        }
-
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Đã có lỗi không xác định xảy ra');
-        
-        // Mock fallback for development if needed
-        const mockData: OrderResponse = {
-          success: true,
-          orderId: "65db123456789",
-          paymentCode: "DH4A5E21",
-          qrUrl: `https://img.vietqr.io/image/vietcombank-1234567890-qr_only.png?amount=${planInfo.totalAmount || 1500000}&addInfo=DH4A5E21`,
-          totalAmount: planInfo.totalAmount || 1500000
-        };
-        setOrderData(mockData);
-      } finally {
-        setLoading(false);
-      }
+    // Fallback if accessed /payment-qr directly without state
+    const mockData: OrderResponse = {
+      success: true,
+      orderId: "PAYDEFAULT",
+      paymentCode: "PAYDEFAULT",
+      qrUrl: `https://img.vietqr.io/image/vietcombank-1234567890-qr_only.png?amount=${planInfo.totalAmount || 1500000}&addInfo=PAYDEFAULT`,
+      totalAmount: planInfo.totalAmount || 1500000
     };
-
-    fetchOrderData();
-  }, [planInfo.totalAmount]);
+    setOrderData(mockData);
+    setLoading(false);
+  }, [planInfo, orderData]);
 
   useEffect(() => {
-    if (!orderData?.paymentCode) return;
+    if (!orderData?.paymentCode || orderData.paymentCode === 'PAYDEFAULT') return;
 
     const checkStatus = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/payment/order/${orderData.paymentCode}`);
-        const data = await response.json();
+        const response = await getSubscriptionCheckoutStatus(orderData.paymentCode);
         
-        if (data.transaction && data.transaction.status === 'completed') {
+        if (response.success && response.status === 'completed') {
+          // Notify app to clear user profile cache or reload profile
+          try {
+            localStorage.setItem('subscription_activated', '1');
+            window.dispatchEvent(new Event('currentUserUpdated'));
+          } catch (e) {
+            console.error(e);
+          }
+
           navigate('/payment-success', {
             state: {
               planName: planInfo.planName,
               price: planInfo.price,
               paymentMethod: 'banking',
-              transactionId: orderData.orderId,
+              transactionId: orderData.paymentCode,
               date: new Date().toLocaleDateString('vi-VN', {
                 hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
               })
@@ -112,33 +95,77 @@ export const VietQRPaymentPage: React.FC = () => {
   }, [orderData, navigate, planInfo]);
 
   const handleManualCheck = async () => {
-    if (!orderData?.paymentCode) return;
+    if (!orderData?.paymentCode || orderData.paymentCode === 'PAYDEFAULT') {
+      setPaymentError("Mã thanh toán không hợp lệ.");
+      return;
+    }
     
     setCheckingStatus(true);
     setPaymentError(null);
     try {
-      const response = await fetch(`http://localhost:5000/api/payment/order/${orderData.paymentCode}`);
-      const data = await response.json();
+      const response = await getSubscriptionCheckoutStatus(orderData.paymentCode);
       
-      if (data.transaction && data.transaction.status === 'completed') {
+      if (response.success && response.status === 'completed') {
+        try {
+          localStorage.setItem('subscription_activated', '1');
+          window.dispatchEvent(new Event('currentUserUpdated'));
+        } catch (e) {}
+
         navigate('/payment-success', {
           state: {
             planName: planInfo.planName,
             price: planInfo.price,
             paymentMethod: 'banking',
-            transactionId: orderData.orderId,
+            transactionId: orderData.paymentCode,
             date: new Date().toLocaleDateString('vi-VN', {
               hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
             })
           }
         });
       } else {
-        setPaymentError("Giao dịch chưa hoàn tất. Vui lòng kiểm tra lại sau giây lát.");
+        setPaymentError("Giao dịch chưa hoàn tất. Vui lòng chuyển khoản chính xác thông tin và đợi vài giây.");
       }
     } catch (err) {
       setPaymentError("Không thể kết nối đến máy chủ. Vui lòng thử lại.");
     } finally {
       setCheckingStatus(false);
+    }
+  };
+
+  const handleFakePayment = async () => {
+    if (!orderData?.paymentCode || orderData.paymentCode === 'PAYDEFAULT') {
+      setPaymentError("Mã thanh toán không hợp lệ.");
+      return;
+    }
+    
+    setFakeLoading(true);
+    setPaymentError(null);
+    try {
+      const res = await sendFakeSubscriptionPayment(orderData.paymentCode);
+      if (res.success) {
+        try {
+          localStorage.setItem('subscription_activated', '1');
+          window.dispatchEvent(new Event('currentUserUpdated'));
+        } catch (e) {}
+
+        navigate('/payment-success', {
+          state: {
+            planName: planInfo.planName,
+            price: planInfo.price,
+            paymentMethod: 'banking',
+            transactionId: orderData.paymentCode,
+            date: new Date().toLocaleDateString('vi-VN', {
+              hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
+            })
+          }
+        });
+      } else {
+        setPaymentError(res.message || "Giả lập thanh toán thất bại.");
+      }
+    } catch (err: any) {
+      setPaymentError(err.message || "Lỗi kết nối giả lập thanh toán.");
+    } finally {
+      setFakeLoading(false);
     }
   };
 
@@ -283,7 +310,7 @@ export const VietQRPaymentPage: React.FC = () => {
                 
                 <button 
                   onClick={handleManualCheck}
-                  disabled={checkingStatus}
+                  disabled={checkingStatus || fakeLoading}
                   className="w-full mt-2 py-4 flex justify-center items-center gap-2 text-[15px] font-semibold text-white bg-gray-900 hover:bg-gray-800 disabled:opacity-70 disabled:cursor-not-allowed rounded-[1rem] transition-all"
                 >
                   {checkingStatus ? (
@@ -293,6 +320,22 @@ export const VietQRPaymentPage: React.FC = () => {
                     </>
                   ) : (
                     'Tôi đã thanh toán'
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleFakePayment}
+                  disabled={checkingStatus || fakeLoading}
+                  className="w-full mt-2 py-3.5 flex justify-center items-center gap-2 text-[14px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 hover:bg-amber-100 disabled:opacity-70 disabled:cursor-not-allowed rounded-[1.25rem] transition-all active:scale-[0.98]"
+                >
+                  {fakeLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+                      Đang giả lập...
+                    </>
+                  ) : (
+                    '🧪 Giả lập thanh toán (Dev)'
                   )}
                 </button>
               </div>

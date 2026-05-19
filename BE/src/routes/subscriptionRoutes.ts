@@ -2,11 +2,14 @@ import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import { requireRole } from "../middleware/auth.js";
 import {
+	createCheckoutSession,
 	handlePaymentSuccess,
 	getMySubscription,
 	cancelSubscription,
 	getAllPlans,
+	getCheckoutStatus,
 } from "../controllers/subscriptionController.js";
+import { handleSepayWebhook, fakeSubscriptionPayment } from "../controllers/webhookController.js";
 
 const router = Router();
 
@@ -15,7 +18,27 @@ const router = Router();
 /** GET /api/subscriptions/plans — list all active pricing plans */
 router.get("/plans", getAllPlans);
 
+/** GET /api/subscriptions/checkout-status/:paymentCode — check status of checkout session */
+router.get("/checkout-status/:paymentCode", getCheckoutStatus);
+
+/** POST /api/subscriptions/sepay-webhook — webhook receiver for SePay transaction sync */
+router.post("/sepay-webhook", handleSepayWebhook);
+
+/** POST /api/subscriptions/fake-payment — simulate successful bank transfer for development */
+router.post("/fake-payment", fakeSubscriptionPayment);
+
 // ─── Owner-only ───────────────────────────────────────────────────────────────
+
+/**
+ * POST /api/subscriptions/checkout
+ * Starts a checkout session for purchasing or upgrading a plan.
+ */
+router.post(
+	"/checkout",
+	requireAuth,
+	requireRole({ role: "owner", error: "forbidden", message: "Only court owners can purchase plans." }),
+	createCheckoutSession
+);
 
 /**
  * POST /api/subscriptions/payment-success

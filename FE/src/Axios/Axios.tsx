@@ -635,3 +635,117 @@ export async function getPricingPlans(): Promise<FEPlan[]> {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// SUBSCRIPTIONS
+// ---------------------------------------------------------------------------
+
+export type FESubscription = {
+	id: string;
+	plan: {
+		_id: string;
+		name: string;
+		displayName: string;
+		description: string;
+		sortOrder?: number;
+	};
+	billingCycle: 'monthly' | 'yearly';
+	status: 'active' | 'expired' | 'cancelled';
+	startDate: string;
+	endDate: string;
+	amountPaid: number;
+	currentFeatures: FEPlan['features'];
+	daysRemaining: number;
+};
+
+export type CheckoutResponse = {
+	success: boolean;
+	message: string;
+	checkout: {
+		paymentCode: string;
+		qrUrl: string;
+		amount: number;
+		basePrice: number;
+		unusedCredit: number;
+		isUpgrade: boolean;
+		billingCycle: 'monthly' | 'yearly';
+		plan: {
+			id: string;
+			name: string;
+			displayName: string;
+		};
+		expiresAt: string;
+	};
+};
+
+export type MySubscriptionResponse = {
+	success: boolean;
+	message: string;
+	subscription: FESubscription;
+};
+
+export async function createSubscriptionCheckout(
+	planId: string,
+	billingCycle: 'monthly' | 'yearly',
+): Promise<CheckoutResponse> {
+	try {
+		const { data } = await axiosClient.post<CheckoutResponse>('/subscriptions/checkout', {
+			planId,
+			billingCycle,
+		}, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function getMySubscription(): Promise<FESubscription> {
+	try {
+		const { data } = await axiosClient.get<MySubscriptionResponse>('/subscriptions/me', {
+			headers: withAuthHeaders(),
+		});
+		return data.subscription;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function cancelMySubscription(): Promise<BasicMessageResponse> {
+	try {
+		const { data } = await axiosClient.delete<BasicMessageResponse>('/subscriptions/me', {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function getSubscriptionCheckoutStatus(
+	paymentCode: string,
+): Promise<{ success: boolean; status: 'pending' | 'completed' | 'expired' }> {
+	try {
+		const { data } = await axiosClient.get<{ success: boolean; status: 'pending' | 'completed' | 'expired' }>(
+			`/subscriptions/checkout-status/${paymentCode}`,
+		);
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function sendFakeSubscriptionPayment(
+	paymentCode: string,
+): Promise<{ success: boolean; message: string }> {
+	try {
+		const { data } = await axiosClient.post<{ success: boolean; message: string }>(
+			'/subscriptions/fake-payment',
+			{ paymentCode },
+		);
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+

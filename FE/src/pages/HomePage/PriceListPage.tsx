@@ -9,6 +9,7 @@ type PriceFeature = {
 };
 
 type PricePlan = {
+  id: string;
   tag?: string;
   tagTone?: 'blue' | 'violet' | 'gold';
   iconTone?: 'slate' | 'blue' | 'gold' | 'violet';
@@ -329,6 +330,7 @@ export const PriceListPage: React.FC = () => {
           });
 
           return {
+            id: plan._id.toString(),
             name: displayName,
             subtitle: displayDescription,
             monthlyPrice,
@@ -508,6 +510,7 @@ export const PriceListPage: React.FC = () => {
                             navigate('/checkout', {
                               state: {
                                 plan: {
+                                  id: plan.id,
                                   name: plan.name,
                                   price: finalPrice,
                                   period: isYearly ? '/ năm' : '/ tháng',

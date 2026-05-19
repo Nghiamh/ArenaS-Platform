@@ -15,6 +15,7 @@ import paymentRoutes from "./routes/paymentRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 import planRoutes from "./routes/planRoutes.js";
+import { startSubscriptionCron } from "./cron/subscriptionCron.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
@@ -65,6 +66,9 @@ async function startServer(): Promise<void> {
 	}
 
 	console.log("MongoDB connected successfully");
+
+	// Initialize background jobs
+	startSubscriptionCron();
 
 	await new Promise<void>((resolve, reject) => {
 		const server = app.listen(PORT, () => {

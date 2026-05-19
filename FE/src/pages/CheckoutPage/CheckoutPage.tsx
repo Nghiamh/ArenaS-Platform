@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
+import { createSubscriptionCheckout } from '../../Axios/Axios';
 
 export const CheckoutPage: React.FC = () => {
   const location = useLocation();
@@ -9,6 +10,7 @@ export const CheckoutPage: React.FC = () => {
 
   // Lấy thông tin gói từ state, mặc định là Gói Chuyên Nghiệp nếu truy cập trực tiếp
   const plan = location.state?.plan || {
+    id: '',
     name: 'Chuyên Nghiệp',
     price: '6.948.000',
     period: '/ năm',
@@ -30,18 +32,30 @@ export const CheckoutPage: React.FC = () => {
         .matches(/(84|0[3|5|7|8|9])+([0-9]{8})\b/, 'Số điện thoại không hợp lệ')
         .required('Vui lòng nhập số điện thoại'),
     }),
-    onSubmit: () => {
-      setIsProcessing(true);
-      setTimeout(() => {
+    onSubmit: async () => {
+      try {
+        setIsProcessing(true);
+        const billingCycle = plan.period.includes('năm') ? 'yearly' : 'monthly';
+        
+        // Trực tiếp gọi API của Backend
+        const response = await createSubscriptionCheckout(plan.id || '65b2a3a4c5d6e7f8a9b0c1d2', billingCycle);
+
+        if (response.success && response.checkout) {
+          navigate('/payment-qr', {
+            state: {
+              planName: plan.name,
+              price: plan.price,
+              paymentCode: response.checkout.paymentCode,
+              qrUrl: response.checkout.qrUrl,
+              totalAmount: response.checkout.amount
+            }
+          });
+        }
+      } catch (err: any) {
+        alert(err.message || 'Không thể tạo phiên thanh toán. Vui lòng kiểm tra lại cấu hình.');
+      } finally {
         setIsProcessing(false);
-        navigate('/payment-qr', {
-          state: {
-            planName: plan.name,
-            price: plan.price,
-            totalAmount: parseInt(plan.price.replace(/\./g, ''))
-          }
-        });
-      }, 500);
+      }
     },
   });
 
