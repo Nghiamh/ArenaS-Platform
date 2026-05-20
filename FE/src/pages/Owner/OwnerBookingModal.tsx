@@ -308,6 +308,9 @@ export const OwnerBookingModal: React.FC<OwnerBookingModalProps> = ({
                 ) : (
                   <div className="mt-2 rounded-xl bg-white/[0.02] p-1">
                     <TimeSlotPicker 
+                      startHour={form.startHour}
+                      endHour={form.endHour}
+                      onChange={(sH, eH) => setForm(prev => ({ ...prev, startHour: sH, endHour: eH }))}
                       slots={(() => {
                         const slots = [];
                         for (let i = 7 * 60; i < 23 * 60; i += 30) {
@@ -320,23 +323,15 @@ export const OwnerBookingModal: React.FC<OwnerBookingModalProps> = ({
                           const isBooked = (i === 10 * 60) || (i === 10 * 60 + 30) || (i === 17 * 60);
 
                           slots.push({
-                            start: `${h1}:${m1}`,
-                            end: `${h2}:${m2}`,
+                            startHour: i / 60,
+                            endHour: (i + 30) / 60,
+                            startLabel: `${h1}:${m1}`,
+                            endLabel: `${h2}:${m2}`,
                             status: isBooked ? 'booked' as const : 'available' as const
                           });
                         }
                         return slots;
                       })()}
-                      onChange={(range) => {
-                        if (range) {
-                          const sH = Number(range.start_time.split(':')[0]) + Number(range.start_time.split(':')[1]) / 60;
-                          const eH = Number(range.end_time.split(':')[0]) + Number(range.end_time.split(':')[1]) / 60;
-                          setForm(prev => ({ ...prev, startHour: sH, endHour: eH }));
-                        } else {
-                          // Reset to invalid/default if cleared
-                          setForm(prev => ({ ...prev, startHour: 0, endHour: 0 }));
-                        }
-                      }}
                     />
                   </div>
                 )}
