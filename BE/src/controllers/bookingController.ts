@@ -4,6 +4,8 @@ import { CourtSlotModel, ISlot } from '../models/courtSlotModel.js';
 import { CourtDashboardModel } from '../models/courtDashboardModel.js';
 import Court from '../models/courtModel.js';
 import { BookingModel } from '../models/bookingModel.js';
+import Wallet from '../models/walletModel.js';
+import WalletTransaction from '../models/walletTransactionModel.js';
 
 // Helper: Khởi tạo các mốc thời gian 30 phút
 function generateTimeSlots(openTime: string, closeTime: string): ISlot[] {
@@ -352,3 +354,393 @@ export async function ownerCreateBooking(req: Request, res: Response) {
 	}
 }
 
+// 7. API: User đặt sân (tích hợp wallet, auto-generate slots, tạo Booking thật)
+export async function userBookCourt(req: Request, res: Response) {
+	const session = await mongoose.startSession();
+	session.startTransaction();
+
+	try {
+		const user = req.user!;
+		const userId = user._id;
+		const { court_id, sub_court_id, date, start_time, end_time } = req.body;
+
+		// --- Validate input ---
+		if (!court_id || !mongoose.Types.ObjectId.isValid(court_id)) {
+			throw new Error('invalid_court_id');
+		}
+		if (!sub_court_id || !mongoose.Types.ObjectId.isValid(sub_court_id)) {
+			throw new Error('invalid_sub_court_id');
+		}
+		if (!date || !start_time || !end_time) {
+			throw new Error('missing_fields');
+		}
+
+		// Không cho đặt ngày trong quá khứ
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
+		const bookingDate = new Date(date);
+		bookingDate.setHours(0, 0, 0, 0);
+		if (bookingDate < today) {
+			throw new Error('cannot_book_past_date');
+		}
+
+		// --- Bước 1: Tìm Court + Sub-court ---
+		const court = await Court.findById(court_id).session(session);
+		if (!court) {
+			throw new Error('court_not_found');
+		}
+
+		const subCourt = court.sub_courts?.find(
+			(sc: any) => sc._id?.toString() === sub_court_id
+		);
+
+		// Lấy giá trực tiếp từ bảng courts (theo yêu cầu khách hàng)
+		const pricePerHour = court.price_per_hour || 0;
+		const openTime = court.open_time || '06:00';
+		const closeTime = court.close_time || '22:00';
+
+		// --- Bước 2: Auto-generate CourtSlot nếu chưa có ---
+		let courtSlot = await CourtSlotModel.findOne({ court_id, sub_court_id, date }).session(session);
+
+		if (!courtSlot) {
+			const slots = generateTimeSlots(openTime, closeTime);
+			courtSlot = new CourtSlotModel({
+				court_id,
+				sub_court_id,
+				date,
+				slots,
+			});
+			await courtSlot.save({ session });
+
+			// Khởi tạo dashboard
+			const targetDate = new Date(date);
+			targetDate.setHours(0, 0, 0, 0);
+			await CourtDashboardModel.findOneAndUpdate(
+				{ court_id, sub_court_id, date: targetDate },
+				{ $inc: { total_slots: slots.length, available_slots: slots.length } },
+				{ upsert: true, new: true, session }
+			);
+		}
+
+		// --- Bước 3: Tìm slot range và kiểm tra khả dụng ---
+		let startIndex = -1;
+		let endIndex = -1;
+
+		for (let i = 0; i < courtSlot.slots.length; i++) {
+			if (courtSlot.slots[i].start === start_time) startIndex = i;
+			if (courtSlot.slots[i].end === end_time) endIndex = i;
+		}
+
+		if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) {
+			throw new Error('invalid_time_range');
+		}
+
+		const targetSlots = courtSlot.slots.slice(startIndex, endIndex + 1);
+		const hasUnavailable = targetSlots.some(slot => slot.status !== 'available');
+		if (hasUnavailable) {
+			throw new Error('slot_already_booked');
+		}
+
+		const numberOfSlotsBooked = targetSlots.length;
+
+		// --- Bước 4: Tính giá ---
+		// 1 slot = 30 phút = nửa giá/h
+		const total_price = (pricePerHour / 2) * numberOfSlotsBooked;
+
+		// --- Bước 5: Kiểm tra và trừ tiền ví ---
+		const wallet = await Wallet.findOne({ userId }).session(session);
+		if (!wallet) {
+			throw new Error('wallet_not_found');
+		}
+		if (wallet.status === 'frozen') {
+			throw new Error('wallet_frozen');
+		}
+		if (wallet.balance < total_price) {
+			throw new Error('insufficient_balance');
+		}
+
+		wallet.balance -= total_price;
+		await wallet.save({ session });
+
+		// --- Bước 6: Tạo Booking document ---
+		const newBooking = new BookingModel({
+			user_id: userId,
+			court_id,
+			sub_court_id,
+			date,
+			start_time,
+			end_time,
+			customer_name: user.name || user.userName || 'Khách hàng',
+			customer_phone: user.phone,
+			total_price,
+			status: 'confirmed',
+			source: 'app',
+			tone: 'blue',
+		});
+		await newBooking.save({ session });
+
+		// --- Bước 7: Cập nhật slot status ---
+		for (let i = startIndex; i <= endIndex; i++) {
+			courtSlot.slots[i].status = 'booked';
+			courtSlot.slots[i].booking_id = newBooking._id as any;
+		}
+		await courtSlot.save({ session });
+
+		// --- Bước 8: Tạo WalletTransaction ---
+		await WalletTransaction.create(
+			[{
+				walletId: wallet._id,
+				bookingId: newBooking._id,
+				amount: total_price,
+				type: 'payment',
+				status: 'completed',
+			}],
+			{ session }
+		);
+
+		// --- Bước 9: Cập nhật Dashboard ---
+		const dashDate = new Date(date);
+		dashDate.setHours(0, 0, 0, 0);
+
+		await CourtDashboardModel.findOneAndUpdate(
+			{ court_id, sub_court_id, date: dashDate },
+			{
+				$inc: {
+					booked_slots: numberOfSlotsBooked,
+					available_slots: -numberOfSlotsBooked,
+					total_bookings: 1,
+					revenue: total_price,
+				},
+			},
+			{ upsert: true, new: true, session }
+		);
+
+		// --- COMMIT ---
+		await session.commitTransaction();
+		session.endSession();
+
+		return res.status(201).json({
+			message: 'Đặt sân thành công!',
+			booking: {
+				_id: newBooking._id,
+				court_id,
+				sub_court_id,
+				court_name: court.name,
+				sub_court_name: subCourt?.name || 'Sân',
+				date,
+				start_time,
+				end_time,
+				total_price,
+				status: 'confirmed',
+				slots_booked: numberOfSlotsBooked,
+				wallet_balance: wallet.balance,
+			},
+		});
+	} catch (error: any) {
+		await session.abortTransaction();
+		session.endSession();
+
+		const errorMap: Record<string, { status: number; message: string }> = {
+			invalid_court_id: { status: 400, message: 'ID sân không hợp lệ' },
+			invalid_sub_court_id: { status: 400, message: 'ID sân con không hợp lệ' },
+			missing_fields: { status: 400, message: 'Thiếu thông tin đặt sân' },
+			cannot_book_past_date: { status: 400, message: 'Không thể đặt sân cho ngày đã qua' },
+			court_not_found: { status: 404, message: 'Không tìm thấy sân' },
+			invalid_time_range: { status: 400, message: 'Khung thời gian không hợp lệ' },
+			slot_already_booked: { status: 400, message: 'Khung giờ này đã có người đặt. Vui lòng chọn giờ khác.' },
+			wallet_not_found: { status: 404, message: 'Chưa có ví. Vui lòng tạo ví trước.' },
+			wallet_frozen: { status: 403, message: 'Ví đã bị khóa' },
+			insufficient_balance: { status: 400, message: 'Số dư ví không đủ. Vui lòng nạp thêm tiền.' },
+		};
+
+		const mapped = errorMap[error.message];
+		if (mapped) {
+			return res.status(mapped.status).json({ error: mapped.message, code: error.message });
+		}
+
+		if (error.name === 'VersionError') {
+			return res.status(409).json({ error: 'Đang xử lý giao dịch khác. Vui lòng thử lại.', code: 'version_conflict' });
+		}
+
+		console.error('Lỗi userBookCourt:', error);
+		return res.status(500).json({ error: 'internal_server_error' });
+	}
+}
+
+// 8. API: Lấy lịch sử booking của user
+export async function getMyBookings(req: Request, res: Response) {
+	try {
+		const userId = req.user!._id;
+		const { status, page = '1', limit = '20' } = req.query;
+
+		const query: any = { user_id: userId };
+		if (status && typeof status === 'string') {
+			query.status = status;
+		}
+
+		const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
+		const limitNum = Math.min(50, Math.max(1, parseInt(limit as string, 10) || 20));
+
+		const [bookings, total] = await Promise.all([
+			BookingModel.find(query)
+				.sort({ date: -1, start_time: -1 })
+				.skip((pageNum - 1) * limitNum)
+				.limit(limitNum)
+				.lean(),
+			BookingModel.countDocuments(query),
+		]);
+
+		// Populate court names
+		const courtIds = [...new Set(bookings.map(b => b.court_id.toString()))];
+		const courts = await Court.find({ _id: { $in: courtIds } }).select('name sub_courts').lean();
+		const courtMap: Record<string, any> = {};
+		courts.forEach(c => { courtMap[(c._id as any).toString()] = c; });
+
+		const enrichedBookings = bookings.map(b => {
+			const court = courtMap[b.court_id.toString()];
+			const subCourt = court?.sub_courts?.find(
+				(sc: any) => sc._id?.toString() === b.sub_court_id.toString()
+			);
+			return {
+				...b,
+				court_name: court?.name || 'Sân không xác định',
+				sub_court_name: subCourt?.name || 'Sân',
+			};
+		});
+
+		return res.status(200).json({
+			message: 'Lấy lịch sử booking thành công',
+			bookings: enrichedBookings,
+			pagination: {
+				page: pageNum,
+				limit: limitNum,
+				total,
+				totalPages: Math.ceil(total / limitNum),
+			},
+		});
+	} catch (error) {
+		console.error('Lỗi getMyBookings:', error);
+		return res.status(500).json({ error: 'internal_server_error' });
+	}
+}
+
+// 9. API: Hủy booking của user
+export async function cancelBooking(req: Request, res: Response) {
+	const session = await mongoose.startSession();
+	session.startTransaction();
+	try {
+		const userId = req.user!._id;
+		const { id } = req.params;
+
+		if (!mongoose.Types.ObjectId.isValid(id)) {
+			throw new Error('invalid_booking_id');
+		}
+
+		const booking = await BookingModel.findOne({ _id: id, user_id: userId }).session(session);
+		if (!booking) {
+			throw new Error('booking_not_found');
+		}
+
+		if (booking.status !== 'confirmed') {
+			throw new Error('booking_cannot_be_cancelled');
+		}
+
+		// Calculate hours until start
+		const bookingDateStr = typeof booking.date === 'string' ? booking.date : (booking.date as any).toISOString().split('T')[0];
+		const startTimeDate = new Date(`${bookingDateStr}T${booking.start_time}:00`);
+		
+		const now = new Date();
+		const hoursDifference = (startTimeDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+		if (hoursDifference < 1) {
+			throw new Error('too_late_to_cancel');
+		}
+
+		// Calculate refund percentage
+		let refundPercentage = 0;
+		if (hoursDifference >= 3) {
+			refundPercentage = 1; // 100%
+		} else {
+			refundPercentage = 0.5; // 50%
+		}
+
+		const refundAmount = Math.floor(booking.total_price * refundPercentage);
+
+		// Update booking status
+		booking.status = 'cancelled';
+		await booking.save({ session });
+
+		// Refund to wallet if amount > 0
+		if (refundAmount > 0) {
+			const wallet = await Wallet.findOne({ user_id: userId }).session(session);
+			if (wallet) {
+				wallet.balance += refundAmount;
+				await wallet.save({ session });
+
+				const tx = new WalletTransaction({
+					wallet_id: wallet._id,
+					type: 'refund',
+					amount: refundAmount,
+					balance_after: wallet.balance,
+					status: 'completed',
+					description: `Hoàn tiền ${refundPercentage * 100}% hủy sân (${booking.start_time}-${booking.end_time})`,
+				});
+				await tx.save({ session });
+			}
+		}
+
+		// Free up the court slots
+		const courtSlot = await CourtSlotModel.findOne({
+			court_id: booking.court_id,
+			sub_court_id: booking.sub_court_id,
+			date: booking.date
+		}).session(session);
+
+		if (courtSlot) {
+			let slotsFreed = 0;
+			courtSlot.slots.forEach((s: any) => {
+				if (s.start >= booking.start_time && s.end <= booking.end_time && s.status === 'booked') {
+					s.status = 'available';
+					slotsFreed++;
+				}
+			});
+			courtSlot.markModified('slots');
+			await courtSlot.save({ session });
+
+			if (slotsFreed > 0) {
+				const targetDate = new Date(booking.date as any);
+				targetDate.setHours(0, 0, 0, 0);
+				await CourtDashboardModel.updateOne(
+					{ court_id: booking.court_id, sub_court_id: booking.sub_court_id, date: targetDate },
+					{ $inc: { available_slots: slotsFreed } },
+					{ session }
+				);
+			}
+		}
+
+		await session.commitTransaction();
+		return res.status(200).json({ 
+			message: 'Hủy sân thành công', 
+			refundAmount, 
+			refundPercentage: refundPercentage * 100 
+		});
+	} catch (error: any) {
+		await session.abortTransaction();
+		const errorMap: Record<string, any> = {
+			invalid_booking_id: { status: 400, message: 'Mã đặt sân không hợp lệ' },
+			booking_not_found: { status: 404, message: 'Không tìm thấy thông tin đặt sân' },
+			booking_cannot_be_cancelled: { status: 400, message: 'Chỉ có thể hủy sân đã được xác nhận' },
+			too_late_to_cancel: { status: 400, message: 'Không thể hủy sân khi thời gian bắt đầu còn dưới 1 tiếng' },
+		};
+
+		const mapped = errorMap[error.message];
+		if (mapped) {
+			return res.status(mapped.status).json({ error: mapped.message });
+		}
+
+		console.error('Lỗi cancelBooking:', error);
+		return res.status(500).json({ error: 'internal_server_error' });
+	} finally {
+		await session.endSession();
+	}
+}

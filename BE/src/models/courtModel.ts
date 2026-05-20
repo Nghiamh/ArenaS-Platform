@@ -59,7 +59,6 @@ const courtCoordinatesSchema = new Schema<ICourtCoordinates>(
 			},
 		},
 	},
-	{ _id: false }
 );
 
 const courtSchema = new Schema<ICourt, ICourtModel>(
@@ -169,8 +168,7 @@ const courtSchema = new Schema<ICourt, ICourtModel>(
 							default: "open",
 							enum: ["open", "closed"],
 						},
-					},
-					{ _id: false }
+					}
 				),
 			],
 			default: [],

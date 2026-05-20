@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   createCurrentUserSkill,
   deleteCurrentUserSkill,
@@ -7,8 +7,11 @@ import {
   getCurrentUserSkills,
   updateCurrentUserProfile,
   updateCurrentUserSkill,
+  getMyBookings,
+  cancelBooking,
   type AuthUser,
   type UserSkill,
+  type UserBooking,
 } from "../../Axios/Axios";
 import { useWallet } from "../../hooks/useWallet";
 import { DepositModal } from "../WalletPage/DepositModal";
@@ -341,6 +344,7 @@ const isAuthError = (message: string): boolean => {
 
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [draftName, setDraftName] = useState("");
   const [draftPhone, setDraftPhone] = useState("");
@@ -375,6 +379,58 @@ export const ProfilePage: React.FC = () => {
   } = useWallet();
   const [showDeposit, setShowDeposit] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+
+  // Bookings state
+  const [myBookings, setMyBookings] = useState<UserBooking[]>([]);
+  const [bookingsLoading, setBookingsLoading] = useState(false);
+  const [cancellingBookingId, setCancellingBookingId] = useState<string | null>(null);
+  const [bookingToCancel, setBookingToCancel] = useState<UserBooking | null>(null);
+
+  const confirmCancelBooking = async () => {
+    if (!bookingToCancel) return;
+    const bookingId = bookingToCancel._id;
+    
+    try {
+      setCancellingBookingId(bookingId);
+      const res = await cancelBooking(bookingId);
+      setSuccessMessage(`Hủy sân thành công. Hoàn lại ${res.refundPercentage}% (${new Intl.NumberFormat('vi-VN').format(res.refundAmount)} đ).`);
+      setTimeout(() => setSuccessMessage(""), 5000);
+      
+      // Update the local state
+      setMyBookings(prev => prev.map(b => b._id === bookingId ? { ...b, status: 'cancelled' } : b));
+      await fetchWallet();
+      setBookingToCancel(null);
+    } catch (e: unknown) {
+      showErrorPopup(e instanceof Error ? e.message : "Có lỗi xảy ra khi hủy sân");
+      setBookingToCancel(null);
+    } finally {
+      setCancellingBookingId(null);
+    }
+  };
+
+  useEffect(() => {
+    if (location.state?.openDeposit) {
+      setShowDeposit(true);
+      // Clear state so it doesn't reopen if user refreshes
+      navigate(".", { replace: true, state: {} });
+    }
+  }, [location.state, navigate]);
+
+  const fetchBookings = async () => {
+    try {
+      setBookingsLoading(true);
+      const res = await getMyBookings({ limit: 20 });
+      setMyBookings(res.bookings);
+    } catch (e) {
+      console.error("Failed to fetch bookings", e);
+    } finally {
+      setBookingsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBookings();
+  }, []);
 
   const handleDepositSuccess = () => {
     setShowDeposit(false);
@@ -463,6 +519,12 @@ export const ProfilePage: React.FC = () => {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (location.state?.openDeposit) {
+      setShowDeposit(true);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     let isMounted = true;
@@ -759,9 +821,9 @@ export const ProfilePage: React.FC = () => {
   const calculatedSkillPoints =
     skills.length > 0
       ? skills.reduce(
-          (sum, s) => sum + s.level * 1000 + s.rating_score * 500,
-          0,
-        )
+        (sum, s) => sum + s.level * 1000 + s.rating_score * 500,
+        0,
+      )
       : 0;
   const formattedSkillPoints =
     calculatedSkillPoints > 0
@@ -871,91 +933,17 @@ export const ProfilePage: React.FC = () => {
                   onClick={
                     isEditing ? handleCancelEditing : handleStartEditing
                   }
-                  className={`mt-6 w-full py-2.5 rounded-xl border text-xs font-bold tracking-wide uppercase transition-all flex items-center justify-center gap-2 ${
-                    isEditing
-                      ? "bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20"
-                      : "bg-white/[0.02] border-white/10 text-slate-200 hover:bg-white/[0.05] hover:border-white/20"
-                  }`}
+                  className={`mt-6 w-full py-2.5 rounded-xl border text-xs font-bold tracking-wide uppercase transition-all flex items-center justify-center gap-2 ${isEditing
+                    ? "bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20"
+                    : "bg-white/[0.02] border-white/10 text-slate-200 hover:bg-white/[0.05] hover:border-white/20"
+                    }`}
                 >
                   <PencilIcon />
                   <span>{isEditing ? "HỦY CHỈNH SỬA" : "CHỈNH SỬA HỒ SƠ"}</span>
                 </button>
               </div>
 
-              {/* Statistics Cards list */}
-              <div className="flex flex-col gap-3">
-                {/* Matches Card */}
-                <div className="bg-[#10111a] border border-white/[0.05] rounded-2xl p-5 flex items-center justify-between shadow-[0_4px_20px_rgba(0,0,0,0.15)] hover:border-white/10 transition duration-300">
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-500 tracking-[0.18em] uppercase">
-                      TRẬN ĐẤU
-                    </p>
-                    <p className="text-2xl font-extrabold text-white mt-1">
-                      —
-                    </p>
-                  </div>
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                    <RacketIcon />
-                  </div>
-                </div>
 
-                {/* Win Rate Card */}
-                <div className="bg-[#10111a] border border-white/[0.05] rounded-2xl p-5 flex items-center justify-between shadow-[0_4px_20px_rgba(0,0,0,0.15)] hover:border-white/10 transition duration-300">
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-500 tracking-[0.18em] uppercase">
-                      TỈ LỆ THẮNG
-                    </p>
-                    <p className="text-2xl font-extrabold text-white mt-1">
-                      —
-                    </p>
-                  </div>
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                    <TrendUpIcon />
-                  </div>
-                </div>
-
-                {/* Skill Points Card */}
-                <div className="bg-[#10111a] border border-white/[0.05] rounded-2xl p-5 flex items-center justify-between shadow-[0_4px_20px_rgba(0,0,0,0.15)] hover:border-white/10 transition duration-300">
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-500 tracking-[0.18em] uppercase">
-                      DIỂM KỸ NĂNG
-                    </p>
-                    <p className="text-2xl font-extrabold text-white mt-1">
-                      {formattedSkillPoints}
-                    </p>
-                  </div>
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-                    <StarIcon />
-                  </div>
-                </div>
-              </div>
-
-              {/* Achievements Card */}
-              <div className="bg-[#10111a] border border-white/[0.05] rounded-2xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.15)]">
-                <p className="text-[10px] font-bold text-slate-500 tracking-[0.18em] uppercase mb-4">
-                  THÀNH TÍCH
-                </p>
-                <div className="flex gap-3.5">
-                  <div
-                    className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shadow-[0_0_12px_rgba(59,130,246,0.1)] hover:scale-105 transition cursor-help"
-                    title="Cúp Danh Hiệu"
-                  >
-                    <TrophyIcon />
-                  </div>
-                  <div
-                    className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.1)] hover:scale-105 transition cursor-help"
-                    title="Người Chơi Tích Cực"
-                  >
-                    <BoltIcon />
-                  </div>
-                  <div
-                    className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.1)] hover:scale-105 transition cursor-help"
-                    title="Kỹ Năng Được Kiểm Chứng"
-                  >
-                    <MedalIcon />
-                  </div>
-                </div>
-              </div>
             </aside>
 
             {/* ─── RIGHT MAIN CONTENT ───────────────────────────────────────── */}
@@ -1098,8 +1086,8 @@ export const ProfilePage: React.FC = () => {
                             onClick={() => {
                               const input = dateOfBirthInputRef.current as
                                 | (HTMLInputElement & {
-                                    showPicker?: () => void;
-                                  })
+                                  showPicker?: () => void;
+                                })
                                 | null;
                               input?.showPicker?.();
                               input?.focus();
@@ -1152,7 +1140,7 @@ export const ProfilePage: React.FC = () => {
                       <p className="text-[10px] font-bold tracking-[0.2em] text-blue-200/80 uppercase">
                         SỐ DƯ VÍ
                       </p>
-                      
+
                       <div className="flex items-center gap-2.5">
                         {/* Shrunk Wallet Refresh Button */}
                         <button
@@ -1546,17 +1534,86 @@ export const ProfilePage: React.FC = () => {
                         <th className="text-[10px] font-bold text-slate-500 tracking-wider uppercase py-3.5 text-right">
                           CHI PHÍ
                         </th>
+                        <th className="text-[10px] font-bold text-slate-500 tracking-wider uppercase py-3.5 text-center">
+                          THAO TÁC
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr>
-                        <td
-                          colSpan={5}
-                          className="text-center py-10 text-xs font-semibold text-slate-500 italic uppercase tracking-wider"
-                        >
-                          Chưa có dữ liệu đặt sân (Tính năng đang phát triển)
-                        </td>
-                      </tr>
+                      {bookingsLoading ? (
+                        <tr>
+                          <td colSpan={6} className="text-center py-10 text-xs font-semibold text-slate-500 animate-pulse">
+                            Đang tải dữ liệu...
+                          </td>
+                        </tr>
+                      ) : myBookings.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={6}
+                            className="text-center py-10 text-xs font-semibold text-slate-500 italic uppercase tracking-wider"
+                          >
+                            Chưa có dữ liệu đặt sân
+                          </td>
+                        </tr>
+                      ) : (
+                        myBookings.map((booking) => {
+                          const isSuccess = booking.status === 'confirmed' || booking.status === 'completed';
+                          const isCancelled = booking.status === 'cancelled';
+                          
+                          // Check if booking is in the past
+                          const bookingEndTime = new Date(`${booking.date.split('T')[0]}T${booking.end_time}:00`);
+                          const isPlayed = isSuccess && bookingEndTime < new Date();
+                          
+                          let statusClass = "bg-slate-500/10 text-slate-400 border-white/[0.05]";
+                          let statusLabel = booking.status;
+                          if (isPlayed) {
+                            statusClass = "bg-[#1D9E75]/10 text-[#1D9E75] border-[#1D9E75]/20";
+                            statusLabel = "Đã chơi";
+                          } else if (isSuccess) {
+                            statusClass = "bg-blue-500/10 text-blue-400 border-blue-500/20";
+                            statusLabel = "Thành công";
+                          } else if (isCancelled) {
+                            statusClass = "bg-rose-500/10 text-rose-400 border-rose-500/20";
+                            statusLabel = "Đã hủy";
+                          }
+
+                          return (
+                            <tr key={booking._id} className="border-b border-white/[0.02] hover:bg-white/[0.01] transition">
+                              <td className="py-4 text-sm font-semibold text-slate-200">
+                                {booking.court_name}
+                                <span className="block text-[10px] text-slate-500 font-normal">{booking.sub_court_name}</span>
+                              </td>
+                              <td className="py-4 text-sm text-slate-300">
+                                {new Date(booking.date).toLocaleDateString('vi-VN')}
+                              </td>
+                              <td className="py-4 text-sm font-mono text-slate-400">
+                                {booking.start_time} - {booking.end_time}
+                              </td>
+                              <td className="py-4">
+                                <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusClass}`}>
+                                  {statusLabel}
+                                </span>
+                              </td>
+                              <td className="py-4 text-sm font-bold text-right text-emerald-400">
+                                {new Intl.NumberFormat('vi-VN').format(booking.total_price)} đ
+                              </td>
+                              <td className="py-4 text-center">
+                                {!isPlayed && isSuccess ? (
+                                  <button 
+                                    onClick={() => setBookingToCancel(booking)}
+                                    disabled={cancellingBookingId === booking._id}
+                                    className="px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 text-xs font-bold hover:bg-rose-500/20 transition disabled:opacity-50"
+                                  >
+                                    {cancellingBookingId === booking._id ? "Đang hủy..." : "Hủy sân"}
+                                  </button>
+                                ) : (
+                                  <span className="text-xs text-slate-600">-</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -1582,6 +1639,61 @@ export const ProfilePage: React.FC = () => {
             </div>
           ) : null}
         </div>
+
+        {/* Cancel Confirmation Modal */}
+        {bookingToCancel && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm transition duration-200">
+            <div className="w-full max-w-md rounded-2xl border border-white/[0.05] bg-[#121320] p-6 shadow-[0_28px_70px_-35px_rgba(0,0,0,0.9)] relative overflow-hidden">
+              <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-rose-500/40 to-transparent" />
+              
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-500/20 text-rose-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                </div>
+                <h3 className="text-lg font-bold text-white">Xác nhận hủy sân</h3>
+              </div>
+
+              <div className="space-y-4 mb-6">
+                <p className="text-sm text-slate-300">
+                  Bạn đang yêu cầu hủy sân <strong className="text-white">{bookingToCancel.court_name} - {bookingToCancel.sub_court_name}</strong> vào lúc <strong className="text-amber-400">{bookingToCancel.start_time} - {bookingToCancel.end_time}</strong> ngày <strong className="text-cyan-400">{new Date(bookingToCancel.date).toLocaleDateString('vi-VN')}</strong>.
+                </p>
+                <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4">
+                  <p className="text-xs font-semibold text-rose-400 mb-2 uppercase tracking-wider">Chính sách hoàn tiền:</p>
+                  <ul className="text-sm text-slate-300 space-y-1.5 list-disc pl-4">
+                    <li>Hủy trước <strong>3 tiếng</strong>: Hoàn <strong>100%</strong> số tiền.</li>
+                    <li>Hủy từ <strong>1 - 3 tiếng</strong>: Hoàn <strong>50%</strong> số tiền.</li>
+                    <li>Hủy dưới <strong>1 tiếng</strong>: <strong className="text-rose-400">Không thể hủy</strong>.</li>
+                  </ul>
+                </div>
+                <p className="text-xs text-slate-500 italic">Tiền hoàn lại sẽ được tự động cộng vào Số dư ví của bạn.</p>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setBookingToCancel(null)}
+                  disabled={cancellingBookingId === bookingToCancel._id}
+                  className="px-5 py-2.5 rounded-xl border border-white/10 bg-transparent hover:bg-white/5 text-slate-300 text-sm font-semibold transition disabled:opacity-50"
+                >
+                  Quay lại
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmCancelBooking}
+                  disabled={cancellingBookingId === bookingToCancel._id}
+                  className="px-5 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-sm font-bold shadow-lg shadow-rose-500/20 transition disabled:opacity-50 flex items-center gap-2"
+                >
+                  {cancellingBookingId === bookingToCancel._id ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+                      Đang xử lý...
+                    </>
+                  ) : "Xác nhận Hủy"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Error Modal Popup */}
         {popupErrorMessage ? (
