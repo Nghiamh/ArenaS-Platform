@@ -18,6 +18,7 @@ export type BookingModalData = {
   note: string;
   status: 'confirmed' | 'pending' | 'completed' | 'cancelled';
   source: 'app' | 'phone' | 'walkin';
+  date: string;
 };
 
 type OwnerBookingModalProps = {
@@ -67,6 +68,7 @@ const mkDefault = (p: Partial<BookingModalData>): BookingModalData => ({
   note: p.note ?? '',
   status: p.status ?? 'confirmed',
   source: p.source ?? 'phone',
+  date: p.date ?? new Date().toISOString().split('T')[0],
 });
 
 /* ── Micro-components ── */
@@ -259,7 +261,7 @@ export const OwnerBookingModal: React.FC<OwnerBookingModalProps> = ({
               {/* Divider */}
               <div style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
 
-              {/* Facility + Court (add mode only) */}
+              {/* Facility + Court + Date (add mode only) */}
               {isAdd && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
@@ -275,6 +277,15 @@ export const OwnerBookingModal: React.FC<OwnerBookingModalProps> = ({
                       <option value="">-- Chọn --</option>
                       {courts.map(c => <option key={c} value={c}>{c}</option>)}
                     </SelectEl>
+                  </div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <Label required>Ngày đặt</Label>
+                    <InputEl 
+                      type="date" 
+                      value={form.date} 
+                      min={new Date().toISOString().split('T')[0]}
+                      onChange={e => set('date', e.target.value)} 
+                    />
                   </div>
                 </div>
               )}

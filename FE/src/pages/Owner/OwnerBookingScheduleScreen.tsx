@@ -281,16 +281,7 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
                     </button>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const addBtn = document.querySelector('[class*="bg-gradient-to-r from-blue-600"]');
-                      if (addBtn) (addBtn as HTMLButtonElement).click();
-                    }}
-                    className="flex h-10 items-center gap-1.5 rounded-xl bg-white hover:bg-slate-100 text-[#07162f] px-4 text-sm font-extrabold shadow-[0_8px_20px_-8px_rgba(255,255,255,0.7)] transition"
-                  >
-                    <span className="text-base leading-none">＋</span> Thêm Lịch Đặt
-                  </button>
+
                 </div>
               </div>
             </header>

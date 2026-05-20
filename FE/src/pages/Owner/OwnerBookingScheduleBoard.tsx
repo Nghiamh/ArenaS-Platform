@@ -558,6 +558,7 @@ export const OwnerBookingScheduleBoard: React.FC<{
         tone: b.tone, note: b.note ?? '',
         status: b.status || 'confirmed', 
         source: b.source || 'app',
+        date: currentDate,
       },
     });
   }, [schedule]);
@@ -584,6 +585,7 @@ export const OwnerBookingScheduleBoard: React.FC<{
         note: b.note || '',
         status: b.status as any,
         source: b.source as any,
+        date: b.date,
       }
     });
   }, [courtsData]);
@@ -596,13 +598,14 @@ export const OwnerBookingScheduleBoard: React.FC<{
         courtName: schedule[fIdx].courts[cIdx].name,
         tone: schedule[fIdx].accent,
         status: 'confirmed', source: 'phone',
+        date: currentDate,
       },
     });
   }, [schedule]);
 
   const openGlobalAdd = () => setModal({
     open: true, mode: 'add', bIdx: null, fIdx: -1, cIdx: -1,
-    initial: { source: 'phone', status: 'confirmed', tone: 'blue' },
+    initial: { source: 'phone', status: 'confirmed', tone: 'blue', date: currentDate },
   });
 
   const handleSave = useCallback(async (data: BookingModalData) => {
@@ -626,7 +629,7 @@ export const OwnerBookingScheduleBoard: React.FC<{
         await createOwnerBooking({
           court_id: court.id,
           sub_court_id: subCourt._id!,
-          date: currentDate,
+          date: data.date,
           start_time: `${sh}:${sm}`,
           end_time: `${eh}:${em}`,
           customer_name: data.customer,
