@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { getPublicCourtById, getCourtSlots, type PublicCourt, type CourtSlotData } from '../../Axios/Axios';
+import { BookingModal } from '../../components/BookingModal';
 
 type LocationState = { court?: PublicCourt };
 
@@ -34,9 +35,17 @@ const CourtDetailPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Calendar States
+  const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
   const [weekStartOffset, setWeekStartOffset] = useState(0);
   const [shift, setShift] = useState<'morning' | 'afternoon'>('afternoon');
-  const [selectedDayIdx, setSelectedDayIdx] = useState(0);
+  // Start on the first non-past day of the current week
+  const [selectedDayIdx, setSelectedDayIdx] = useState(() => {
+    const now = new Date(); now.setHours(0, 0, 0, 0);
+    const day = now.getDay();
+    // Monday=0 index ... Sunday=6 index
+    const mondayOffset = day === 0 ? 6 : day - 1;
+    return Math.min(mondayOffset, 6);
+  });
 
   // Derived Calendar Data
   const startOfWeek = useMemo(() => {
@@ -71,19 +80,29 @@ const CourtDetailPage: React.FC = () => {
   const currentHours = useMemo(() => {
     // Or just divide by 2 for balanced visual grid:
     const splitHour = Math.floor((openHour + closeHour) / 2);
-    
+
     if (shift === 'morning') {
       const length = Math.max(0, splitHour - openHour);
       return Array.from({ length }, (_, i) => openHour + i);
     }
-    
+
     const length = Math.max(0, closeHour - splitHour);
     return Array.from({ length }, (_, i) => splitHour + i);
   }, [shift, openHour, closeHour]);
 
   // Real booking data based on selected date
-  const selectedDateStr = weekDays[selectedDayIdx].toISOString().slice(0, 10);
+  const d = weekDays[selectedDayIdx];
+  const selectedDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const [slotData, setSlotData] = useState<Record<string, CourtSlotData>>({});
+
+  const [selectedSlot, setSelectedSlot] = useState<{
+    subCourtId: string;
+    subCourtName: string;
+    startTime: string;
+    endTime: string;
+  } | null>(null);
+
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
 
   useEffect(() => {
     if (!courtId || !selectedDateStr) return;
@@ -171,7 +190,7 @@ const CourtDetailPage: React.FC = () => {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={() => navigate('/tim-san', { state: { targetCourtId: court.id, directionsCourt: court, showMap: true } })}
               className="flex items-center gap-2 rounded-xl bg-blue-500/10 border border-blue-500/20 px-5 py-2.5 text-sm font-semibold text-blue-400 hover:bg-blue-500/20 transition"
             >
@@ -186,193 +205,249 @@ const CourtDetailPage: React.FC = () => {
 
       {/* 2. Middle Section (Grid) */}
       <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 mb-6">
-         <div className="flex flex-col gap-6 lg:flex-row">
-            
-            {/* Left: Gallery (65%) */}
-            <div className="w-full lg:w-[65%]">
-               <div className="grid grid-cols-3 grid-rows-2 gap-3 h-[300px] md:h-[420px]">
-                 {/* Image 1 (Large) */}
-                 <div className="col-span-2 row-span-2 rounded-xl overflow-hidden relative group">
-                    <img src={gallery[0]} alt="Court view 1" className="w-full h-full object-cover transition duration-500 group-hover:scale-105" />
-                 </div>
-                 {/* Image 2 (Small Top) */}
-                 <div className="col-span-1 row-span-1 rounded-xl overflow-hidden relative group">
-                    <img src={gallery[1]} alt="Court view 2" className="w-full h-full object-cover transition duration-500 group-hover:scale-105" />
-                 </div>
-                 {/* Image 3 (Small Bottom) */}
-                 <div className="col-span-1 row-span-1 rounded-xl overflow-hidden relative group cursor-pointer">
-                    <img src={gallery[2]} alt="Court view 3" className="w-full h-full object-cover transition duration-500 group-hover:scale-105" />
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center transition opacity-0 group-hover:opacity-100">
-                       <span className="px-4 py-2 bg-white/10 backdrop-blur-md rounded-lg font-semibold text-sm border border-white/20 shadow-lg text-white">
-                         Xem tất cả
-                       </span>
-                    </div>
-                 </div>
-               </div>
-            </div>
-            
-            {/* Right: Info Panels (35%) */}
-            <div className="w-full lg:w-[35%] flex flex-col gap-6">
-               
-               {/* Court Info */}
-               <div className="bg-[#141e2b] border border-white/8 rounded-2xl p-6 space-y-5 shadow-lg">
-                  <h3 className="font-bold text-white border-l-4 border-[#1D9E75] pl-3 text-lg leading-none">Thông tin sân</h3>
-                  <div className="space-y-4 text-sm">
-                     <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                        <span className="text-slate-400">Giờ hoạt động:</span>
-                        <span className="font-semibold text-white">{court.open_time || '06:00'} - {court.close_time || '22:00'}</span>
-                     </div>
-                     <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                        <span className="text-slate-400">Số sân thi đấu:</span>
-                        <span className="font-semibold text-white">{court.sub_courts?.length || court.number_of_courts || 0} Sân</span>
-                     </div>
-                     <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                        <span className="text-slate-400">Giá sân:</span>
-                        <span className="font-semibold text-white">{price > 0 ? `${fmt(price)} đ/h` : 'Liên hệ'}</span>
-                     </div>
-                     <div className="flex items-center justify-between pb-1">
-                        <span className="text-slate-400">Giá sân giờ vàng:</span>
-                        <span className="font-semibold text-white">{price > 0 ? `${fmt(price * 1.2)} đ/h` : 'Liên hệ'}</span>
-                     </div>
-                  </div>
-               </div>
-               
-               {/* Amenities */}
-               <div className="bg-[#141e2b] border border-white/8 rounded-2xl p-6 space-y-5 shadow-lg flex-1">
-                  <h3 className="font-bold text-white border-l-4 border-blue-500 pl-3 text-lg leading-none">Dịch vụ tiện ích</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                     {court.amenities?.map(amenity => (
-                        <div key={amenity} className="flex items-center gap-2.5 text-slate-300">
-                           <div className="flex h-6 w-6 items-center justify-center rounded-md bg-white/5 border border-white/10 text-slate-400 text-xs">
-                             ❖
-                           </div>
-                           <span className="truncate">{amenity}</span>
-                        </div>
-                     ))}
-                     {(!court.amenities || court.amenities.length === 0) && (
-                        <p className="text-slate-500 col-span-2">Chưa có thông tin tiện ích</p>
-                     )}
-                  </div>
-               </div>
+        <div className="flex flex-col gap-6 lg:flex-row">
 
+          {/* Left: Gallery (65%) */}
+          <div className="w-full lg:w-[65%]">
+            <div className="grid grid-cols-3 grid-rows-2 gap-3 h-[300px] md:h-[420px]">
+              {/* Image 1 (Large) */}
+              <div className="col-span-2 row-span-2 rounded-xl overflow-hidden relative group">
+                <img src={gallery[0]} alt="Court view 1" className="w-full h-full object-cover transition duration-500 group-hover:scale-105" />
+              </div>
+              {/* Image 2 (Small Top) */}
+              <div className="col-span-1 row-span-1 rounded-xl overflow-hidden relative group">
+                <img src={gallery[1]} alt="Court view 2" className="w-full h-full object-cover transition duration-500 group-hover:scale-105" />
+              </div>
+              {/* Image 3 (Small Bottom) */}
+              <div className="col-span-1 row-span-1 rounded-xl overflow-hidden relative group cursor-pointer">
+                <img src={gallery[2]} alt="Court view 3" className="w-full h-full object-cover transition duration-500 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center transition opacity-0 group-hover:opacity-100">
+                  <span className="px-4 py-2 bg-white/10 backdrop-blur-md rounded-lg font-semibold text-sm border border-white/20 shadow-lg text-white">
+                    Xem tất cả
+                  </span>
+                </div>
+              </div>
             </div>
-         </div>
+          </div>
+
+          {/* Right: Info Panels (35%) */}
+          <div className="w-full lg:w-[35%] flex flex-col gap-6">
+
+            {/* Court Info */}
+            <div className="bg-[#141e2b] border border-white/8 rounded-2xl p-6 space-y-5 shadow-lg">
+              <h3 className="font-bold text-white border-l-4 border-[#1D9E75] pl-3 text-lg leading-none">Thông tin sân</h3>
+              <div className="space-y-4 text-sm">
+                <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                  <span className="text-slate-400">Giờ hoạt động:</span>
+                  <span className="font-semibold text-white">{court.open_time} - {court.close_time}</span>
+                </div>
+                <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                  <span className="text-slate-400">Số sân thi đấu:</span>
+                  <span className="font-semibold text-white">{court.sub_courts?.length || court.number_of_courts || 0} Sân</span>
+                </div>
+                <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                  <span className="text-slate-400">Giá sân:</span>
+                  <span className="font-semibold text-white">{price > 0 ? `${fmt(price)} đ/h` : 'Liên hệ'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Amenities */}
+            <div className="bg-[#141e2b] border border-white/8 rounded-2xl p-6 space-y-5 shadow-lg flex-1">
+              <h3 className="font-bold text-white border-l-4 border-blue-500 pl-3 text-lg leading-none">Dịch vụ tiện ích</h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                {court.amenities?.map(amenity => (
+                  <div key={amenity} className="flex items-center gap-2.5 text-slate-300">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-md bg-white/5 border border-white/10 text-slate-400 text-xs">
+                      ❖
+                    </div>
+                    <span className="truncate">{amenity}</span>
+                  </div>
+                ))}
+                {(!court.amenities || court.amenities.length === 0) && (
+                  <p className="text-slate-500 col-span-2">Chưa có thông tin tiện ích</p>
+                )}
+              </div>
+            </div>
+
+          </div>
+        </div>
       </div>
 
       {/* 3. Bottom Section (Calendar Timeline) */}
       <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
         <div className="bg-[#141e2b] border border-white/8 rounded-2xl p-6 shadow-lg overflow-x-auto">
-           
-           {/* Top Controls */}
-           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 min-w-[800px]">
-             
-             {/* Date range */}
-             <div className="flex items-center gap-3">
-                <button onClick={() => setWeekStartOffset(o => o - 1)} className="h-8 w-8 rounded-lg border border-white/10 hover:bg-white/5 flex items-center justify-center transition">
-                   &lt;
-                </button>
-                <span className="text-sm font-semibold text-white min-w-[90px] text-center">{dateRangeStr}</span>
-                <button onClick={() => setWeekStartOffset(o => o + 1)} className="h-8 w-8 rounded-lg border border-white/10 hover:bg-white/5 flex items-center justify-center transition">
-                   &gt;
-                </button>
-             </div>
 
-             {/* Legends */}
-             <div className="flex items-center gap-5 text-xs font-medium">
-                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm border border-white/20 bg-transparent"></span><span className="text-slate-400">Giờ trống</span></div>
-                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-slate-700"></span><span className="text-slate-400">Đã khóa</span></div>
-                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-rose-500"></span><span className="text-slate-400">Đã đặt</span></div>
-                <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-[#1D9E75]"></span><span className="text-slate-400">Đã chơi</span></div>
-             </div>
+          {/* Top Controls */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 min-w-[800px]">
 
-             {/* Action chips */}
-             <div className="flex items-center gap-2">
-                <button onClick={() => setWeekStartOffset(0)} className="px-4 py-1.5 rounded-full border border-white/10 text-xs font-semibold hover:bg-white/5 transition flex items-center gap-1.5 text-slate-300">
-                  Hôm nay
-                </button>
-                <button 
-                  onClick={() => setShift('morning')}
-                  className={`px-4 py-1.5 rounded-full border text-xs font-semibold flex items-center gap-1.5 transition ${
-                    shift === 'morning' ? 'bg-blue-500/20 border-blue-500/30 text-blue-400' : 'border-white/10 text-slate-300 hover:bg-white/5'
-                  }`}
-                >
-                  Ca sáng
-                </button>
-                <button 
-                  onClick={() => setShift('afternoon')}
-                  className={`px-4 py-1.5 rounded-full border text-xs font-semibold flex items-center gap-1.5 transition ${
-                    shift === 'afternoon' ? 'bg-blue-500/20 border-blue-500/30 text-blue-400' : 'border-white/10 text-slate-300 hover:bg-white/5'
-                  }`}
-                >
-                  Ca chiều
-                </button>
-             </div>
-           </div>
+            {/* Date range */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setWeekStartOffset(o => o - 1)}
+                disabled={weekStartOffset <= 0}
+                className={`h-8 w-8 rounded-lg border border-white/10 flex items-center justify-center transition ${weekStartOffset <= 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/5'}`}
+              >
+                &lt;
+              </button>
+              <span className="text-sm font-semibold text-white min-w-[90px] text-center">{dateRangeStr}</span>
+              <button onClick={() => setWeekStartOffset(o => o + 1)} className="h-8 w-8 rounded-lg border border-white/10 hover:bg-white/5 flex items-center justify-center transition">
+                &gt;
+              </button>
+            </div>
 
-           {/* Week Tabs */}
-           <div className="flex border-b border-white/10 mb-4 min-w-[800px]">
-             {weekDays.map((day, idx) => (
-                <button 
-                  key={idx} 
-                  onClick={() => setSelectedDayIdx(idx)}
-                  className={`px-6 py-3 text-sm font-semibold transition border-b-2 ${
-                    idx === selectedDayIdx ? 'text-blue-400 border-blue-500' : 'text-slate-400 border-transparent hover:text-slate-200'
+            {/* Legends */}
+            <div className="flex items-center gap-5 text-xs font-medium">
+              <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm border border-white/20 bg-transparent"></span><span className="text-slate-400">Giờ trống</span></div>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-slate-700"></span><span className="text-slate-400">Đã khóa</span></div>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-rose-500"></span><span className="text-slate-400">Đã đặt</span></div>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-[#1D9E75]"></span><span className="text-slate-400">Đã chơi</span></div>
+            </div>
+
+            {/* Action chips */}
+            <div className="flex items-center gap-2">
+              <button onClick={() => setWeekStartOffset(0)} className="px-4 py-1.5 rounded-full border border-white/10 text-xs font-semibold hover:bg-white/5 transition flex items-center gap-1.5 text-slate-300">
+                Hôm nay
+              </button>
+              <button
+                onClick={() => setShift('morning')}
+                className={`px-4 py-1.5 rounded-full border text-xs font-semibold flex items-center gap-1.5 transition ${shift === 'morning' ? 'bg-blue-500/20 border-blue-500/30 text-blue-400' : 'border-white/10 text-slate-300 hover:bg-white/5'
                   }`}
+              >
+                Ca sáng
+              </button>
+              <button
+                onClick={() => setShift('afternoon')}
+                className={`px-4 py-1.5 rounded-full border text-xs font-semibold flex items-center gap-1.5 transition ${shift === 'afternoon' ? 'bg-blue-500/20 border-blue-500/30 text-blue-400' : 'border-white/10 text-slate-300 hover:bg-white/5'
+                  }`}
+              >
+                Ca chiều
+              </button>
+            </div>
+          </div>
+
+          {/* Week Tabs */}
+          <div className="flex border-b border-white/10 mb-4 min-w-[800px]">
+            {weekDays.map((day, idx) => {
+              const isPastDay = day < today;
+              return (
+                <button
+                  key={idx}
+                  onClick={() => { if (!isPastDay) setSelectedDayIdx(idx); }}
+                  disabled={isPastDay}
+                  className={`px-6 py-3 text-sm font-semibold transition border-b-2 ${isPastDay
+                    ? 'text-slate-700 border-transparent cursor-not-allowed'
+                    : idx === selectedDayIdx
+                      ? 'text-blue-400 border-blue-500'
+                      : 'text-slate-400 border-transparent hover:text-slate-200'
+                    }`}
                 >
                   {getDayLabel(day)}
                 </button>
-             ))}
-           </div>
+              );
+            })}
+          </div>
 
-           {/* Schedule Grid */}
-           <div className="min-w-[800px] border border-white/5 rounded-xl overflow-hidden bg-[#0f1923]/50">
-             {/* Header Row (Hours) */}
-             <div className="flex border-b border-white/5">
-                <div className="w-16 flex-shrink-0"></div> {/* Empty corner */}
-                {currentHours.map(hr => (
-                   <div key={hr} className="flex-1 py-3 text-center text-xs font-semibold text-slate-500 border-l border-white/5">
-                     {hr}:00
-                   </div>
-                ))}
-             </div>
+          {/* Schedule Grid */}
+          <div className="min-w-[800px] border border-white/5 rounded-xl overflow-hidden bg-[#0f1923]/50">
+            {/* Header Row (Hours) */}
+            <div className="flex border-b border-white/5">
+              <div className="w-16 flex-shrink-0"></div> {/* Empty corner */}
+              {currentHours.map(hr => (
+                <div key={hr} className="flex-1 py-3 text-center text-xs font-semibold text-slate-500 border-l border-white/5">
+                  {hr}:00
+                </div>
+              ))}
+            </div>
 
-             {/* Court Rows */}
-             {(court.sub_courts && court.sub_courts.length > 0 ? court.sub_courts : Array.from({ length: court.number_of_courts || 8 })).map((subCourt: any, courtIdx) => {
-               const scId = subCourt?._id;
-               const scData = scId ? slotData[scId] : undefined;
-               
-               return (
-                 <div key={scId || courtIdx} className="flex border-b border-white/5 last:border-b-0">
-                    <div className="w-16 flex-shrink-0 flex items-center justify-center font-bold text-slate-300 text-sm border-r border-white/5 bg-[#141e2b] truncate px-1">
-                       <span className="w-2 h-4 bg-amber-400 rounded-sm mr-2 flex-shrink-0"></span>
-                       {subCourt?.name || `Sân ${courtIdx + 1}`}
-                    </div>
-                    {currentHours.map((hr) => {
-                       // Look up the 2 slots for this hour
-                       const startStr1 = `${hr.toString().padStart(2, '0')}:00`;
-                       const startStr2 = `${hr.toString().padStart(2, '0')}:30`;
-                       
-                       const slot1 = scData?.slots?.find(s => s.start === startStr1);
-                       const slot2 = scData?.slots?.find(s => s.start === startStr2);
-                       
-                       const getSlotColor = (status?: string) => {
-                         if (!status || status === 'available') return 'bg-transparent border border-white/10 hover:border-white/30';
-                         if (status === 'locked') return 'bg-slate-700 border-slate-600 hover:border-slate-500';
-                         if (status === 'booked') return 'bg-rose-500 border-rose-400 hover:border-rose-300';
-                         return 'bg-transparent border border-white/10';
-                       };
+            {/* Court Rows */}
+            {(court.sub_courts && court.sub_courts.length > 0 ? court.sub_courts : Array.from({ length: court.number_of_courts || 8 })).map((subCourt: any, courtIdx) => {
+              let scId = subCourt?._id || subCourt?.id;
+              if (!scId && Object.keys(slotData).length > 0) {
+                scId = Object.keys(slotData)[courtIdx];
+              }
+              const scData = scId ? slotData[scId] : undefined;
 
-                       return (
-                         <div key={hr} className="flex-1 p-1 flex gap-1 border-l border-white/5">
-                            <div className={`flex-1 h-10 rounded-md transition cursor-pointer ${getSlotColor(slot1?.status)}`} title={`${startStr1} - ${slot1?.status || 'available'}`}></div>
-                            <div className={`flex-1 h-10 rounded-md transition cursor-pointer ${getSlotColor(slot2?.status)}`} title={`${startStr2} - ${slot2?.status || 'available'}`}></div>
-                         </div>
-                       );
-                    })}
-                 </div>
-               );
-             })}
-           </div>
+              return (
+                <div key={scId || courtIdx} className="flex border-b border-white/5 last:border-b-0">
+                  <div className="w-16 flex-shrink-0 flex items-center justify-center font-bold text-slate-300 text-sm border-r border-white/5 bg-[#141e2b] truncate px-1">
+                    <span className="w-2 h-4 bg-amber-400 rounded-sm mr-2 flex-shrink-0"></span>
+                    {subCourt?.name || `Sân ${courtIdx + 1}`}
+                  </div>
+                  {currentHours.map((hr) => {
+                    // Look up the 2 slots for this hour
+                    const startStr1 = `${hr.toString().padStart(2, '0')}:00`;
+                    const startStr2 = `${hr.toString().padStart(2, '0')}:30`;
+
+                    const slot1 = scData?.slots?.find(s => s.start === startStr1);
+                    const slot2 = scData?.slots?.find(s => s.start === startStr2);
+
+                    const isSlotSelected = (slotStart: string) => {
+                      if (!selectedSlot || selectedSlot.subCourtId !== scId) return false;
+                      return slotStart >= selectedSlot.startTime && slotStart < selectedSlot.endTime;
+                    };
+
+                    const getSlotColor = (status?: string, slotStart?: string) => {
+                      if (slotStart) {
+                        const slotDate = new Date(`${selectedDateStr}T${slotStart}:00`);
+                        if (slotDate < new Date()) {
+                           if (status === 'booked') return 'bg-[#1D9E75] border-[#1D9E75]/80 cursor-not-allowed'; // Đã chơi
+                           return 'bg-white/[0.02] border-white/5 cursor-not-allowed'; // Quá giờ (trống)
+                        }
+                      }
+
+                      if (slotStart && isSlotSelected(slotStart)) return 'bg-cyan-500/30 border-cyan-400 ring-1 ring-cyan-400/50 shadow-[0_0_10px_rgba(34,211,238,0.15)]';
+                      if (!status || status === 'available') return 'bg-transparent border border-white/10 hover:border-cyan-500/50 hover:bg-cyan-500/5';
+                      if (status === 'locked') return 'bg-slate-700 border-slate-600 hover:border-slate-500';
+                      if (status === 'booked') return 'bg-rose-500 border-rose-400 hover:border-rose-300';
+                      
+                      return 'bg-transparent border border-white/10';
+                    };
+
+                    const handleSlotClick = (slotStart: string, slotEnd: string, status?: string) => {
+                      const slotDate = new Date(`${selectedDateStr}T${slotStart}:00`);
+                      if (slotDate < new Date()) return; // Cannot book past times
+                      
+                      if (status && status !== 'available') return;
+                      if (!scId) return;
+                      const scName = subCourt?.name || `Sân ${courtIdx + 1}`;
+
+                      if (!selectedSlot || selectedSlot.subCourtId !== scId) {
+                        setSelectedSlot({ subCourtId: scId, subCourtName: scName, startTime: slotStart, endTime: slotEnd });
+                        return;
+                      }
+
+                      if (slotStart >= selectedSlot.startTime && slotStart < selectedSlot.endTime) {
+                        setSelectedSlot(null);
+                        return;
+                      }
+
+                      if (slotStart === selectedSlot.endTime) {
+                        setSelectedSlot(prev => prev ? { ...prev, endTime: slotEnd } : null);
+                        return;
+                      }
+
+                      if (slotEnd === selectedSlot.startTime) {
+                        setSelectedSlot(prev => prev ? { ...prev, startTime: slotStart } : null);
+                        return;
+                      }
+
+                      setSelectedSlot({ subCourtId: scId, subCourtName: scName, startTime: slotStart, endTime: slotEnd });
+                    };
+
+                    const nextHourStr = `${(hr + 1).toString().padStart(2, '0')}:00`;
+
+                    return (
+                      <div key={hr} className="flex-1 p-1 flex gap-1 border-l border-white/5">
+                        <div onClick={() => handleSlotClick(startStr1, startStr2, slot1?.status)} className={`flex-1 h-10 rounded-md transition cursor-pointer ${getSlotColor(slot1?.status, startStr1)}`} title={`${startStr1} - ${slot1?.status || 'available'}`}></div>
+                        <div onClick={() => handleSlotClick(startStr2, nextHourStr, slot2?.status)} className={`flex-1 h-10 rounded-md transition cursor-pointer ${getSlotColor(slot2?.status, startStr2)}`} title={`${startStr2} - ${slot2?.status || 'available'}`}></div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
 
         </div>
 
@@ -387,7 +462,7 @@ const CourtDetailPage: React.FC = () => {
               <span className="font-semibold text-slate-300">{rating.toFixed(1)}/5 điểm</span>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {REVIEWS.map(r => (
               <div key={r.id} className="rounded-xl border border-white/5 bg-[#0f1923] p-5 space-y-3">
@@ -409,6 +484,70 @@ const CourtDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Floating Booking Bar */}
+      {selectedSlot && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#0c1220]/95 backdrop-blur-xl shadow-2xl shadow-black/50">
+          <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/15 border border-cyan-500/20 text-cyan-400">
+
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">
+                  {selectedSlot.subCourtName} • <span className="text-cyan-400">{selectedSlot.startTime} - {selectedSlot.endTime}</span>
+                </p>
+                <p className="text-xs text-slate-500">{formatShortDate(weekDays[selectedDayIdx])} • Nhấn để đặt sân</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setSelectedSlot(null)}
+                className="rounded-xl border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-slate-400 hover:bg-white/10 transition"
+              >
+                Hủy chọn
+              </button>
+              <button
+                onClick={() => setBookingModalOpen(true)}
+                className="rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-300"
+              >
+                Đặt sân ngay
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Booking Modal */}
+      {selectedSlot && court && (
+        <BookingModal
+          isOpen={bookingModalOpen}
+          onClose={() => {
+            setBookingModalOpen(false);
+            setSelectedSlot(null);
+          }}
+          courtName={court.name}
+          subCourtName={selectedSlot.subCourtName}
+          payload={{
+            court_id: courtId!,
+            sub_court_id: selectedSlot.subCourtId,
+            date: selectedDateStr,
+            start_time: selectedSlot.startTime,
+            end_time: selectedSlot.endTime,
+          }}
+          pricePerHour={court.price_per_hour || 0}
+          onSuccess={() => {
+            // Refresh slot data but do NOT close the modal
+            getCourtSlots(courtId!, selectedDateStr)
+              .then(data => {
+                const map: Record<string, CourtSlotData> = {};
+                data.forEach(d => { map[d.sub_court_id] = d; });
+                setSlotData(map);
+              })
+              .catch(console.error);
+          }}
+        />
+      )}
     </div>
   );
 };
