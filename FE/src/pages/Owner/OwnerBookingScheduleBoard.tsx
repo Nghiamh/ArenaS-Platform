@@ -1,22 +1,26 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { getOwnerCourts, getOwnerBookings, createOwnerBooking, type OwnerCourt } from '../../Axios/Axios';
+import { createOwnerBooking, type OwnerCourt, type OwnerBooking } from '../../Axios/Axios';
 import {
   bookingHours,
-  bookingWeekDays,
-  bookingWeekScheduleFacilities,
   type BookingTone,
   type BookingBlock,
-  type FacilitySchedule,
 } from './ownerBookingScheduleMockData';
 import { OwnerBookingModal, type BookingModalData, type ModalMode } from './OwnerBookingModal';
 
 /* ── Types ── */
-type ScheduleState = FacilitySchedule[];
+type ScheduleState = any[];
+
 type ModalState = {
-  open: boolean; mode: ModalMode; initial: Partial<BookingModalData>;
-  fIdx: number; cIdx: number; bIdx: number | null;
+  open: boolean;
+  mode: ModalMode;
+  initial: Partial<BookingModalData>;
+  fIdx: number;
+  cIdx: number;
+  bIdx: number | null;
+  bookingId?: string;
 };
+
 const CLOSED: ModalState = { open: false, mode: 'view', initial: {}, fIdx: -1, cIdx: -1, bIdx: null };
 
 /* ── Style maps ── */
@@ -37,16 +41,16 @@ const TONE_CHIP: Record<BookingTone, { bg: string; border: string; shadow: strin
 const COL   = '220px repeat(16, 110px)';
 const WIDTH = '1990px';
 const HC    = bookingHours.length;
-const fmt   = (h: number) => `${String(h).padStart(2, '0')}:00`;
+const fmt   = (h: number) => `${String(Math.floor(h)).padStart(2, '0')}:${(h % 1) * 60 === 30 ? '30' : '00'}`;
 const WEEK_COL = 'minmax(210px,250px) repeat(7,minmax(150px,1fr))';
 
 /* ═══════════════════════════════════════
    Booking chip (day view)
-═══════════════════════════════════════ */
+   ═══════════════════════════════════════ */
 const Chip: React.FC<{ b: BookingBlock; onClick: () => void }> = ({ b, onClick }) => {
   const s    = b.startHour - 7;
   const span = Math.max(1, b.endHour - b.startHour);
-  const t    = TONE_CHIP[b.tone];
+  const t    = TONE_CHIP[b.tone] || TONE_CHIP.blue;
 
   return (
     <motion.button
@@ -72,7 +76,7 @@ const Chip: React.FC<{ b: BookingBlock; onClick: () => void }> = ({ b, onClick }
       </div>
       {/* Hover edit hint */}
       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/30 rounded-xl">
-        <span className="rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur-sm">✏ Sửa</span>
+        <span className="rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur-sm">🔍 Chi tiết</span>
       </div>
     </motion.button>
   );
@@ -80,7 +84,7 @@ const Chip: React.FC<{ b: BookingBlock; onClick: () => void }> = ({ b, onClick }
 
 /* ═══════════════════════════════════════
    Add-slot button (empty row area)
-═══════════════════════════════════════ */
+   ═══════════════════════════════════════ */
 const AddSlot: React.FC<{ onClick: () => void }> = ({ onClick }) => (
   <button
     type="button"
@@ -97,9 +101,9 @@ const AddSlot: React.FC<{ onClick: () => void }> = ({ onClick }) => (
 
 /* ═══════════════════════════════════════
    Court row
-═══════════════════════════════════════ */
+   ═══════════════════════════════════════ */
 const CourtRow: React.FC<{
-  court: FacilitySchedule['courts'][number];
+  court: any;
   onChipClick: (b: BookingBlock, bIdx: number) => void;
   onAddClick: () => void;
 }> = ({ court, onChipClick, onAddClick }) => (
@@ -127,8 +131,8 @@ const CourtRow: React.FC<{
         />
       ))}
       <AddSlot onClick={onAddClick} />
-      {court.bookings.map((b, bIdx) => (
-        <Chip key={`${court.name}-${b.customer}-${b.startHour}`} b={b} onClick={() => onChipClick(b, bIdx)} />
+      {court.bookings.map((b: any, bIdx: number) => (
+        <Chip key={`${court.name}-${b.customer}-${b.startHour}-${bIdx}`} b={b} onClick={() => onChipClick(b, bIdx)} />
       ))}
     </div>
   </div>
@@ -136,9 +140,9 @@ const CourtRow: React.FC<{
 
 /* ═══════════════════════════════════════
    Facility section
-═══════════════════════════════════════ */
+   ═══════════════════════════════════════ */
 const FacilitySection: React.FC<{
-  facility: FacilitySchedule;
+  facility: any;
   fIdx: number;
   onChipClick: (fIdx: number, cIdx: number, b: BookingBlock, bIdx: number) => void;
   onAddClick: (fIdx: number, cIdx: number) => void;
@@ -150,7 +154,7 @@ const FacilitySection: React.FC<{
       style={{ gridTemplateColumns: COL, width: WIDTH }}
     >
       <div className="flex items-center gap-2.5 px-4 py-3">
-        <span className={`inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-lg ${ACCENT[facility.accent]}`}>
+        <span className={`inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-lg ${ACCENT[facility.accent as BookingTone] || ACCENT.blue}`}>
           <span className="h-1.5 w-1.5 rounded-full bg-current" />
         </span>
         <div>
@@ -159,13 +163,13 @@ const FacilitySection: React.FC<{
         </div>
       </div>
       <div className="col-span-16 flex items-center gap-2 px-4">
-        <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${ACCENT[facility.accent]}`}>
+        <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${ACCENT[facility.accent as BookingTone] || ACCENT.blue}`}>
           {facility.bookingCount} lượt đặt
         </span>
       </div>
     </div>
 
-    {facility.courts.map((court, cIdx) => (
+    {facility.courts.map((court: any, cIdx: number) => (
       <CourtRow
         key={`${facility.name}-${court.name}`}
         court={court}
@@ -178,159 +182,327 @@ const FacilitySection: React.FC<{
 
 /* ═══════════════════════════════════════
    Week view
-═══════════════════════════════════════ */
-const WeekView: React.FC = () => (
-  <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#07162f]/80">
-    {/* Header */}
-    <div className="grid border-b border-white/[0.08] bg-[#0a1a38]/80" style={{ gridTemplateColumns: WEEK_COL }}>
-      <div className="border-r border-white/[0.06] px-5 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-600">Cơ sở / Sân</div>
-      {bookingWeekDays.map(d => (
-        <div key={d.key} className="border-r border-white/[0.06] px-3 py-3 text-center last:border-r-0">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{d.label}</p>
-          <p className="mt-1 text-lg font-black text-white">{d.date}</p>
-          {d.total > 0 && (
-            <span className="mt-1.5 inline-flex rounded-full bg-blue-500/20 px-2.5 py-0.5 text-[10px] font-bold text-blue-300 ring-1 ring-blue-400/30">
-              {d.total}
-            </span>
-          )}
-        </div>
-      ))}
-    </div>
+   ═══════════════════════════════════════ */
+const WeekView: React.FC<{
+  currentDate: string;
+  schedule: any[];
+}> = ({ currentDate, schedule }) => {
+  // Monday of the week
+  const current = new Date(currentDate);
+  const day = current.getDay();
+  const diffToMonday = current.getDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(current.setDate(diffToMonday));
 
-    {bookingWeekScheduleFacilities.map(f => (
-      <div key={f.name} className="border-b border-white/[0.06] last:border-b-0">
-        {/* Facility header */}
-        <div className="grid bg-white/[0.02]" style={{ gridTemplateColumns: WEEK_COL }}>
-          <div className="flex items-center gap-2.5 border-r border-white/[0.06] px-5 py-4">
-            <span className={`inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-lg ${ACCENT[f.accent]}`}>
-              <span className="h-1.5 w-1.5 rounded-full bg-current" />
-            </span>
-            <div>
-              <p className="text-sm font-extrabold text-white">{f.name}</p>
-              <p className="text-[11px] text-slate-500">{f.location}</p>
-            </div>
+  const weekDays = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    
+    // Count total bookings on this date across all facilities/courts
+    let count = 0;
+    schedule.forEach(f => {
+      f.courts.forEach((c: any) => {
+        if (c.bookingsByDay && c.bookingsByDay[i]) {
+          count += c.bookingsByDay[i].length;
+        }
+      });
+    });
+    
+    const labels = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    const keys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    
+    return {
+      key: keys[d.getDay()],
+      label: labels[d.getDay()],
+      date: d.getDate(),
+      total: count
+    };
+  });
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#07162f]/80">
+      {/* Header */}
+      <div className="grid border-b border-white/[0.08] bg-[#0a1a38]/80" style={{ gridTemplateColumns: WEEK_COL }}>
+        <div className="border-r border-white/[0.06] px-5 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-600">Cơ sở / Sân</div>
+        {weekDays.map(d => (
+          <div key={d.key} className="border-r border-white/[0.06] px-3 py-3 text-center last:border-r-0">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{d.label}</p>
+            <p className="mt-1 text-lg font-black text-white">{d.date}</p>
+            {d.total > 0 && (
+              <span className="mt-1.5 inline-flex rounded-full bg-blue-500/20 px-2.5 py-0.5 text-[10px] font-bold text-blue-300 ring-1 ring-blue-400/30">
+                {d.total}
+              </span>
+            )}
           </div>
-          {bookingWeekDays.map(d => (
-            <div key={d.key} className="border-r border-white/[0.06] px-3 py-4 last:border-r-0 flex items-center justify-center">
-              {d.total > 0
-                ? <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${ACCENT[f.accent]}`}>{d.total} đặt</span>
-                : <span className="text-[11px] text-slate-700">—</span>}
-            </div>
-          ))}
-        </div>
+        ))}
+      </div>
 
-        {f.courts.map(court => (
-          <div key={`${f.name}-${court.name}`} className="grid border-t border-white/[0.05]" style={{ gridTemplateColumns: WEEK_COL }}>
-            <div className="flex items-center gap-2.5 border-r border-white/[0.06] px-5 py-3">
-              <div className={`h-2 w-2 flex-shrink-0 rounded-full ${court.open ? 'bg-emerald-400' : 'bg-slate-600'}`} />
+      {schedule.map(f => (
+        <div key={f.name} className="border-b border-white/[0.06] last:border-b-0">
+          {/* Facility header */}
+          <div className="grid bg-white/[0.02]" style={{ gridTemplateColumns: WEEK_COL }}>
+            <div className="flex items-center gap-2.5 border-r border-white/[0.06] px-5 py-4">
+              <span className={`inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-lg ${ACCENT[f.accent as BookingTone] || ACCENT.blue}`}>
+                <span className="h-1.5 w-1.5 rounded-full bg-current" />
+              </span>
               <div>
-                <p className="text-sm font-bold text-white">{court.name}</p>
-                <p className="text-[11px] text-slate-500">{court.capacity} · {court.price}</p>
+                <p className="text-sm font-extrabold text-white">{f.name}</p>
+                <p className="text-[11px] text-slate-500">{f.location}</p>
               </div>
             </div>
-            {bookingWeekDays.map((d, i) => {
-              const bks = court.bookingsByDay[i] ?? [];
+            {weekDays.map((d, i) => {
+              // Count facility total for day i
+              let fTotal = 0;
+              f.courts.forEach((c: any) => {
+                if (c.bookingsByDay && c.bookingsByDay[i]) {
+                  fTotal += c.bookingsByDay[i].length;
+                }
+              });
+
               return (
-                <div key={`${court.name}-${d.key}`} className="border-r border-white/[0.06] p-2 last:border-r-0">
-                  <div className={`min-h-[72px] rounded-xl border p-2 ${i % 2 === 0 ? 'border-white/[0.05] bg-white/[0.02]' : 'border-transparent'}`}>
-                    {bks.length > 0 ? (
-                      <div className="space-y-1.5">
-                        {bks.map(b => (
-                          <div key={`${court.name}-${d.key}-${b.customer}`}
-                            className={`rounded-lg border bg-gradient-to-r px-2.5 py-1.5 ${TONE_CHIP[b.tone].bg} ${TONE_CHIP[b.tone].border}`}>
-                            <p className="text-[12px] font-bold text-white truncate">{b.customer}</p>
-                            <p className="text-[10px] text-white/70">{fmt(b.startHour)}–{fmt(b.endHour)}</p>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex h-full min-h-[56px] items-center justify-center rounded-lg border border-dashed border-white/[0.05] text-[11px] text-slate-700">
-                        Trống
-                      </div>
-                    )}
-                  </div>
+                <div key={d.key} className="border-r border-white/[0.06] px-3 py-4 last:border-r-0 flex items-center justify-center">
+                  {fTotal > 0
+                    ? <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${ACCENT[f.accent as BookingTone] || ACCENT.blue}`}>{fTotal} đặt</span>
+                    : <span className="text-[11px] text-slate-700">—</span>}
                 </div>
               );
             })}
           </div>
-        ))}
+
+          {f.courts.map((court: any) => (
+            <div key={`${f.name}-${court.name}`} className="grid border-t border-white/[0.05]" style={{ gridTemplateColumns: WEEK_COL }}>
+              <div className="flex items-center gap-2.5 border-r border-white/[0.06] px-5 py-3">
+                <div className={`h-2 w-2 flex-shrink-0 rounded-full ${court.open ? 'bg-emerald-400' : 'bg-slate-600'}`} />
+                <div>
+                  <p className="text-sm font-bold text-white">{court.name}</p>
+                  <p className="text-[11px] text-slate-500">{court.capacity}</p>
+                </div>
+              </div>
+              {weekDays.map((d, i) => {
+                const bks = court.bookingsByDay ? court.bookingsByDay[i] ?? [] : [];
+                return (
+                  <div key={`${court.name}-${d.key}`} className="border-r border-white/[0.06] p-2 last:border-r-0">
+                    <div className={`min-h-[72px] rounded-xl border p-2 ${i % 2 === 0 ? 'border-white/[0.05] bg-white/[0.02]' : 'border-transparent'}`}>
+                      {bks.length > 0 ? (
+                        <div className="space-y-1.5">
+                          {bks.map((b: any, bIdx: number) => {
+                            const toneStyle = TONE_CHIP[b.tone as BookingTone] || TONE_CHIP.blue;
+                            return (
+                              <div key={`${court.name}-${d.key}-${b.customer}-${bIdx}`}
+                                className={`rounded-lg border bg-gradient-to-r px-2.5 py-1.5 ${toneStyle.bg} ${toneStyle.border}`}>
+                                <p className="text-[12px] font-bold text-white truncate">{b.customer}</p>
+                                <p className="text-[10px] text-white/70">{fmt(b.startHour)}–{fmt(b.endHour)}</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="flex h-full min-h-[56px] items-center justify-center rounded-lg border border-dashed border-white/[0.05] text-[11px] text-slate-700">
+                          Trống
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════
+   List view
+   ═══════════════════════════════════════ */
+const ListView: React.FC<{
+  bookingsData: OwnerBooking[];
+  courtsData: OwnerCourt[];
+  onDetailClick: (booking: OwnerBooking) => void;
+}> = ({ bookingsData, courtsData, onDetailClick }) => {
+  const getSubCourtName = (courtId: string, subCourtId: string) => {
+    const court = courtsData.find(c => c.id === courtId);
+    const sub = court?.sub_courts.find(sc => sc._id === subCourtId);
+    return court && sub ? `${court.name} - ${sub.name}` : 'Sân đã bị xóa';
+  };
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#07162f]/80">
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-left text-sm text-slate-300">
+          <thead className="bg-[#0a1a38]/80 text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-white/[0.08]">
+            <tr>
+              <th className="px-6 py-4">Khách hàng</th>
+              <th className="px-6 py-4">Số điện thoại</th>
+              <th className="px-6 py-4">Sân đặt</th>
+              <th className="px-6 py-4">Ngày đặt</th>
+              <th className="px-6 py-4">Khung giờ</th>
+              <th className="px-6 py-4">Tổng tiền</th>
+              <th className="px-6 py-4">Trạng thái</th>
+              <th className="px-6 py-4">Nguồn</th>
+              <th className="px-6 py-4 text-right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/[0.04]">
+            {bookingsData.length > 0 ? (
+              bookingsData.map((b) => (
+                <tr key={b._id} className="hover:bg-white/[0.02] transition-colors">
+                  <td className="px-6 py-4 font-bold text-white">{b.customer_name}</td>
+                  <td className="px-6 py-4 text-slate-400">{b.customer_phone || '—'}</td>
+                  <td className="px-6 py-4 font-medium text-slate-300">{getSubCourtName(b.court_id, b.sub_court_id)}</td>
+                  <td className="px-6 py-4 text-slate-400">{b.date}</td>
+                  <td className="px-6 py-4 text-slate-300 font-mono">{b.start_time} - {b.end_time}</td>
+                  <td className="px-6 py-4 font-bold text-emerald-400">{(b.total_price || 0).toLocaleString('vi-VN')}₫</td>
+                  <td className="px-6 py-4">
+                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ${
+                      b.status === 'confirmed' || b.status === 'completed'
+                        ? 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/30'
+                        : b.status === 'cancelled'
+                        ? 'bg-rose-500/10 text-rose-400 ring-rose-500/30'
+                        : 'bg-amber-500/10 text-amber-400 ring-amber-500/30'
+                    }`}>
+                      {b.status === 'confirmed' ? 'Đã xác nhận' : b.status === 'cancelled' ? 'Đã hủy' : b.status || 'Chờ thanh toán'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-xs">
+                    {b.source === 'app' ? '📱 App' : b.source === 'phone' ? '📞 Điện thoại' : '🚶 Trực tiếp'}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button
+                      type="button"
+                      onClick={() => onDetailClick(b)}
+                      className="rounded-lg bg-white/[0.06] hover:bg-white/[0.12] px-3 py-1.5 text-xs font-bold text-white transition"
+                    >
+                      Chi tiết
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={9} className="px-6 py-12 text-center text-slate-500">
+                  Không có lịch đặt nào trong khoảng thời gian này
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
-    ))}
-  </div>
-);
+    </div>
+  );
+};
 
 /* ═══════════════════════════════════════
    MAIN BOARD
-═══════════════════════════════════════ */
-type BookingViewMode = 'day' | 'week';
+   ═══════════════════════════════════════ */
+type BookingViewMode = 'day' | 'week' | 'list';
 
-export const OwnerBookingScheduleBoard: React.FC<{ viewMode: BookingViewMode }> = ({ viewMode }) => {
+export const OwnerBookingScheduleBoard: React.FC<{
+  viewMode: BookingViewMode;
+  currentDate: string;
+  setCurrentDate: React.Dispatch<React.SetStateAction<string>>;
+  courtsData: OwnerCourt[];
+  bookingsData: OwnerBooking[];
+  fetchScheduleData: () => Promise<void>;
+}> = ({ viewMode, currentDate, setCurrentDate, courtsData, bookingsData, fetchScheduleData }) => {
   const [schedule, setSchedule] = useState<ScheduleState>([]);
-  const [ownerCourts, setOwnerCourts] = useState<OwnerCourt[]>([]);
-  const [currentDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [modal, setModal] = useState<ModalState>(CLOSED);
 
-  const fetchScheduleData = useCallback(async () => {
-    try {
-      const [courtsData, bookingsData] = await Promise.all([
-        getOwnerCourts(),
-        getOwnerBookings({ startDate: currentDate, endDate: currentDate }) // only day view for now
-      ]);
-
-      setOwnerCourts(courtsData);
-
-      // Parse to ScheduleState
-      const nextSchedule: ScheduleState = courtsData.map((court, i) => {
-        const courtBookings = bookingsData.filter(b => b.court_id === court.id);
-        const accent: BookingTone = ['blue', 'violet', 'emerald', 'slate'][i % 4] as BookingTone;
-        
-        return {
-          name: court.name,
-          location: court.location,
-          accent,
-          bookingCount: courtBookings.length,
-          courts: court.sub_courts.map(sub => {
-            const subBookings = courtBookings.filter(b => b.sub_court_id === sub._id);
-            return {
-              id: sub._id,
-              name: sub.name,
-              capacity: `${sub.type} · ${sub.price_per_hour / 1000}K/giờ`,
-              price: `${sub.price_per_hour / 1000}K`,
-              open: sub.status === 'open',
-              bookings: subBookings.map(b => {
-                const [sh, sm] = b.start_time.split(':').map(Number);
-                const [eh, em] = b.end_time.split(':').map(Number);
-                return {
-                  bookingId: b._id,
-                  customer: b.customer_name,
-                  startHour: sh + sm / 60,
-                  endHour: eh + em / 60,
-                  tone: b.tone as BookingTone || accent,
-                  note: b.note,
-                };
-              })
-            };
-          })
-        };
-      });
-
-      setSchedule(nextSchedule);
-    } catch (error) {
-      console.error('Failed to fetch schedule data:', error);
-    }
-  }, [currentDate]);
-
+  // Synchronize courts and bookings into the schedule timeline layout
   useEffect(() => {
-    fetchScheduleData();
-  }, [fetchScheduleData]);
+    const nextSchedule: ScheduleState = courtsData.map((court, i) => {
+      const courtBookings = bookingsData.filter(b => b.court_id === court.id);
+      const accent: BookingTone = ['blue', 'violet', 'emerald', 'slate'][i % 4] as BookingTone;
+      
+      return {
+        name: court.name,
+        location: court.location,
+        accent,
+        bookingCount: courtBookings.length,
+        courts: court.sub_courts.map(sub => {
+          const subBookings = courtBookings.filter(b => b.sub_court_id === sub._id);
+          
+          // Build bookingsByDay (for week view)
+          const bookingsByDay: Record<number, (BookingBlock & { dayIndex: number })[]> = {};
+          
+          const current = new Date(currentDate);
+          const day = current.getDay();
+          const diffToMonday = current.getDate() - day + (day === 0 ? -6 : 1);
+          const monday = new Date(current.setDate(diffToMonday));
 
-  const facilities = schedule.map(f => f.name);
-  const courts     = schedule.flatMap(f => f.courts.map(c => c.name));
+          for (let dIdx = 0; dIdx < 7; dIdx++) {
+            const d = new Date(monday);
+            d.setDate(monday.getDate() + dIdx);
+            const dateStr = d.toISOString().split('T')[0];
+            
+            const dayBookings = subBookings.filter(b => b.date === dateStr);
+            bookingsByDay[dIdx] = dayBookings.map(b => {
+              const [sh, sm] = b.start_time.split(':').map(Number);
+              const [eh, em] = b.end_time.split(':').map(Number);
+              return {
+                bookingId: b._id,
+                customer: b.customer_name,
+                startHour: sh + sm / 60,
+                endHour: eh + em / 60,
+                tone: (b.tone as BookingTone) || accent,
+                note: b.note,
+                dayIndex: dIdx,
+              };
+            });
+          }
+
+          return {
+            id: sub._id,
+            name: sub.name,
+            capacity: `${sub.type} · ${sub.price_per_hour / 1000}K/giờ`,
+            price: `${sub.price_per_hour / 1000}K`,
+            open: sub.status === 'open',
+            bookings: subBookings.filter(b => b.date === currentDate).map(b => {
+              const [sh, sm] = b.start_time.split(':').map(Number);
+              const [eh, em] = b.end_time.split(':').map(Number);
+              return {
+                bookingId: b._id,
+                customer: b.customer_name,
+                startHour: sh + sm / 60,
+                endHour: eh + em / 60,
+                tone: (b.tone as BookingTone) || accent,
+                note: b.note,
+              };
+            }),
+            bookingsByDay
+          };
+        })
+      };
+    });
+
+    setSchedule(nextSchedule);
+  }, [courtsData, bookingsData, currentDate]);
+
+  const handlePrev = () => {
+    const d = new Date(currentDate);
+    if (viewMode === 'day' || viewMode === 'list') {
+      d.setDate(d.getDate() - 1);
+    } else {
+      d.setDate(d.getDate() - 7);
+    }
+    setCurrentDate(d.toISOString().split('T')[0]);
+  };
+
+  const handleNext = () => {
+    const d = new Date(currentDate);
+    if (viewMode === 'day' || viewMode === 'list') {
+      d.setDate(d.getDate() + 1);
+    } else {
+      d.setDate(d.getDate() + 7);
+    }
+    setCurrentDate(d.toISOString().split('T')[0]);
+  };
 
   const openEdit = useCallback((fIdx: number, cIdx: number, b: BookingBlock, bIdx: number) => {
     setModal({
       open: true, mode: 'view', bIdx,
       fIdx, cIdx,
+      bookingId: (b as any).bookingId,
       initial: {
         facilityName: schedule[fIdx].name,
         courtName: schedule[fIdx].courts[cIdx].name,
@@ -341,6 +513,32 @@ export const OwnerBookingScheduleBoard: React.FC<{ viewMode: BookingViewMode }> 
       },
     });
   }, [schedule]);
+
+  const openListDetail = useCallback((b: OwnerBooking) => {
+    const court = courtsData.find(c => c.id === b.court_id);
+    const facilityName = court?.name || '';
+    const courtName = court?.sub_courts.find(sc => sc._id === b.sub_court_id)?.name || '';
+    
+    const [sh, sm] = b.start_time.split(':').map(Number);
+    const [eh, em] = b.end_time.split(':').map(Number);
+
+    setModal({
+      open: true, mode: 'view', bIdx: 0, fIdx: 0, cIdx: 0,
+      bookingId: b._id,
+      initial: {
+        facilityName,
+        courtName,
+        customer: b.customer_name,
+        phone: b.customer_phone || '',
+        startHour: sh + sm / 60,
+        endHour: eh + em / 60,
+        tone: (b.tone as BookingTone) || 'blue',
+        note: b.note || '',
+        status: b.status as any,
+        source: b.source as any,
+      }
+    });
+  }, [courtsData]);
 
   const openAdd = useCallback((fIdx: number, cIdx: number) => {
     setModal({
@@ -363,10 +561,10 @@ export const OwnerBookingScheduleBoard: React.FC<{ viewMode: BookingViewMode }> 
     try {
       const fIdx = modal.fIdx >= 0 ? modal.fIdx : schedule.findIndex(f => f.name === data.facilityName);
       if (fIdx < 0) return;
-      const cIdx = modal.cIdx >= 0 ? modal.cIdx : schedule[fIdx].courts.findIndex(c => c.name === data.courtName);
+      const cIdx = modal.cIdx >= 0 ? modal.cIdx : schedule[fIdx].courts.findIndex((c: any) => c.name === data.courtName);
       if (cIdx < 0) return;
 
-      const court = ownerCourts.find(c => c.name === data.facilityName);
+      const court = courtsData.find(c => c.name === data.facilityName);
       const subCourt = court?.sub_courts.find(sc => sc.name === data.courtName);
 
       if (!court || !subCourt) throw new Error('Không tìm thấy sân hợp lệ');
@@ -402,21 +600,39 @@ export const OwnerBookingScheduleBoard: React.FC<{ viewMode: BookingViewMode }> 
       console.error('Lỗi khi lưu đặt sân:', error);
       alert('Lỗi: ' + (error instanceof Error ? error.message : ''));
     }
-  }, [modal, schedule, ownerCourts, currentDate, fetchScheduleData]);
+  }, [modal, schedule, courtsData, currentDate, fetchScheduleData]);
 
-  const handleDelete = useCallback(() => {
-    if (modal.fIdx < 0 || modal.cIdx < 0 || modal.bIdx === null) return;
-    setSchedule(prev => {
-      const next = JSON.parse(JSON.stringify(prev)) as ScheduleState;
-      next[modal.fIdx].courts[modal.cIdx].bookings.splice(modal.bIdx!, 1);
-      next[modal.fIdx].bookingCount = Math.max(0, next[modal.fIdx].bookingCount - 1);
-      return next;
-    });
-    setModal(CLOSED);
-  }, [modal]);
+  // Format header title range
+  const getHeaderTitle = () => {
+    const current = new Date(currentDate);
+    if (viewMode === 'day' || viewMode === 'list') {
+      const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+      const dayName = days[current.getDay()];
+      const dd = String(current.getDate()).padStart(2, '0');
+      const mm = String(current.getMonth() + 1).padStart(2, '0');
+      return `${dayName}, ${dd}/${mm}/${current.getFullYear()}`;
+    } else {
+      const day = current.getDay();
+      const diffToMonday = current.getDate() - day + (day === 0 ? -6 : 1);
+      const startOfWeek = new Date(current.setDate(diffToMonday));
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
 
-  const headerTitle = viewMode === 'day' ? 'Thứ Hai, 02/03/2026' : '02 thg 3 – 08 thg 3, 2026';
+      const formatShort = (d: Date) => {
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        return `${dd} thg ${mm}`;
+      };
+
+      return `${formatShort(startOfWeek)} – ${formatShort(endOfWeek)}, ${startOfWeek.getFullYear()}`;
+    }
+  };
+
+  const headerTitle = getHeaderTitle();
   const totalBookings = schedule.reduce((a, f) => a + f.bookingCount, 0);
+
+  const facilities = schedule.map(f => f.name);
+  const courts     = schedule.flatMap(f => f.courts.map((c: any) => c.name));
 
   return (
     <>
@@ -432,14 +648,20 @@ export const OwnerBookingScheduleBoard: React.FC<{ viewMode: BookingViewMode }> 
           <div className="flex items-center gap-3">
             <button
               type="button"
+              onClick={handlePrev}
               className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-slate-400 text-lg transition hover:border-white/20 hover:text-white"
             >‹</button>
             <div>
               <p className="text-base font-extrabold text-white">{headerTitle}</p>
-              <p className="text-[11px] text-slate-500">{totalBookings} lượt đặt · {viewMode === 'day' ? 'hôm nay' : 'tuần này'}</p>
+              <p className="text-[11px] text-slate-500">
+                {viewMode === 'day' 
+                  ? `${schedule.reduce((acc, f) => acc + f.courts.reduce((ac: number, c: any) => ac + c.bookings.length, 0), 0)} lượt đặt hôm nay` 
+                  : `${totalBookings} lượt đặt trong tuần`}
+              </p>
             </div>
             <button
               type="button"
+              onClick={handleNext}
               className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-slate-400 text-lg transition hover:border-white/20 hover:text-white"
             >›</button>
           </div>
@@ -490,9 +712,17 @@ export const OwnerBookingScheduleBoard: React.FC<{ viewMode: BookingViewMode }> 
               ))}
             </div>
           </div>
+        ) : viewMode === 'week' ? (
+          <div className="p-4 sm:p-5">
+            <WeekView currentDate={currentDate} schedule={schedule} />
+          </div>
         ) : (
           <div className="p-4 sm:p-5">
-            <WeekView />
+            <ListView
+              bookingsData={bookingsData}
+              courtsData={courtsData}
+              onDetailClick={openListDetail}
+            />
           </div>
         )}
       </motion.section>
@@ -506,7 +736,6 @@ export const OwnerBookingScheduleBoard: React.FC<{ viewMode: BookingViewMode }> 
         courts={courts}
         onClose={() => setModal(CLOSED)}
         onSave={handleSave}
-        onDelete={modal.bIdx !== null ? handleDelete : undefined}
       />
     </>
   );

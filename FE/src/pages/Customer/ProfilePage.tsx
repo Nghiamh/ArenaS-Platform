@@ -65,6 +65,7 @@ const CalendarIcon = () => (
   </svg>
 );
 
+/*
 const RacketIcon = () => (
   <svg
     viewBox="0 0 24 24"
@@ -124,6 +125,8 @@ const BoltIcon = () => (
     <polygon points="11.5 1 2 13 10.5 13 8.5 23 22 10 13.5 10 15.5 1" />
   </svg>
 );
+*/
+
 
 const MedalIcon = () => (
   <svg
@@ -818,6 +821,7 @@ export const ProfilePage: React.FC = () => {
   };
 
   // Compute stats based on skills
+  /*
   const calculatedSkillPoints =
     skills.length > 0
       ? skills.reduce(
@@ -829,6 +833,7 @@ export const ProfilePage: React.FC = () => {
     calculatedSkillPoints > 0
       ? calculatedSkillPoints.toLocaleString()
       : "—";
+  */
 
   const getLevelColorInfo = (level: number) => {
     if (level <= 2) {
