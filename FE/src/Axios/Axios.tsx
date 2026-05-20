@@ -749,3 +749,98 @@ export async function sendFakeSubscriptionPayment(
 	}
 }
 
+// ---------------------------------------------------------------------------
+// USER BOOKING
+// ---------------------------------------------------------------------------
+
+export type UserBookingPayload = {
+	court_id: string;
+	sub_court_id: string;
+	date: string;
+	start_time: string;
+	end_time: string;
+};
+
+export type UserBookingResponse = {
+	message: string;
+	booking: {
+		_id: string;
+		court_id: string;
+		sub_court_id: string;
+		court_name: string;
+		sub_court_name: string;
+		date: string;
+		start_time: string;
+		end_time: string;
+		total_price: number;
+		status: string;
+		slots_booked: number;
+		wallet_balance: number;
+	};
+};
+
+export type UserBooking = {
+	_id: string;
+	user_id: string;
+	court_id: string;
+	sub_court_id: string;
+	date: string;
+	start_time: string;
+	end_time: string;
+	customer_name: string;
+	customer_phone?: string;
+	note?: string;
+	total_price: number;
+	status: string;
+	source: string;
+	tone?: string;
+	court_name: string;
+	sub_court_name: string;
+	createdAt: string;
+	updatedAt?: string;
+};
+
+export type MyBookingsResponse = {
+	message: string;
+	bookings: UserBooking[];
+	pagination: {
+		page: number;
+		limit: number;
+		total: number;
+		totalPages: number;
+	};
+};
+
+export async function userBookCourt(payload: UserBookingPayload): Promise<UserBookingResponse> {
+	try {
+		const { data } = await axiosClient.post<UserBookingResponse>('/bookings/user-book', payload, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function getMyBookings(params?: { status?: string; page?: number; limit?: number }): Promise<MyBookingsResponse> {
+	try {
+		const { data } = await axiosClient.get<MyBookingsResponse>('/bookings/my-bookings', {
+			headers: withAuthHeaders(),
+			params,
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function cancelBooking(bookingId: string): Promise<{ message: string; refundAmount: number; refundPercentage: number }> {
+	try {
+		const { data } = await axiosClient.post(`/bookings/${bookingId}/cancel`, {}, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
