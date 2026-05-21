@@ -24,8 +24,9 @@
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.0",
     "mongoose": "^8.0.0",
-    "socket.io": "^4.8.3",
-    "node-cron": "^4.2.1"
+    "node-cron": "^4.2.1",
+    "socket": "^1.1.97",
+    "socket.io": "^4.8.3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

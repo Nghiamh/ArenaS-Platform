@@ -27,23 +27,22 @@ export async function getChatHistory(req: Request, res: Response): Promise<void>
 			return;
 		}
 
-		// Check if user is a participant or owner
+		// Check if user is a participant
 		const userId = user._id!.toString();
 		const isParticipant = match.participants.some(
 			(p: any) => p.toString() === userId
 		);
-		const isOwner = match.owner_id.toString() === userId;
 
-		if (!isParticipant && !isOwner) {
+		if (!isParticipant) {
 			res.status(403).json({
 				message: "forbidden",
-				error: "You are not a member of this match",
+				error: "You are not a participant of this match",
 			});
 			return;
 		}
 
 		// Check if chat has been fully deleted
-		const totalParties = match.participants.length + 1;
+		const totalParties = match.participants.length; // only the 2 players
 		if (match.chat_deleted_by.length >= totalParties) {
 			res.status(200).json({
 				success: true,
@@ -71,6 +70,10 @@ export async function getChatHistory(req: Request, res: Response): Promise<void>
 		res.status(200).json({
 			success: true,
 			messages,
+			deleted: false,
+			votesRemaining: Math.max(0, totalParties - match.chat_deleted_by.length),
+			chat_deleted_by: match.chat_deleted_by.map((id: any) => id.toString()),
+			canVote: isParticipant, // only participants can vote, not the court owner
 			pagination: {
 				page,
 				limit,
@@ -89,7 +92,7 @@ export async function getChatHistory(req: Request, res: Response): Promise<void>
 
 /**
  * POST /api/chat/:matchId/delete
- * Vote to delete chat history. Requires all 3 parties (2 players + owner) to agree.
+ * Vote to delete chat history. Requires all participants (2 players) to agree.
  */
 export async function voteChatDelete(req: Request, res: Response): Promise<void> {
 	try {
@@ -110,17 +113,16 @@ export async function voteChatDelete(req: Request, res: Response): Promise<void>
 			return;
 		}
 
-		// Check if user is a participant or owner
+		// Only match participants can vote to delete chat (not the court owner)
 		const userId = user._id!.toString();
 		const isParticipant = match.participants.some(
 			(p: any) => p.toString() === userId
 		);
-		const isOwner = match.owner_id.toString() === userId;
 
-		if (!isParticipant && !isOwner) {
+		if (!isParticipant) {
 			res.status(403).json({
 				message: "forbidden",
-				error: "You are not a member of this match",
+				error: "Only match participants can vote to delete chat",
 			});
 			return;
 		}
@@ -142,20 +144,41 @@ export async function voteChatDelete(req: Request, res: Response): Promise<void>
 		match.chat_deleted_by.push(user._id as any);
 		await match.save();
 
-		const totalParties = match.participants.length + 1; // 2 players + 1 owner
+		const totalParties = match.participants.length; // 2 players
 		const votesNeeded = totalParties - match.chat_deleted_by.length;
+
+		const io = req.app.get("io");
 
 		// If all parties have voted, delete the messages
 		if (votesNeeded <= 0) {
 			await ChatMessage.deleteMany({ match_id: matchId });
+
+			if (io) {
+				io.to(`match:${matchId}`).emit("chat_vote_updated", {
+					matchId,
+					chat_deleted_by: match.chat_deleted_by.map((id: any) => id.toString()),
+					deleted: true,
+					votesRemaining: 0,
+				});
+			}
 
 			res.status(200).json({
 				success: true,
 				message: "All parties agreed. Chat history has been deleted.",
 				deleted: true,
 				votesRemaining: 0,
+				chat_deleted_by: match.chat_deleted_by.map((id: any) => id.toString()),
 			});
 			return;
+		}
+
+		if (io) {
+			io.to(`match:${matchId}`).emit("chat_vote_updated", {
+				matchId,
+				chat_deleted_by: match.chat_deleted_by.map((id: any) => id.toString()),
+				deleted: false,
+				votesRemaining: votesNeeded,
+			});
 		}
 
 		res.status(200).json({
@@ -163,6 +186,7 @@ export async function voteChatDelete(req: Request, res: Response): Promise<void>
 			message: `Vote recorded. ${votesNeeded} more vote(s) needed to delete chat.`,
 			deleted: false,
 			votesRemaining: votesNeeded,
+			chat_deleted_by: match.chat_deleted_by.map((id: any) => id.toString()),
 		});
 	} catch (error: unknown) {
 		console.error("voteChatDelete error:", error);

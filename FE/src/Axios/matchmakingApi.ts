@@ -44,10 +44,32 @@ export type MatchData = {
 	sport: string;
 	match_score: number;
 	chat_deleted_by: string[];
+	accepted_by: string[];
+	checked_in_players: string[];
+	confirmation_deadline?: string;
 	status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
 	scheduled_at?: string;
 	createdAt?: string;
 	updatedAt?: string;
+};
+
+export type SubmitFeedbackPayload = {
+	punctual: boolean;
+	attitude: 'friendly' | 'neutral' | 'bad';
+	skill_as_described: boolean;
+	play_again: boolean;
+};
+
+export type SubmitFeedbackResponse = {
+	success: boolean;
+	message: string;
+	feedback: any;
+	rewards?: {
+		xpGained: number;
+		pointsGained: number;
+		newXp: number;
+		newPoints: number;
+	};
 };
 
 export type JoinMatchmakingPayload = {
@@ -89,6 +111,9 @@ export type ChatHistoryResponse = {
 	success: boolean;
 	messages: ChatMessageData[];
 	deleted?: boolean;
+	votesRemaining?: number;
+	chat_deleted_by?: string[];
+	canVote?: boolean;
 	pagination?: {
 		page: number;
 		limit: number;
@@ -102,6 +127,7 @@ export type VoteChatDeleteResponse = {
 	message: string;
 	deleted: boolean;
 	votesRemaining: number;
+	chat_deleted_by?: string[];
 };
 
 // ---------------------------------------------------------------------------
@@ -186,6 +212,71 @@ export async function voteChatDelete(matchId: string): Promise<VoteChatDeleteRes
 		const { data } = await axiosClient.post<VoteChatDeleteResponse>(`/chat/${matchId}/delete`, {}, {
 			headers: withAuthHeaders(),
 		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function acceptMatch(matchId: string): Promise<{ success: boolean; message: string; match: MatchData }> {
+	try {
+		const { data } = await axiosClient.post<{ success: boolean; message: string; match: MatchData }>(
+			`/matchmaking/match/${matchId}/accept`,
+			{},
+			{ headers: withAuthHeaders() }
+		);
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function declineMatch(matchId: string): Promise<{ success: boolean; message: string }> {
+	try {
+		const { data } = await axiosClient.post<{ success: boolean; message: string }>(
+			`/matchmaking/match/${matchId}/decline`,
+			{},
+			{ headers: withAuthHeaders() }
+		);
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function checkInMatch(matchId: string): Promise<{ success: boolean; message: string; match: MatchData }> {
+	try {
+		const { data } = await axiosClient.post<{ success: boolean; message: string; match: MatchData }>(
+			`/matchmaking/match/${matchId}/check-in`,
+			{},
+			{ headers: withAuthHeaders() }
+		);
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function completeMatch(matchId: string): Promise<{ success: boolean; message: string; match: MatchData }> {
+	try {
+		const { data } = await axiosClient.post<{ success: boolean; message: string; match: MatchData }>(
+			`/matchmaking/match/${matchId}/complete`,
+			{},
+			{ headers: withAuthHeaders() }
+		);
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function submitMatchFeedback(matchId: string, payload: SubmitFeedbackPayload): Promise<SubmitFeedbackResponse> {
+	try {
+		const { data } = await axiosClient.post<SubmitFeedbackResponse>(
+			`/matchmaking/match/${matchId}/feedback`,
+			payload,
+			{ headers: withAuthHeaders() }
+		);
 		return data;
 	} catch (error: unknown) {
 		throw new Error(toErrorMessage(error));

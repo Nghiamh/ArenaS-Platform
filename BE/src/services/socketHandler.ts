@@ -29,7 +29,7 @@ function authenticateSocket(socket: Socket): string | null {
 }
 
 /**
- * Check if a user is a participant or owner of a match.
+ * Check if a user is a participant of a match.
  */
 async function isUserInMatch(userId: string, matchId: string): Promise<boolean> {
 	const match = await Match.findById(matchId);
@@ -40,9 +40,8 @@ async function isUserInMatch(userId: string, matchId: string): Promise<boolean> 
 	const isParticipant = match.participants.some(
 		(p: any) => p.toString() === userId
 	);
-	const isOwner = match.owner_id.toString() === userId;
 
-	return isParticipant || isOwner;
+	return isParticipant;
 }
 
 /**
@@ -127,9 +126,8 @@ export function setupSocketHandlers(io: SocketServer): void {
 						return;
 					}
 
-					// All 3 parties must agree to delete chat; if they have, block new messages
-					const totalParties =
-						match.participants.length + 1; // 2 players + 1 owner
+					// All participants must agree to delete chat; if they have, block new messages
+					const totalParties = match.participants.length; // 2 players
 					if (match.chat_deleted_by.length >= totalParties) {
 						socket.emit("error", {
 							message: "Chat has been deleted for this match",

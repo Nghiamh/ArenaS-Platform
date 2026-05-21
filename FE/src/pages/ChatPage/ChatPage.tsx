@@ -39,7 +39,7 @@ function getSenderName(sender: ChatMessageData['sender_id']): string {
 export const ChatPage: React.FC = () => {
 	const { matchId } = useParams<{ matchId: string }>();
 	const navigate = useNavigate();
-	const { joinMatchRoom, leaveMatchRoom, sendMessage: socketSendMessage, onReceiveMessage, isConnected } = useSocket();
+	const { joinMatchRoom, leaveMatchRoom, sendMessage: socketSendMessage, onReceiveMessage, onChatVoteUpdated, isConnected } = useSocket();
 
 	const [currentUserId, setCurrentUserId] = useState<string>('');
 	const [messages, setMessages] = useState<ChatMessageData[]>([]);
@@ -49,6 +49,8 @@ export const ChatPage: React.FC = () => {
 	const [chatDeleted, setChatDeleted] = useState(false);
 	const [deleteVoting, setDeleteVoting] = useState(false);
 	const [deleteVotesRemaining, setDeleteVotesRemaining] = useState<number | null>(null);
+	const [canVote, setCanVote] = useState(false);
+	const [chatDeletedBy, setChatDeletedBy] = useState<string[]>([]);
 	const [showScrollFab, setShowScrollFab] = useState(false);
 	const [error, setError] = useState('');
 
@@ -102,6 +104,15 @@ export const ChatPage: React.FC = () => {
 					setMessages([]);
 				} else {
 					setMessages(res.messages);
+					if (res.votesRemaining !== undefined) {
+						setDeleteVotesRemaining(res.votesRemaining);
+					}
+					if (res.chat_deleted_by !== undefined) {
+						setChatDeletedBy(res.chat_deleted_by);
+					}
+					if (res.canVote !== undefined) {
+						setCanVote(res.canVote);
+					}
 				}
 			})
 			.catch((err) => {
@@ -125,6 +136,22 @@ export const ChatPage: React.FC = () => {
 			});
 		});
 	}, [onReceiveMessage]);
+
+	// Listen for chat deletion/voting updates from socket
+	useEffect(() => {
+		onChatVoteUpdated((payload) => {
+			if (payload.matchId === matchId) {
+				setDeleteVotesRemaining(payload.votesRemaining);
+				if (payload.chat_deleted_by) {
+					setChatDeletedBy(payload.chat_deleted_by);
+				}
+				if (payload.deleted) {
+					setChatDeleted(true);
+					setMessages([]);
+				}
+			}
+		});
+	}, [onChatVoteUpdated, matchId]);
 
 	// Auto-scroll on initial load
 	useEffect(() => {
@@ -182,6 +209,9 @@ export const ChatPage: React.FC = () => {
 		try {
 			const res = await voteChatDelete(matchId);
 			setDeleteVotesRemaining(res.votesRemaining);
+			if (res.chat_deleted_by) {
+				setChatDeletedBy(res.chat_deleted_by);
+			}
 			if (res.deleted) {
 				setChatDeleted(true);
 				setMessages([]);
@@ -245,19 +275,25 @@ export const ChatPage: React.FC = () => {
 							</span>
 						</div>
 					</div>
-					<button
-						type="button"
-						onClick={handleVoteDelete}
-						disabled={deleteVoting || chatDeleted}
-						className="flex items-center justify-center w-9 h-9 rounded-xl border border-slate-700/60 bg-slate-800/50 text-slate-500 transition hover:bg-red-500/15 hover:text-red-400 hover:border-red-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
-						title="Vote xoá chat"
-					>
-						{deleteVoting ? (
-							<Loader2 className="w-4 h-4 animate-spin" />
-						) : (
-							<Trash2 className="w-4 h-4" />
-						)}
-					</button>
+					{canVote && (
+						<button
+							type="button"
+							onClick={handleVoteDelete}
+							disabled={deleteVoting || chatDeleted || chatDeletedBy.includes(currentUserId)}
+							className={`flex items-center justify-center w-9 h-9 rounded-xl border transition disabled:opacity-40 disabled:cursor-not-allowed ${
+								chatDeletedBy.includes(currentUserId)
+									? 'border-amber-500/30 bg-amber-500/10 text-amber-400'
+									: 'border-slate-700/60 bg-slate-800/50 text-slate-500 hover:bg-red-500/15 hover:text-red-400 hover:border-red-500/30'
+							}`}
+							title={chatDeletedBy.includes(currentUserId) ? 'Bạn đã vote xoá' : 'Vote xoá chat'}
+						>
+							{deleteVoting ? (
+								<Loader2 className="w-4 h-4 animate-spin" />
+							) : (
+								<Trash2 className="w-4 h-4" />
+							)}
+						</button>
+					)}
 				</div>
 			</div>
 

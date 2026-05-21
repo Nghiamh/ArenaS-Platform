@@ -276,12 +276,16 @@ async function createMatch(
 	}
 
 	// Create the match
+	const confirmationDeadline = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes deadline
+
 	const match = await Match.create({
 		participants: [ticketA.user_id, ticketB.user_id],
 		owner_id: courtDoc.owner_id,
 		court_id: courtId,
 		sport: ticketA.sport,
 		match_score: score,
+		accepted_by: [],
+		confirmation_deadline: confirmationDeadline,
 		status: "PENDING",
 	});
 
@@ -332,6 +336,81 @@ async function createMatch(
 }
 
 /**
+ * Scan for and expire PENDING matches that have passed their confirmation deadline.
+ */
+async function expirePendingMatches(io: SocketServer): Promise<void> {
+	try {
+		const now = new Date();
+		// Find pending matches that expired
+		const expiredMatches = await Match.find({
+			status: "PENDING",
+			confirmation_deadline: { $lte: now },
+		});
+
+		for (const match of expiredMatches) {
+			match.status = "CANCELLED";
+			await match.save();
+
+			const participantIds = match.participants.map((id: any) => id.toString());
+			const acceptedSet = new Set(match.accepted_by.map((id: any) => id.toString()));
+
+			for (const pId of participantIds) {
+				const hasAccepted = acceptedSet.has(pId);
+
+				if (hasAccepted) {
+					// Player accepted but match expired (due to other player AFK).
+					// Reactivate their ticket.
+					const updatedTicket = await MatchmakingTicket.findOneAndUpdate(
+						{ user_id: pId, status: "MATCHED", match_id: match._id },
+						{
+							status: "WAITING",
+							matched_with: undefined,
+							match_id: undefined,
+						},
+						{ new: true }
+					);
+
+					// Emit match_cancelled socket event to reactivated user
+					io.to(`user:${pId}`).emit("match_cancelled", {
+						matchId: match._id.toString(),
+						reason: "timeout",
+						isBackInQueue: true,
+						ticket: updatedTicket,
+					});
+				} else {
+					// Player did not accept (AFK / timed out)
+					const updatedTicket = await MatchmakingTicket.findOneAndUpdate(
+						{ user_id: pId, status: "MATCHED", match_id: match._id },
+						{ status: "EXPIRED" },
+						{ new: true }
+					);
+
+					// Emit match_cancelled socket event to AFK user
+					io.to(`user:${pId}`).emit("match_cancelled", {
+						matchId: match._id.toString(),
+						reason: "timeout",
+						isBackInQueue: false,
+						ticket: updatedTicket,
+					});
+				}
+			}
+
+			// Also notify court owner
+			const ownerId = match.owner_id.toString();
+			io.to(`user:${ownerId}`).emit("match_cancelled", {
+				matchId: match._id.toString(),
+				reason: "timeout",
+				isBackInQueue: false,
+			});
+
+			console.log(`Match ${match._id} cancelled due to confirmation timeout`);
+		}
+	} catch (error) {
+		console.error("Error in expirePendingMatches worker:", error);
+	}
+}
+
+/**
  * Start the matchmaking worker that runs every 5 seconds.
  */
 export function startMatchmakingWorker(io: SocketServer): void {
@@ -339,5 +418,6 @@ export function startMatchmakingWorker(io: SocketServer): void {
 
 	setInterval(() => {
 		void processMatchmaking(io);
+		void expirePendingMatches(io);
 	}, WORKER_INTERVAL_MS);
 }

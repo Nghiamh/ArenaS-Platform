@@ -224,3 +224,40 @@
   background: rgba(59, 130, 246, 0.12);
   box-shadow: 0 0 20px -6px rgba(59, 130, 246, 0.4);
 }
+
+/* ── Post-Match Survey Modal Styling ── */
+.mm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
+  padding: 1.5rem;
+}
+
+.mm-modal-content {
+  width: 100%;
+  max-width: 460px;
+  border-radius: 1.5rem;
+  padding: 2rem 1.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.85) 100%);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px -4px rgba(34, 211, 238, 0.15);
+}
+
+@keyframes mm-slide-up {
+  0% { opacity: 0; transform: translateY(40px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes mm-fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: mm-fade-in 0.4s ease-out forwards;
+}

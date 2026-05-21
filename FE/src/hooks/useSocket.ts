@@ -17,6 +17,40 @@ type ReceiveMessagePayload = {
 	createdAt: string;
 };
 
+type PlayerAcceptedPayload = {
+	matchId: string;
+	playerId: string;
+};
+
+type MatchConfirmedPayload = {
+	matchId: string;
+	match: unknown;
+	sport: string;
+};
+type MatchCancelledPayload = {
+	matchId: string;
+	reason: 'timeout' | 'decline';
+	isBackInQueue: boolean;
+	ticket?: unknown;
+};
+
+type ChatVoteUpdatedPayload = {
+	matchId: string;
+	chat_deleted_by: string[];
+	deleted: boolean;
+	votesRemaining: number;
+};
+
+type PlayerCheckedInPayload = {
+	matchId: string;
+	playerId: string;
+};
+
+type MatchCompletedPayload = {
+	matchId: string;
+	match: unknown;
+};
+
 type UseSocketReturn = {
 	socket: Socket | null;
 	isConnected: boolean;
@@ -25,6 +59,12 @@ type UseSocketReturn = {
 	sendMessage: (matchId: string, message: string) => void;
 	onMatchFound: (callback: (payload: MatchFoundPayload) => void) => void;
 	onReceiveMessage: (callback: (payload: ReceiveMessagePayload) => void) => void;
+	onPlayerAccepted: (callback: (payload: PlayerAcceptedPayload) => void) => void;
+	onMatchConfirmed: (callback: (payload: MatchConfirmedPayload) => void) => void;
+	onMatchCancelled: (callback: (payload: MatchCancelledPayload) => void) => void;
+	onChatVoteUpdated: (callback: (payload: ChatVoteUpdatedPayload) => void) => void;
+	onPlayerCheckedIn: (callback: (payload: PlayerCheckedInPayload) => void) => void;
+	onMatchCompleted: (callback: (payload: MatchCompletedPayload) => void) => void;
 };
 
 export function useSocket(): UseSocketReturn {
@@ -34,6 +74,12 @@ export function useSocket(): UseSocketReturn {
 	// Store callback refs so they survive re-renders
 	const matchFoundCb = useRef<((payload: MatchFoundPayload) => void) | null>(null);
 	const receiveMessageCb = useRef<((payload: ReceiveMessagePayload) => void) | null>(null);
+	const playerAcceptedCb = useRef<((payload: PlayerAcceptedPayload) => void) | null>(null);
+	const matchConfirmedCb = useRef<((payload: MatchConfirmedPayload) => void) | null>(null);
+	const matchCancelledCb = useRef<((payload: MatchCancelledPayload) => void) | null>(null);
+	const chatVoteUpdatedCb = useRef<((payload: ChatVoteUpdatedPayload) => void) | null>(null);
+	const playerCheckedInCb = useRef<((payload: PlayerCheckedInPayload) => void) | null>(null);
+	const matchCompletedCb = useRef<((payload: MatchCompletedPayload) => void) | null>(null);
 
 	useEffect(() => {
 		const token = localStorage.getItem('accessToken')?.trim();
@@ -75,6 +121,36 @@ export function useSocket(): UseSocketReturn {
 			receiveMessageCb.current?.(payload);
 		});
 
+		socket.on('player_accepted', (payload: PlayerAcceptedPayload) => {
+			console.log('[Socket] player_accepted:', payload);
+			playerAcceptedCb.current?.(payload);
+		});
+
+		socket.on('match_confirmed', (payload: MatchConfirmedPayload) => {
+			console.log('[Socket] match_confirmed:', payload);
+			matchConfirmedCb.current?.(payload);
+		});
+
+		socket.on('match_cancelled', (payload: MatchCancelledPayload) => {
+			console.log('[Socket] match_cancelled:', payload);
+			matchCancelledCb.current?.(payload);
+		});
+
+		socket.on('chat_vote_updated', (payload: ChatVoteUpdatedPayload) => {
+			console.log('[Socket] chat_vote_updated:', payload);
+			chatVoteUpdatedCb.current?.(payload);
+		});
+
+		socket.on('player_checked_in', (payload: PlayerCheckedInPayload) => {
+			console.log('[Socket] player_checked_in:', payload);
+			playerCheckedInCb.current?.(payload);
+		});
+
+		socket.on('match_completed', (payload: MatchCompletedPayload) => {
+			console.log('[Socket] match_completed:', payload);
+			matchCompletedCb.current?.(payload);
+		});
+
 		socket.on('error', (err: { message: string }) => {
 			console.error('[Socket] Server error:', err.message);
 		});
@@ -107,6 +183,30 @@ export function useSocket(): UseSocketReturn {
 		receiveMessageCb.current = callback;
 	}, []);
 
+	const onPlayerAccepted = useCallback((callback: (payload: PlayerAcceptedPayload) => void) => {
+		playerAcceptedCb.current = callback;
+	}, []);
+
+	const onMatchConfirmed = useCallback((callback: (payload: MatchConfirmedPayload) => void) => {
+		matchConfirmedCb.current = callback;
+	}, []);
+
+	const onMatchCancelled = useCallback((callback: (payload: MatchCancelledPayload) => void) => {
+		matchCancelledCb.current = callback;
+	}, []);
+
+	const onChatVoteUpdated = useCallback((callback: (payload: ChatVoteUpdatedPayload) => void) => {
+		chatVoteUpdatedCb.current = callback;
+	}, []);
+
+	const onPlayerCheckedIn = useCallback((callback: (payload: PlayerCheckedInPayload) => void) => {
+		playerCheckedInCb.current = callback;
+	}, []);
+
+	const onMatchCompleted = useCallback((callback: (payload: MatchCompletedPayload) => void) => {
+		matchCompletedCb.current = callback;
+	}, []);
+
 	return {
 		socket: socketRef.current,
 		isConnected,
@@ -115,5 +215,11 @@ export function useSocket(): UseSocketReturn {
 		sendMessage,
 		onMatchFound,
 		onReceiveMessage,
+		onPlayerAccepted,
+		onMatchConfirmed,
+		onMatchCancelled,
+		onChatVoteUpdated,
+		onPlayerCheckedIn,
+		onMatchCompleted,
 	};
 }

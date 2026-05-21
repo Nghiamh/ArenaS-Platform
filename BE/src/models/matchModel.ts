@@ -9,6 +9,9 @@ export interface IMatch extends Document {
 	sport: string;
 	match_score: number;
 	chat_deleted_by: Types.ObjectId[];
+	accepted_by: Types.ObjectId[];
+	checked_in_players: Types.ObjectId[];
+	confirmation_deadline?: Date;
 	status: MatchStatus;
 	scheduled_at?: Date;
 	createdAt?: Date;
@@ -56,6 +59,22 @@ const matchSchema = new Schema<IMatch, IMatchModel>(
 			required: true,
 			default: [],
 			ref: "User",
+		},
+		accepted_by: {
+			type: [Schema.Types.ObjectId],
+			required: true,
+			default: [],
+			ref: "User",
+		},
+		checked_in_players: {
+			type: [Schema.Types.ObjectId],
+			required: true,
+			default: [],
+			ref: "User",
+		},
+		confirmation_deadline: {
+			type: Date,
+			required: false,
 		},
 		status: {
 			type: String,
