@@ -527,8 +527,17 @@ export async function cancelBooking(req: Request, res: Response) {
 		}
 
 		// Calculate hours until start
-		const bookingDateStr = typeof booking.date === 'string' ? booking.date : (booking.date as any).toISOString().split('T')[0];
-		const startTimeDate = new Date(`${bookingDateStr}T${booking.start_time}:00`);
+		let bookingDateStr = '';
+		if (typeof booking.date === 'string') {
+			bookingDateStr = booking.date.split('T')[0];
+		} else {
+			const d = new Date(booking.date as any);
+			const vnTime = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+			bookingDateStr = vnTime.toISOString().split('T')[0];
+		}
+		
+		// Parse in Vietnam Time (+07:00) explicitly
+		const startTimeDate = new Date(`${bookingDateStr}T${booking.start_time}:00+07:00`);
 		
 		const now = new Date();
 		const hoursDifference = (startTimeDate.getTime() - now.getTime()) / (1000 * 60 * 60);
@@ -553,18 +562,17 @@ export async function cancelBooking(req: Request, res: Response) {
 
 		// Refund to wallet if amount > 0
 		if (refundAmount > 0) {
-			const wallet = await Wallet.findOne({ user_id: userId }).session(session);
+			const wallet = await Wallet.findOne({ userId: userId }).session(session);
 			if (wallet) {
 				wallet.balance += refundAmount;
 				await wallet.save({ session });
 
 				const tx = new WalletTransaction({
-					wallet_id: wallet._id,
+					walletId: wallet._id,
+					bookingId: booking._id,
 					type: 'refund',
 					amount: refundAmount,
-					balance_after: wallet.balance,
 					status: 'completed',
-					description: `Hoàn tiền ${refundPercentage * 100}% hủy sân (${booking.start_time}-${booking.end_time})`,
 				});
 				await tx.save({ session });
 			}
