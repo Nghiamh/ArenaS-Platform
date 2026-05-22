@@ -942,3 +942,103 @@ export async function cancelBooking(bookingId: string): Promise<{ message: strin
 	}
 }
 
+// ---------------------------------------------------------------------------
+// REVIEWS
+// ---------------------------------------------------------------------------
+
+export type CourtReview = {
+	_id: string;
+	user_id: string;
+	court_id: string;
+	rating: number;
+	comment?: string;
+	user_name: string;
+	user_avatar?: string;
+	createdAt: string;
+};
+
+export type CourtReviewsResponse = {
+	reviews: CourtReview[];
+	total: number;
+	avgRating: number;
+	pagination: {
+		page: number;
+		limit: number;
+		total: number;
+		totalPages: number;
+	};
+};
+
+export type CanReviewResponse = {
+	canReview: boolean;
+};
+
+export async function getCourtReviews(courtId: string, page = 1, limit = 10): Promise<CourtReviewsResponse> {
+	try {
+		const { data } = await axiosClient.get<CourtReviewsResponse>(`/reviews/court/${courtId}`, {
+			params: { page, limit },
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function getCanReview(courtId: string): Promise<CanReviewResponse> {
+	try {
+		const { data } = await axiosClient.get<CanReviewResponse>(`/reviews/can-review/${courtId}`, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function createReview(payload: {
+	court_id: string;
+	rating: number;
+	comment?: string;
+}): Promise<{ message: string; review: CourtReview }> {
+	try {
+		const { data } = await axiosClient.post<{ message: string; review: CourtReview }>('/reviews', payload, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function updateReview(reviewId: string, payload: { rating: number; comment?: string }): Promise<{ message: string; review: CourtReview }> {
+	try {
+		const { data } = await axiosClient.put<{ message: string; review: CourtReview }>(`/reviews/${reviewId}`, payload, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function deleteReview(reviewId: string): Promise<{ message: string }> {
+	try {
+		const { data } = await axiosClient.delete<{ message: string }>(`/reviews/${reviewId}`, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function getMyCourtReview(courtId: string): Promise<CourtReview | null> {
+	try {
+		const { data } = await axiosClient.get<{ review: CourtReview | null }>(`/reviews/my-review/${courtId}`, {
+			headers: withAuthHeaders(),
+		});
+		return data.review;
+	} catch (error: unknown) {
+		return null;
+	}
+}

@@ -16,6 +16,7 @@ import bookingRoutes from "./routes/bookingRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 import planRoutes from "./routes/planRoutes.js";
 import { startSubscriptionCron } from "./cron/subscriptionCron.js";
+import reviewRoutes from "./routes/reviewRoutes.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
@@ -25,6 +26,10 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
+
+app.get("/health", (_req, res) => {
+	res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
 
 app.use("/api/auth", authRoutes);
 app.use("/api/courts", courtRoutes);
@@ -37,6 +42,7 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/plans", planRoutes);
+app.use("/api/reviews", reviewRoutes);
 app.get("/api/health", (_req, res) => {
 	res.status(200).json({ status: "ok", service: "arena-backend" });
 });
