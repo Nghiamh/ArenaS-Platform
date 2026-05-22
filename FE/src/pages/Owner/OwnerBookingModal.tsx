@@ -18,6 +18,7 @@ export type BookingModalData = {
   note: string;
   status: 'confirmed' | 'pending' | 'completed' | 'cancelled';
   source: 'app' | 'phone' | 'walkin';
+  date: string;
 };
 
 type OwnerBookingModalProps = {
@@ -50,9 +51,9 @@ const STATUS_CFG = {
 };
 
 const SOURCE_CFG = {
-  app:    { label: 'Qua App',          emoji: '📱', active: 'border-indigo-500/50 bg-indigo-600/15 text-indigo-300' },
-  phone:  { label: 'Điện thoại',       emoji: '📞', active: 'border-sky-500/50    bg-sky-600/15    text-sky-300'    },
-  walkin: { label: 'Đến trực tiếp',   emoji: '🚶', active: 'border-teal-500/50   bg-teal-600/15   text-teal-300'   },
+  app:    { label: 'Qua App',          active: 'border-indigo-500/50 bg-indigo-600/15 text-indigo-300' },
+  phone:  { label: 'Điện thoại',       active: 'border-sky-500/50    bg-sky-600/15    text-sky-300'    },
+  walkin: { label: 'Đến trực tiếp',   active: 'border-teal-500/50   bg-teal-600/15   text-teal-300'   },
 };
 
 const mkDefault = (p: Partial<BookingModalData>): BookingModalData => ({
@@ -67,6 +68,7 @@ const mkDefault = (p: Partial<BookingModalData>): BookingModalData => ({
   note: p.note ?? '',
   status: p.status ?? 'confirmed',
   source: p.source ?? 'phone',
+  date: p.date ?? new Date().toISOString().split('T')[0],
 });
 
 /* ── Micro-components ── */
@@ -80,6 +82,7 @@ const Label: React.FC<{ children: React.ReactNode; required?: boolean }> = ({ ch
 const InputEl: React.FC<React.InputHTMLAttributes<HTMLInputElement>> = ({ className = '', ...rest }) => (
   <input
     {...rest}
+    style={{ fontFamily: 'inherit' }}
     className={`w-full rounded-xl border border-white/10 bg-[#0d1e3d] px-4 py-2.5 text-sm text-white placeholder-slate-600
       outline-none transition focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 ${className}`}
   />
@@ -88,6 +91,7 @@ const InputEl: React.FC<React.InputHTMLAttributes<HTMLInputElement>> = ({ classN
 const SelectEl: React.FC<React.SelectHTMLAttributes<HTMLSelectElement>> = ({ className = '', ...rest }) => (
   <select
     {...rest}
+    style={{ fontFamily: 'inherit' }}
     className={`w-full appearance-none rounded-xl border border-white/10 bg-[#0d1e3d] px-4 py-2.5 text-sm text-white
       outline-none transition focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 ${className}`}
   />
@@ -101,7 +105,7 @@ const StaticVal: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 
 /* ════════════════════════════════════════════
    Main Component
-════════════════════════════════════════════ */
+   ════════════════════════════════════════════ */
 export const OwnerBookingModal: React.FC<OwnerBookingModalProps> = ({
   open, mode, initialData, facilities, courts, onClose, onSave, onDelete,
 }) => {
@@ -183,20 +187,9 @@ export const OwnerBookingModal: React.FC<OwnerBookingModalProps> = ({
             {/* ── Header ── */}
             <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)', flexShrink: 0, position: 'relative' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                {/* Icon */}
-                <div style={{
-                  width: 40, height: 40, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: isAdd
-                    ? 'linear-gradient(135deg,#3b82f6,#8b5cf6)'
-                    : 'linear-gradient(135deg,#8b5cf6,#ec4899)',
-                  boxShadow: '0 8px 20px -8px rgba(99,102,241,0.7)',
-                  fontSize: 18, flexShrink: 0,
-                }}>
-                  {isAdd ? '＋' : editing ? '✏' : '📋'}
-                </div>
-
+                
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>{title}</h2>
+                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#fff', lineHeight: 1.2, fontFamily: 'inherit' }}>{title}</h2>
                   {!isAdd && (form.facilityName || form.courtName) && (
                     <p style={{ margin: '3px 0 0', fontSize: 12, color: '#64748b', fontWeight: 500 }}>
                       {[form.facilityName, form.courtName].filter(Boolean).join(' · ')}
@@ -219,7 +212,7 @@ export const OwnerBookingModal: React.FC<OwnerBookingModalProps> = ({
                     width: 32, height: 32, borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)',
                     background: 'rgba(255,255,255,0.04)', color: '#94a3b8', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13,
-                    flexShrink: 0,
+                    flexShrink: 0, fontFamily: 'inherit'
                   }}
                   className="transition hover:border-white/20 hover:text-white"
                 >
@@ -241,13 +234,13 @@ export const OwnerBookingModal: React.FC<OwnerBookingModalProps> = ({
                         key={key}
                         type="button"
                         onClick={() => set('source', key)}
-                        className={`flex flex-col items-center gap-1.5 rounded-xl border py-3 text-xs font-semibold transition
+                        style={{ fontFamily: 'inherit' }}
+                        className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border py-3.5 text-xs font-bold transition
                           ${form.source === key
                             ? cfg.active
                             : 'border-white/[0.07] bg-white/[0.02] text-slate-500 hover:border-white/15 hover:text-slate-300'
                           }`}
                       >
-                        <span className="text-xl">{cfg.emoji}</span>
                         <span>{cfg.label}</span>
                       </button>
                     ))}
@@ -258,7 +251,6 @@ export const OwnerBookingModal: React.FC<OwnerBookingModalProps> = ({
               {/* Source badge (view mode) */}
               {isView && (
                 <div className="flex items-center gap-2.5 rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-3">
-                  <span className="text-xl">{SOURCE_CFG[form.source].emoji}</span>
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600">Nguồn đặt</p>
                     <p className="text-sm font-semibold text-white">{SOURCE_CFG[form.source].label}</p>
@@ -269,7 +261,7 @@ export const OwnerBookingModal: React.FC<OwnerBookingModalProps> = ({
               {/* Divider */}
               <div style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
 
-              {/* Facility + Court (add mode only) */}
+              {/* Facility + Court + Date (add mode only) */}
               {isAdd && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
@@ -285,6 +277,15 @@ export const OwnerBookingModal: React.FC<OwnerBookingModalProps> = ({
                       <option value="">-- Chọn --</option>
                       {courts.map(c => <option key={c} value={c}>{c}</option>)}
                     </SelectEl>
+                  </div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <Label required>Ngày đặt</Label>
+                    <InputEl 
+                      type="date" 
+                      value={form.date} 
+                      min={new Date().toISOString().split('T')[0]}
+                      onChange={e => set('date', e.target.value)} 
+                    />
                   </div>
                 </div>
               )}
@@ -308,15 +309,19 @@ export const OwnerBookingModal: React.FC<OwnerBookingModalProps> = ({
                 <Label required>Khung giờ</Label>
                 {isView ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderRadius: 12, border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.03)', padding: '10px 16px' }}>
-                    <span style={{ fontSize: 20 }}>🕐</span>
-                    <span style={{ color: '#fff', fontSize: 15, fontWeight: 700 }}>{fmt(Math.floor(form.startHour)).replace(':00', form.startHour % 1 === 0.5 ? ':30' : ':00')} – {fmt(Math.floor(form.endHour)).replace(':00', form.endHour % 1 === 0.5 ? ':30' : ':00')}</span>
-                    <span style={{ marginLeft: 'auto', borderRadius: 20, background: 'rgba(59,130,246,0.2)', color: '#93c5fd', padding: '3px 10px', fontSize: 12, fontWeight: 700 }}>
-                      {dur}h
+                    <span style={{ color: '#fff', fontSize: 15, fontWeight: 700, fontFamily: 'inherit' }}>
+                      {fmt(Math.floor(form.startHour)).replace(':00', form.startHour % 1 === 0.5 ? ':30' : ':00')} – {fmt(Math.floor(form.endHour)).replace(':00', form.endHour % 1 === 0.5 ? ':30' : ':00')}
+                    </span>
+                    <span style={{ marginLeft: 'auto', borderRadius: 20, background: 'rgba(59,130,246,0.2)', color: '#93c5fd', padding: '3px 10px', fontSize: 12, fontWeight: 700, fontFamily: 'inherit' }}>
+                      {dur} giờ
                     </span>
                   </div>
                 ) : (
                   <div className="mt-2 rounded-xl bg-white/[0.02] p-1">
                     <TimeSlotPicker 
+                      startHour={form.startHour}
+                      endHour={form.endHour}
+                      onChange={(sH, eH) => setForm(prev => ({ ...prev, startHour: sH, endHour: eH }))}
                       slots={(() => {
                         const slots = [];
                         for (let i = 7 * 60; i < 23 * 60; i += 30) {
@@ -329,23 +334,15 @@ export const OwnerBookingModal: React.FC<OwnerBookingModalProps> = ({
                           const isBooked = (i === 10 * 60) || (i === 10 * 60 + 30) || (i === 17 * 60);
 
                           slots.push({
-                            start: `${h1}:${m1}`,
-                            end: `${h2}:${m2}`,
+                            startHour: i / 60,
+                            endHour: (i + 30) / 60,
+                            startLabel: `${h1}:${m1}`,
+                            endLabel: `${h2}:${m2}`,
                             status: isBooked ? 'booked' as const : 'available' as const
                           });
                         }
                         return slots;
                       })()}
-                      onChange={(range) => {
-                        if (range) {
-                          const sH = Number(range.start_time.split(':')[0]) + Number(range.start_time.split(':')[1]) / 60;
-                          const eH = Number(range.end_time.split(':')[0]) + Number(range.end_time.split(':')[1]) / 60;
-                          setForm(prev => ({ ...prev, startHour: sH, endHour: eH }));
-                        } else {
-                          // Reset to invalid/default if cleared
-                          setForm(prev => ({ ...prev, startHour: 0, endHour: 0 }));
-                        }
-                      }}
                     />
                   </div>
                 )}
@@ -366,6 +363,7 @@ export const OwnerBookingModal: React.FC<OwnerBookingModalProps> = ({
                         key={key}
                         type="button"
                         onClick={() => set('status', key)}
+                        style={{ fontFamily: 'inherit' }}
                         className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-semibold transition
                           ${form.status === key ? cfg.badge : 'border-white/[0.07] bg-white/[0.02] text-slate-500 hover:border-white/15 hover:text-slate-300'}`}
                       >
@@ -388,6 +386,7 @@ export const OwnerBookingModal: React.FC<OwnerBookingModalProps> = ({
                         type="button"
                         title={t.label}
                         onClick={() => set('tone', t.value)}
+                        style={{ fontFamily: 'inherit' }}
                         className={`relative h-8 w-8 rounded-full transition hover:scale-110 ${t.tw}
                           ${form.tone === t.value ? 'ring-2 ring-white ring-offset-2 ring-offset-[#07152e] scale-110' : ''}`}
                       >
@@ -414,7 +413,7 @@ export const OwnerBookingModal: React.FC<OwnerBookingModalProps> = ({
                     placeholder="Ghi chú thêm (tùy chọn)..."
                     value={form.note}
                     onChange={e => set('note', e.target.value)}
-                    style={{ width: '100%', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', background: '#0d1e3d', padding: '10px 16px', fontSize: 13, color: '#fff', resize: 'none', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', background: '#0d1e3d', padding: '10px 16px', fontSize: 13, color: '#fff', resize: 'none', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
                     className="placeholder-slate-600 transition focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
                   />
                 )}
@@ -438,13 +437,13 @@ export const OwnerBookingModal: React.FC<OwnerBookingModalProps> = ({
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
                       <button
                         onClick={() => setDelConfirm(false)}
-                        style={{ borderRadius: 20, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', padding: '6px 16px', fontSize: 12, color: '#94a3b8', cursor: 'pointer', fontWeight: 600 }}
+                        style={{ borderRadius: 20, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', padding: '6px 16px', fontSize: 12, color: '#94a3b8', cursor: 'pointer', fontWeight: 600, fontFamily: 'inherit' }}
                       >
                         Hủy bỏ
                       </button>
                       <button
                         onClick={() => onDelete?.(form)}
-                        style={{ borderRadius: 20, background: '#dc2626', padding: '6px 16px', fontSize: 12, color: '#fff', cursor: 'pointer', fontWeight: 700, boxShadow: '0 6px 16px -8px rgba(220,38,38,0.8)' }}
+                        style={{ borderRadius: 20, background: '#dc2626', padding: '6px 16px', fontSize: 12, color: '#fff', cursor: 'pointer', fontWeight: 700, boxShadow: '0 6px 16px -8px rgba(220,38,38,0.8)', border: 'none', fontFamily: 'inherit' }}
                       >
                         Xóa lịch đặt
                       </button>
@@ -458,31 +457,31 @@ export const OwnerBookingModal: React.FC<OwnerBookingModalProps> = ({
                   {onDelete && (
                     <button
                       onClick={() => setDelConfirm(true)}
-                      style={{ borderRadius: 12, border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.08)', padding: '10px 16px', fontSize: 13, color: '#f87171', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}
+                      style={{ borderRadius: 12, border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.08)', padding: '10px 16px', fontSize: 13, color: '#f87171', cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit' }}
                       className="transition hover:border-red-500/40 hover:bg-red-500/15"
                     >
-                      🗑
+                      Xóa
                     </button>
                   )}
                   <button
                     onClick={onClose}
-                    style={{ flex: 1, borderRadius: 12, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.04)', padding: '10px 16px', fontSize: 13, color: '#94a3b8', cursor: 'pointer', fontWeight: 700 }}
+                    style={{ flex: 1, borderRadius: 12, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.04)', padding: '10px 16px', fontSize: 13, color: '#94a3b8', cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit' }}
                     className="transition hover:text-white"
                   >
                     Đóng
                   </button>
                   <button
                     onClick={() => setEditing(true)}
-                    style={{ flex: 2, borderRadius: 12, background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', padding: '10px 16px', fontSize: 13, color: '#fff', cursor: 'pointer', fontWeight: 700, boxShadow: '0 12px 28px -14px rgba(99,102,241,0.8)', border: 'none' }}
+                    style={{ flex: 2, borderRadius: 12, background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', padding: '10px 16px', fontSize: 13, color: '#fff', cursor: 'pointer', fontWeight: 700, boxShadow: '0 12px 28px -14px rgba(99,102,241,0.8)', border: 'none', fontFamily: 'inherit' }}
                   >
-                    ✏️ Chỉnh sửa
+                    Chỉnh sửa
                   </button>
                 </div>
               ) : (
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button
                     onClick={onClose}
-                    style={{ flex: 1, borderRadius: 12, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.04)', padding: '10px 16px', fontSize: 13, color: '#94a3b8', cursor: 'pointer', fontWeight: 700 }}
+                    style={{ flex: 1, borderRadius: 12, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.04)', padding: '10px 16px', fontSize: 13, color: '#94a3b8', cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit' }}
                     className="transition hover:text-white"
                   >
                     Hủy
@@ -496,9 +495,10 @@ export const OwnerBookingModal: React.FC<OwnerBookingModalProps> = ({
                       color: canSave ? '#fff' : '#334155',
                       boxShadow: canSave ? '0 12px 28px -14px rgba(99,102,241,0.8)' : 'none',
                       transition: 'all 0.2s',
+                      fontFamily: 'inherit'
                     }}
                   >
-                    {isAdd ? '＋ Thêm lịch đặt' : '✓ Lưu thay đổi'}
+                    {isAdd ? 'Thêm lịch đặt' : 'Lưu thay đổi'}
                   </button>
                 </div>
               )}

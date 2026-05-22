@@ -749,6 +749,103 @@ export async function sendFakeSubscriptionPayment(
 	}
 }
 
+export type MyStatusSubscriptionResponse = {
+	success: boolean;
+	subscription: {
+		_id: string;
+		ownerId: string;
+		status: 'active' | 'expired' | 'cancelled';
+		billingCycle: 'monthly' | 'yearly';
+		startDate: string;
+		endDate: string;
+		amountPaid: number;
+		currentFeatures: FEPlan['features'];
+		planId: {
+			_id: string;
+			name: string;
+			displayName: string;
+			sortOrder: number;
+			description?: string;
+			pricing?: { monthly: number; yearly: number };
+			features?: FEPlan['features'];
+		};
+		isSimulated?: boolean;
+	};
+};
+
+export async function getCurrentSubscriptionStatus(): Promise<MyStatusSubscriptionResponse['subscription']> {
+	try {
+		const { data } = await axiosClient.get<MyStatusSubscriptionResponse>('/subscriptions/my-status', {
+			headers: withAuthHeaders(),
+		});
+		return data.subscription;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export type ValidateSubscriptionActionResponse = {
+	success: boolean;
+	action: 'renew' | 'upgrade' | 'downgrade';
+	allowed: boolean;
+	message: string;
+	billingCycle: 'monthly' | 'yearly';
+	closeToExpiry?: boolean;
+	currentPlan?: {
+		id: string;
+		name: string;
+		displayName: string;
+		sortOrder: number;
+	};
+	targetPlan?: {
+		id: string;
+		name: string;
+		displayName: string;
+		sortOrder: number;
+	};
+	pricing: {
+		basePrice: number;
+		unusedCredit: number;
+		netAmount: number;
+		daysRemaining: number;
+	};
+	reason?: string;
+	details?: {
+		currentUsage: {
+			locations: number;
+			courts: number;
+		};
+		targetLimits: {
+			locations: number;
+			courts: number;
+		};
+		violations: string[];
+		recommendations: string[];
+		featureLosses: string[];
+	};
+	warningMessage?: string;
+};
+
+export async function validateSubscriptionAction(
+	targetPlanId: string,
+	billingCycle: 'monthly' | 'yearly',
+): Promise<ValidateSubscriptionActionResponse> {
+	try {
+		const { data } = await axiosClient.post<ValidateSubscriptionActionResponse>('/subscriptions/validate-action', {
+			targetPlanId,
+			billingCycle,
+		}, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		if (axios.isAxiosError(error) && error.response?.data) {
+			return error.response.data as ValidateSubscriptionActionResponse;
+		}
+		throw new Error(toErrorMessage(error));
+	}
+}
+
 // ---------------------------------------------------------------------------
 // USER BOOKING
 // ---------------------------------------------------------------------------
@@ -844,3 +941,4 @@ export async function cancelBooking(bookingId: string): Promise<{ message: strin
 		throw new Error(toErrorMessage(error));
 	}
 }
+

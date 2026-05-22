@@ -110,7 +110,7 @@ export async function getCourtSlots(req: Request, res: Response) {
 // 5. API: Lấy danh sách Booking của Owner
 export async function getOwnerBookings(req: Request, res: Response) {
 	try {
-		const ownerId = (req as any).user.userId;
+		const ownerId = (req as any).user._id;
 		const { startDate, endDate } = req.query;
 
 		// 1. Tìm tất cả các court_id thuộc về owner này
@@ -144,7 +144,7 @@ export async function ownerCreateBooking(req: Request, res: Response) {
 	session.startTransaction();
 
 	try {
-		const ownerId = (req as any).user.userId;
+		const ownerId = (req as any).user._id;
 		const { court_id, sub_court_id, date, start_time, end_time, customer_name, customer_phone, note, status, source, tone } = req.body;
 
 		// 1. Kiểm tra ownership
