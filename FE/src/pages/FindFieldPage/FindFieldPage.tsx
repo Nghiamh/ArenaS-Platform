@@ -193,11 +193,11 @@ const SPORT_TO_API: Partial<Record<SportName, string>> = {
 };
 
 const SPORT_CHIPS: Array<{ value: SportName | 'all'; label: string; icon: string }> = [
-  { value: 'all',       label: 'Tất cả',       icon: '' },
+  { value: 'all', label: 'Tất cả', icon: '' },
   { value: 'Pickleball', label: 'Sân pickleball', icon: '' },
-  { value: 'Cầu Lông',  label: 'Sân cầu lông',  icon: '' },
-  { value: 'Bóng Đá',   label: 'Sân bóng đá',   icon: '' },
-  { value: 'Tennis',    label: 'Sân tennis',     icon: '' },
+  { value: 'Cầu Lông', label: 'Sân cầu lông', icon: '' },
+  { value: 'Bóng Đá', label: 'Sân bóng đá', icon: '' },
+  { value: 'Tennis', label: 'Sân tennis', icon: '' },
 ];
 
 export const FindFieldPage: React.FC = () => {
@@ -391,9 +391,8 @@ export const FindFieldPage: React.FC = () => {
             <button
               key={mode}
               onClick={() => setViewMode(mode)}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
-                viewMode === mode ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-white'
-              }`}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition ${viewMode === mode ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-white'
+                }`}
             >
               {mode === 'list' ? '📋 Danh sách' : '🗺️ Bản đồ'}
             </button>
@@ -422,11 +421,10 @@ export const FindFieldPage: React.FC = () => {
             <button
               key={chip.value}
               onClick={() => setActiveSportFilter(chip.value)}
-              className={`flex flex-shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap transition ${
-                active
+              className={`flex flex-shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap transition ${active
                   ? 'bg-blue-500 text-white shadow-[0_4px_14px_-6px_rgba(59,130,246,0.7)]'
                   : 'border border-white/10 bg-white/5 text-slate-400 hover:text-white hover:border-white/25'
-              }`}
+                }`}
             >
               <span>{chip.icon}</span>
               <span>{chip.label}</span>
@@ -479,43 +477,44 @@ export const FindFieldPage: React.FC = () => {
           {!loadError && (
             <div className={`transition-opacity duration-200 ${isLoading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
               <AnimatePresence mode="popLayout">
-              {filteredVenues.length === 0 ? (
-                <div className="rounded-2xl border border-white/8 bg-white/3 p-12 text-center">
-                  <p className="text-slate-400">Không có sân phù hợp. Thử từ khóa khác.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {filteredVenues.map((venue, idx) => (
-                    <motion.div
-                      key={venue.id} layout
-                      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                      transition={{ delay: idx * 0.02, duration: 0.22 }}
-                      onClick={() => navigate(`/courts/${venue.id}`)}
-                      className="group cursor-pointer overflow-hidden rounded-2xl border border-white/8 bg-[#141e2b] transition hover:border-[#1D9E75]/50 hover:shadow-[0_12px_32px_-16px_rgba(29,158,117,0.25)]"
-                    >
-                      <div className="relative h-44 overflow-hidden">
-                        <img src={venue.image} alt={venue.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                        <span className={`absolute right-2 top-2 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                          venue.tag === 'Đang mở' ? 'bg-[#1D9E75]/90 text-white' : 'bg-slate-700/90 text-slate-300'
-                        }`}>{venue.tag}</span>
-                        <span className="absolute left-2 bottom-2 rounded-md bg-black/50 px-2 py-0.5 text-xs text-slate-200 backdrop-blur">{venue.formatLabel}</span>
-                      </div>
-                      <div className="p-3 space-y-1.5">
-                        <h3 className="truncate font-semibold text-white text-sm">{venue.name}</h3>
-                        <p className="truncate text-xs text-slate-500">{venue.locationText}</p>
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-400">⭐ {venue.rating.toFixed(1)} · {venue.distanceKm.toFixed(1)} km</span>
-                          <span className="font-bold text-[#1D9E75]">{new Intl.NumberFormat('vi-VN').format(venue.priceK * 1000)}đ/giờ</span>
+                {filteredVenues.length === 0 ? (
+                  <div className="rounded-2xl border border-white/8 bg-white/3 p-12 text-center">
+                    <p className="text-slate-400">Không có sân phù hợp. Thử từ khóa khác.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {filteredVenues.map((venue, idx) => (
+                      <motion.div
+                        key={venue.id} layout
+                        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                        transition={{ delay: idx * 0.02, duration: 0.22 }}
+                        onClick={() => navigate(`/courts/${venue.id}`)}
+                        className="group cursor-pointer overflow-hidden rounded-2xl border border-white/8 bg-[#141e2b] transition hover:border-[#1D9E75]/50 hover:shadow-[0_12px_32px_-16px_rgba(29,158,117,0.25)]"
+                      >
+                        <div className="relative h-44 overflow-hidden">
+                          <img src={venue.image} alt={venue.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                          <span className={`absolute right-2 top-2 rounded-full px-2.5 py-0.5 text-xs font-semibold ${venue.tag === 'Đang mở' ? 'bg-[#1D9E75]/90 text-white' : 'bg-slate-700/90 text-slate-300'
+                            }`}>{venue.tag}</span>
+                          <span className="absolute left-2 bottom-2 rounded-md bg-black/50 px-2 py-0.5 text-xs text-slate-200 backdrop-blur">{venue.formatLabel}</span>
                         </div>
-                        {venue.amenities.length > 0 && (
-                          <p className="truncate text-[11px] text-slate-600">{venue.amenities.slice(0, 3).join(' · ')}</p>
-                        )}
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
+                        <div className="p-3 space-y-1.5">
+                          <h3 className="truncate font-semibold text-white text-sm">{venue.name}</h3>
+                          <p className="truncate text-xs text-slate-500">{venue.locationText}</p>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-slate-400">
+                              {venue.rating > 0 ? `⭐ ${venue.rating.toFixed(1)}` : <span className="italic opacity-60">Chưa có đánh giá</span>}
+                            </span>
+                            <span className="font-bold text-[#1D9E75]">{new Intl.NumberFormat('vi-VN').format(venue.priceK * 1000)}đ/giờ</span>
+                          </div>
+                          {venue.amenities.length > 0 && (
+                            <p className="truncate text-[11px] text-slate-600">{venue.amenities.slice(0, 3).join(' · ')}</p>
+                          )}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
               </AnimatePresence>
             </div>
           )}
