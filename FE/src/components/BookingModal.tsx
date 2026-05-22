@@ -111,15 +111,15 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             >
               {/* Header */}
               <div className="w-full flex items-center justify-between px-6 py-4 bg-[#0F172A] border-b border-white/5">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                   <button onClick={handleClose} className="text-white hover:text-slate-300 transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="m15 18-6-6 6-6"/>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="15 18 9 12 15 6" />
                     </svg>
                   </button>
                   <div>
-                    <h1 className="text-xl font-bold text-white leading-tight">Xác nhận đặt sân</h1>
-                    <p className="text-xs text-slate-400">Kiểm tra thông tin trước khi đặt</p>
+                    <h1 className="text-lg font-bold text-white leading-tight">Xác nhận đặt sân</h1>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Kiểm tra thông tin trước khi đặt</p>
                   </div>
                 </div>
                 <div className="text-sm font-bold text-white hidden sm:block">
@@ -129,211 +129,204 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
               {/* Content */}
               <div className="w-full overflow-y-auto px-6 py-8 max-h-[80vh] custom-scrollbar">
-          {/* STEP: CONFIRM */}
-          {step === 'confirm' && (
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-6"
-            >
-              {/* Main Info Card */}
-              <div className="relative overflow-hidden rounded-2xl bg-[#141E2B] border border-white/5 p-6">
-                {/* Watermark */}
-                <div className="absolute -right-6 -bottom-8 text-8xl font-black text-white/[0.03] select-none pointer-events-none">
-                  01
-                </div>
+                {/* STEP: CONFIRM */}
+                {step === 'confirm' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                  >
+                    {/* Main Info Card */}
+                    <div className="rounded-2xl bg-[#141E2B] p-5 mb-4">
+                      <div className="flex items-start gap-4 mb-6">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-transparent text-white shrink-0">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-bold tracking-wider uppercase mb-1">SÂN & SÂN CON</p>
+                          <h2 className="text-lg font-bold text-white">{courtName}</h2>
+                          <p className="text-[#c7f200] text-sm font-bold mt-0.5">{subCourtName}</p>
+                        </div>
+                      </div>
 
-                <div className="relative z-10">
-                  <div className="flex items-start gap-4 mb-8">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#c7f200]/20 text-[#c7f200]">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-400 font-semibold tracking-wider uppercase mb-1">Sân & Sân Con</p>
-                      <h2 className="text-xl font-bold text-white">{courtName}</h2>
-                      <p className="text-[#c7f200] font-semibold">{subCourtName}</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-6 border-t border-white/5 pt-6">
-                    <div>
-                      <p className="text-xs text-slate-400 font-semibold tracking-wider uppercase mb-1 flex items-center gap-1.5">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-                        Ngày
-                      </p>
-                      <p className="text-sm font-bold text-white">{formatDate(payload.date)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-400 font-semibold tracking-wider uppercase mb-1 flex items-center gap-1.5">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                        Khung giờ
-                      </p>
-                      <p className="text-sm font-bold text-[#c7f200]">{payload.start_time} - {payload.end_time}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-400 font-semibold tracking-wider uppercase mb-1 flex items-center gap-1.5">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                        Thời lượng
-                      </p>
-                      <p className="text-sm font-bold text-white">{durationMinutes} phút</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Price Card */}
-              <div className="rounded-2xl border border-[#ffb020]/20 bg-[#ffb020]/5 p-6 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-[#ffb020]/10 blur-3xl rounded-full" />
-                
-                <div className="flex items-center justify-between mb-6 relative z-10">
-                  <span className="text-lg font-bold text-white">Tạm tính</span>
-                  <span className="text-3xl font-black text-[#ffb020]">{fmt(estimatedPrice)} đ</span>
-                </div>
-
-                <div className="border-t border-white/5 pt-4 relative z-10">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-sm text-slate-400">Số dư ví</span>
-                    <span className="text-sm font-semibold text-slate-300">
-                      {wallet ? `${fmt(wallet.balance)} đ` : 'Đang tải...'}
-                    </span>
-                  </div>
-
-                  {!balanceSufficient && wallet && (
-                    <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 flex items-start gap-3">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-rose-400 flex-shrink-0 mt-0.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-                      <div>
-                        <p className="text-sm font-bold text-rose-400">Số dư không đủ</p>
-                        <p className="text-xs text-rose-300/80">Thiếu {fmt(estimatedPrice - wallet.balance)} đ</p>
+                      <div className="grid grid-cols-3 gap-4 border-t border-white/5 pt-5">
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-bold tracking-wider uppercase mb-1 flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /></svg>
+                            NGÀY
+                          </p>
+                          <p className="text-[13px] font-bold text-white">{formatDate(payload.date)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-bold tracking-wider uppercase mb-1 flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                            KHUNG GIỜ
+                          </p>
+                          <p className="text-[13px] font-bold text-[#c7f200]">{payload.start_time} - {payload.end_time}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-bold tracking-wider uppercase mb-1 flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
+                            THỜI LƯỢNG
+                          </p>
+                          <p className="text-[13px] font-bold text-white">{durationMinutes} phút</p>
+                        </div>
                       </div>
                     </div>
-                  )}
-                </div>
-              </div>
 
-              {/* Actions */}
-              <div className="flex gap-4 pt-4">
-                <button
-                  onClick={handleClose}
-                  className="flex-[1] rounded-2xl border border-white/10 bg-transparent py-4 text-sm font-semibold text-slate-300 hover:bg-white/5 transition"
-                >
-                  Hủy
-                </button>
-                {!balanceSufficient ? (
-                  <button
-                    onClick={() => setShowDeposit(true)}
-                    className="flex-[2] rounded-2xl bg-[#c7f200] py-4 text-sm font-bold text-[#0B1221] shadow-[0_0_20px_rgba(199,242,0,0.3)] hover:shadow-[0_0_30px_rgba(199,242,0,0.5)] transition flex items-center justify-center gap-2"
+                    {/* Price Card */}
+                    <div className="rounded-2xl border border-[#ffb020]/20 bg-[#ffb020]/5 p-5 mb-6">
+                      <div className="flex items-center justify-between mb-5">
+                        <span className="text-base font-bold text-white">Tạm tính</span>
+                        <span className="text-2xl font-black text-[#ffb020]">{fmt(estimatedPrice)} đ</span>
+                      </div>
+
+                      <div className="border-t border-white/5 pt-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-slate-400">Số dư ví</span>
+                          <span className="text-sm font-bold text-white">
+                            {wallet ? `${fmt(wallet.balance)} đ` : 'Đang tải...'}
+                          </span>
+                        </div>
+
+                        {!balanceSufficient && wallet && (
+                          <div className="mt-4 rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 flex items-start gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-rose-400 flex-shrink-0 mt-0.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
+                            <div>
+                              <p className="text-[13px] font-bold text-rose-400">Số dư không đủ (thiếu {fmt(estimatedPrice - wallet.balance)} đ)</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handleClose}
+                        className="w-1/3 rounded-xl bg-[#1A2235] hover:bg-[#232D45] py-3.5 text-[13px] font-bold text-white transition"
+                      >
+                        Hủy
+                      </button>
+                      {!balanceSufficient ? (
+                        <button
+                          onClick={() => setShowDeposit(true)}
+                          className="w-2/3 rounded-xl bg-[#c7f200] py-3.5 text-[13px] font-bold text-[#0B1221] shadow-[0_4px_20px_rgba(199,242,0,0.2)] hover:shadow-[0_4px_25px_rgba(199,242,0,0.4)] transition"
+                        >
+                          Nạp thêm tiền
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleConfirm}
+                          disabled={!wallet}
+                          className="w-2/3 rounded-xl bg-[#c7f200] py-3.5 text-[13px] font-bold text-[#0B1221] shadow-[0_4px_20px_rgba(199,242,0,0.2)] hover:shadow-[0_4px_25px_rgba(199,242,0,0.4)] transition disabled:opacity-50 disabled:shadow-none"
+                        >
+                          Xác nhận đặt sân
+                        </button>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* STEP: PROCESSING */}
+                {step === 'processing' && (
+                  <motion.div
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    className="flex flex-col items-center justify-center py-10 gap-5"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-                    Nạp thêm tiền
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleConfirm}
-                    disabled={!wallet}
-                    className="flex-[2] rounded-2xl bg-[#c7f200] py-4 text-sm font-bold text-[#0B1221] shadow-[0_0_20px_rgba(199,242,0,0.3)] hover:shadow-[0_0_30px_rgba(199,242,0,0.5)] transition disabled:opacity-50 disabled:shadow-none"
+                    <div className="relative flex items-center justify-center mb-2">
+                      <div className="h-14 w-14 animate-spin rounded-full border-[3px] border-slate-700 border-t-white" />
+                    </div>
+                    <div className="text-center">
+                      <h3 className="text-xl font-bold text-white mb-2">Đang xử lý đặt sân...</h3>
+                      <p className="text-[13px] text-slate-400 leading-relaxed">Hệ thống đang giữ chỗ cho bạn. Vui<br/>lòng không đóng trang.</p>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* STEP: SUCCESS */}
+                {step === 'success' && result && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                    className="space-y-6"
                   >
-                    Xác nhận đặt sân
-                  </button>
+                    <div className="flex flex-col items-center gap-3 text-center mb-6">
+                      <div className="h-14 w-14 rounded-full bg-slate-800 flex items-center justify-center mb-1">
+                        <div className="h-7 w-7 rounded-full bg-white flex items-center justify-center text-[#0F172A]">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                        </div>
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold text-white mb-1">Đặt sân thành công!</h2>
+                        <p className="text-slate-400 text-[13px]">Đặt sân thành công!</p>
+                      </div>
+                    </div>
+
+                    <div className="relative rounded-2xl bg-[#141E2B] p-5 space-y-5">
+                      <div className="absolute left-0 top-[55%] -translate-x-1/2 -translate-y-1/2 w-4 h-6 bg-[#0F172A] rounded-r-full" />
+                      <div className="absolute right-0 top-[55%] translate-x-1/2 -translate-y-1/2 w-4 h-6 bg-[#0F172A] rounded-l-full" />
+
+                      <div className="flex justify-between items-center px-1">
+                        <span className="text-[10px] font-bold text-slate-400 tracking-wider">SÂN</span>
+                        <span className="text-[13px] font-bold text-white">{result.booking.court_name} - {result.booking.sub_court_name}</span>
+                      </div>
+                      
+                      <div className="border-t border-dashed border-white/10 pt-5 px-1 flex justify-between items-start">
+                        <span className="text-[10px] font-bold text-slate-400 tracking-wider mt-0.5">THỜI GIAN</span>
+                        <div className="text-right">
+                          <p className="text-[13px] font-bold text-[#c7f200]">{result.booking.start_time} - {result.booking.end_time}</p>
+                          <p className="text-[11px] text-slate-400 mt-1">{formatDate(result.booking.date)}</p>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-white/5 pt-5 px-1 flex justify-between items-center">
+                        <span className="text-[10px] font-bold text-slate-400 tracking-wider">ĐÃ THANH TOÁN</span>
+                        <span className="text-lg font-black text-[#c7f200]">{fmt(result.booking.total_price)} đ</span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleClose}
+                      className="w-full rounded-2xl bg-white/10 hover:bg-white/20 py-3.5 text-[13px] font-bold text-white transition"
+                    >
+                      Hoàn tất {timeLeft > 0 ? `(Đóng sau ${timeLeft}s)` : ''}
+                    </button>
+                  </motion.div>
+                )}
+
+                {/* STEP: ERROR */}
+                {step === 'error' && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                    className="space-y-6"
+                  >
+                    <div className="flex flex-col items-center gap-4 text-center">
+                      <div className="h-24 w-24 rounded-full bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-5xl text-rose-400 mb-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-bold text-rose-400 mb-1">Đặt sân thất bại</h2>
+                        <p className="text-slate-400">{errorMsg}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4 pt-4">
+                      <button
+                        onClick={handleClose}
+                        className="flex-1 rounded-2xl border border-white/10 bg-transparent py-4 text-sm font-semibold text-slate-300 hover:bg-white/5 transition"
+                      >
+                        Đóng
+                      </button>
+                      <button
+                        onClick={() => setStep('confirm')}
+                        className="flex-1 rounded-2xl bg-white py-4 text-sm font-bold text-slate-900 hover:bg-slate-200 transition"
+                      >
+                        Thử lại
+                      </button>
+                    </div>
+                  </motion.div>
                 )}
               </div>
-            </motion.div>
-          )}
-
-          {/* STEP: PROCESSING */}
-          {step === 'processing' && (
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center h-64 gap-6"
-            >
-              <div className="relative">
-                <div className="h-20 w-20 animate-spin rounded-full border-4 border-[#c7f200]/20 border-t-[#c7f200]" />
-                <div className="absolute inset-0 flex items-center justify-center text-3xl">⚡</div>
-              </div>
-              <div className="text-center">
-                <h3 className="text-xl font-bold text-white mb-2">Đang xử lý đặt sân...</h3>
-                <p className="text-sm text-slate-400">Hệ thống đang giữ chỗ cho bạn. Vui lòng không đóng trang.</p>
-              </div>
-            </motion.div>
-          )}
-
-          {/* STEP: SUCCESS */}
-          {step === 'success' && result && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-              className="space-y-6"
-            >
-              <div className="flex flex-col items-center gap-4 text-center">
-                <div className="h-24 w-24 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-5xl text-emerald-400 mb-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-emerald-400 mb-1">Đặt sân thành công!</h2>
-                  <p className="text-slate-400">{result.message}</p>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-6 space-y-4">
-                <div className="flex justify-between items-center border-b border-white/5 pb-4">
-                  <span className="text-sm text-slate-400">Sân</span>
-                  <span className="text-base font-bold text-white">{result.booking.court_name} - {result.booking.sub_court_name}</span>
-                </div>
-                <div className="flex justify-between items-center border-b border-white/5 pb-4">
-                  <span className="text-sm text-slate-400">Thời gian</span>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-[#c7f200]">{result.booking.start_time} - {result.booking.end_time}</p>
-                    <p className="text-xs text-slate-300">{formatDate(result.booking.date)}</p>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center pt-2">
-                  <span className="text-sm text-slate-400">Đã thanh toán</span>
-                  <span className="text-xl font-bold text-amber-400">{fmt(result.booking.total_price)} đ</span>
-                </div>
-              </div>
-
-              <button
-                onClick={handleClose}
-                className="w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 py-4 text-sm font-bold text-white shadow-lg hover:shadow-emerald-500/25 transition"
-              >
-                Hoàn tất {timeLeft > 0 ? `(Đóng sau ${timeLeft}s)` : ''}
-              </button>
-            </motion.div>
-          )}
-
-          {/* STEP: ERROR */}
-          {step === 'error' && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-              className="space-y-6"
-            >
-              <div className="flex flex-col items-center gap-4 text-center">
-                <div className="h-24 w-24 rounded-full bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-5xl text-rose-400 mb-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-rose-400 mb-1">Đặt sân thất bại</h2>
-                  <p className="text-slate-400">{errorMsg}</p>
-                </div>
-              </div>
-
-              <div className="flex gap-4 pt-4">
-                <button
-                  onClick={handleClose}
-                  className="flex-1 rounded-2xl border border-white/10 bg-transparent py-4 text-sm font-semibold text-slate-300 hover:bg-white/5 transition"
-                >
-                  Đóng
-                </button>
-                <button
-                  onClick={() => setStep('confirm')}
-                  className="flex-1 rounded-2xl bg-white py-4 text-sm font-bold text-slate-900 hover:bg-slate-200 transition"
-                >
-                  Thử lại
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </div>
             </motion.div>
           </motion.div>
         )}

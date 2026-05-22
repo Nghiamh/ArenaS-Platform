@@ -352,6 +352,7 @@ export const ProfilePage: React.FC = () => {
   const [draftDateOfBirth, setDraftDateOfBirth] = useState("");
   const [draftAvatarUrl, setDraftAvatarUrl] = useState("");
   const [isEditing, setIsEditing] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [skills, setSkills] = useState<UserSkill[]>([]);
   const [skillForm, setSkillForm] = useState<SkillFormState>(EMPTY_SKILL_FORM);
   const [editingSkillId, setEditingSkillId] = useState<string | null>(null);
@@ -385,17 +386,18 @@ export const ProfilePage: React.FC = () => {
   const [bookingsLoading, setBookingsLoading] = useState(false);
   const [cancellingBookingId, setCancellingBookingId] = useState<string | null>(null);
   const [bookingToCancel, setBookingToCancel] = useState<UserBooking | null>(null);
+  const [showAllBookingsModal, setShowAllBookingsModal] = useState(false);
 
   const confirmCancelBooking = async () => {
     if (!bookingToCancel) return;
     const bookingId = bookingToCancel._id;
-    
+
     try {
       setCancellingBookingId(bookingId);
       const res = await cancelBooking(bookingId);
       setSuccessMessage(`Hủy sân thành công. Hoàn lại ${res.refundPercentage}% (${new Intl.NumberFormat('vi-VN').format(res.refundAmount)} đ).`);
       setTimeout(() => setSuccessMessage(""), 5000);
-      
+
       // Update the local state
       setMyBookings(prev => prev.map(b => b._id === bookingId ? { ...b, status: 'cancelled' } : b));
       await fetchWallet();
@@ -419,8 +421,18 @@ export const ProfilePage: React.FC = () => {
   const fetchBookings = async () => {
     try {
       setBookingsLoading(true);
-      const res = await getMyBookings({ limit: 20 });
-      setMyBookings(res.bookings);
+      const res = await getMyBookings({ limit: 100 });
+      
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setHours(0, 0, 0, 0);
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const recentBookings = res.bookings.filter((b) => {
+        const bookingDate = new Date(b.date);
+        return bookingDate >= thirtyDaysAgo;
+      });
+
+      setMyBookings(recentBookings);
     } catch (e) {
       console.error("Failed to fetch bookings", e);
     } finally {
@@ -588,6 +600,7 @@ export const ProfilePage: React.FC = () => {
     setSuccessMessage("");
     setPopupErrorMessage("");
     setIsEditing(true);
+    setIsEditModalOpen(true);
   };
 
   const handleCancelEditing = () => {
@@ -599,6 +612,7 @@ export const ProfilePage: React.FC = () => {
     setSuccessMessage("");
     setPopupErrorMessage("");
     setIsEditing(false);
+    setIsEditModalOpen(false);
   };
 
   const handlePickAvatar = () => {
@@ -671,6 +685,7 @@ export const ProfilePage: React.FC = () => {
       persistCurrentUser(response.user);
       setSuccessMessage("Đã lưu thông tin hồ sơ.");
       setIsEditing(false);
+      setIsEditModalOpen(false);
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Không lưu được hồ sơ.";
@@ -851,6 +866,18 @@ export const ProfilePage: React.FC = () => {
 
   return (
     <div className="relative min-h-screen bg-[#08090d] text-slate-100 px-4 py-8 md:px-8 md:py-12 selection:bg-blue-500/30 overflow-x-hidden">
+      {/* Global Toast Notification */}
+      {successMessage && (
+        <div className="fixed bottom-10 right-6 md:right-10 z-[9999] flex items-center gap-3 px-5 py-4 rounded-xl bg-[#141E2B] border-l-4 border-l-[#1D9E75] border-y border-r border-white/10 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] animate-[slideIn_0.3s_ease-out_forwards]">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1D9E75]/20 text-[#1D9E75] shrink-0">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
+          <span className="text-white text-sm font-semibold">{successMessage}</span>
+        </div>
+      )}
+
       {/* Background glow elements */}
       <div className="absolute top-[-10%] left-[-5%] w-[45vw] h-[45vw] rounded-full bg-blue-900/10 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[20%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-indigo-900/8 blur-[130px] pointer-events-none" />
@@ -927,20 +954,7 @@ export const ProfilePage: React.FC = () => {
                   <span>{profileRole} LEVEL</span>
                 </div>
 
-                {/* Edit Profile Action Button */}
-                <button
-                  type="button"
-                  onClick={
-                    isEditing ? handleCancelEditing : handleStartEditing
-                  }
-                  className={`mt-6 w-full py-2.5 rounded-xl border text-xs font-bold tracking-wide uppercase transition-all flex items-center justify-center gap-2 ${isEditing
-                    ? "bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20"
-                    : "bg-white/[0.02] border-white/10 text-slate-200 hover:bg-white/[0.05] hover:border-white/20"
-                    }`}
-                >
-                  <PencilIcon />
-                  <span>{isEditing ? "HỦY CHỈNH SỬA" : "CHỈNH SỬA HỒ SƠ"}</span>
-                </button>
+
               </div>
 
 
@@ -972,11 +986,14 @@ export const ProfilePage: React.FC = () => {
                           Thông tin cá nhân
                         </h3>
                       </div>
-                      {isEditing && (
-                        <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold uppercase tracking-wider">
-                          Đang sửa
-                        </span>
-                      )}
+                      <button
+                        type="button"
+                        onClick={handleStartEditing}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/[0.08] transition-all active:scale-90"
+                        title="Chỉnh sửa hồ sơ"
+                      >
+                        <PencilIcon />
+                      </button>
                     </div>
 
                     {/* Fields list */}
@@ -986,18 +1003,9 @@ export const ProfilePage: React.FC = () => {
                         <p className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">
                           HỌ VÀ TÊN
                         </p>
-                        {isEditing ? (
-                          <input
-                            value={draftName}
-                            onChange={(e) => setDraftName(e.target.value)}
-                            placeholder="Nhập họ và tên"
-                            className="mt-1 h-9 w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-xs font-semibold text-white outline-none focus:border-blue-500/50 transition"
-                          />
-                        ) : (
-                          <p className="mt-1.5 text-sm font-semibold text-slate-200">
-                            {profileName}
-                          </p>
-                        )}
+                        <p className="mt-1.5 text-sm font-semibold text-slate-200">
+                          {profileName}
+                        </p>
                       </div>
 
                       {/* Phone */}
@@ -1005,18 +1013,9 @@ export const ProfilePage: React.FC = () => {
                         <p className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">
                           SỐ ĐIỆN THOẠI
                         </p>
-                        {isEditing ? (
-                          <input
-                            value={draftPhone}
-                            onChange={(e) => setDraftPhone(e.target.value)}
-                            placeholder="Số điện thoại"
-                            className="mt-1 h-9 w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-xs font-semibold text-white outline-none focus:border-blue-500/50 transition"
-                          />
-                        ) : (
-                          <p className="mt-1.5 text-sm font-semibold text-slate-200">
-                            {profilePhone}
-                          </p>
-                        )}
+                        <p className="mt-1.5 text-sm font-semibold text-slate-200">
+                          {profilePhone}
+                        </p>
                       </div>
 
                       {/* Email */}
@@ -1037,19 +1036,9 @@ export const ProfilePage: React.FC = () => {
                         <p className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">
                           ĐỊA CHỈ
                         </p>
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={draftAddress}
-                            onChange={(e) => setDraftAddress(e.target.value)}
-                            className="mt-1 h-9 w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-xs font-semibold text-white outline-none focus:border-blue-500/50 transition"
-                            placeholder="Nhập địa chỉ"
-                          />
-                        ) : (
-                          <p className="mt-1.5 text-sm font-semibold text-slate-200 truncate" title={currentUser?.address || "Chưa cập nhật"}>
-                            {currentUser?.address || "—"}
-                          </p>
-                        )}
+                        <p className="mt-1.5 text-sm font-semibold text-slate-200 truncate" title={currentUser?.address || "Chưa cập nhật"}>
+                          {currentUser?.address || "—"}
+                        </p>
                       </div>
 
                       {/* Join Date */}
@@ -1061,69 +1050,21 @@ export const ProfilePage: React.FC = () => {
                           {formatJoinDate(currentUser?.createdAt)}
                         </p>
                       </div>
-                    </div>
 
-                    {/* Date of birth inline editing field if editing */}
-                    {isEditing && (
-                      <div className="mt-4 border-t border-white/[0.04] pt-4">
-                        <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">
+                      {/* Date of Birth */}
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">
                           NGÀY SINH
-                        </label>
-                        <div className="mt-1.5 flex items-center gap-2">
-                          <input
-                            ref={dateOfBirthInputRef}
-                            type="date"
-                            value={draftDateOfBirth}
-                            onChange={(e) =>
-                              setDraftDateOfBirth(e.target.value)
-                            }
-                            max={new Date().toISOString().slice(0, 10)}
-                            min="1900-01-01"
-                            className="h-9 w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-xs font-semibold text-white outline-none focus:border-blue-500/50 transition"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const input = dateOfBirthInputRef.current as
-                                | (HTMLInputElement & {
-                                  showPicker?: () => void;
-                                })
-                                | null;
-                              input?.showPicker?.();
-                              input?.focus();
-                            }}
-                            className="h-9 w-9 rounded-xl border border-white/10 bg-slate-800 text-blue-100 flex items-center justify-center transition hover:bg-slate-700 active:scale-95"
-                            aria-label="Chọn ngày sinh"
-                            title="Chọn ngày sinh"
-                          >
-                            <CalendarIcon />
-                          </button>
-                        </div>
+                        </p>
+                        <p className="mt-1.5 text-sm font-semibold text-slate-200">
+                          {currentUser?.dateOfBirth
+                            ? new Date(currentUser.dateOfBirth).toLocaleDateString("vi-VN")
+                            : "—"}
+                        </p>
                       </div>
-                    )}
+                    </div>
                   </div>
 
-                  {/* Actions when editing */}
-                  {isEditing && (
-                    <div className="mt-6 border-t border-white/[0.05] pt-4 flex items-center justify-end gap-3.5">
-                      <button
-                        type="button"
-                        onClick={handleCancelEditing}
-                        disabled={isSaving}
-                        className="px-4 py-2 rounded-xl border border-white/10 bg-white/[0.01] text-xs font-bold text-slate-300 transition hover:bg-white/[0.05]"
-                      >
-                        Hủy
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSaveProfile}
-                        disabled={isSaving}
-                        className="px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-400 text-xs font-bold text-white transition flex items-center gap-1.5"
-                      >
-                        {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
-                      </button>
-                    </div>
-                  )}
                 </div>
 
                 {/* Wallet Balance Card */}
@@ -1421,8 +1362,7 @@ export const ProfilePage: React.FC = () => {
                             </span>
                             <div className="flex items-center gap-3">
                               <span className={`text-xs font-bold ${textClass}`}>
-                                {getSkillLevelLabel(skill.level)} ({percent}
-                                %)
+                                {getSkillLevelLabel(skill.level)}
                               </span>
 
                               {/* Hover actions trigger */}
@@ -1509,9 +1449,12 @@ export const ProfilePage: React.FC = () => {
                     </h3>
                   </div>
 
-                  <span className="text-xs font-bold text-slate-500 hover:text-slate-500 transition cursor-not-allowed select-none">
+                  <button
+                    onClick={() => setShowAllBookingsModal(true)}
+                    className="text-xs font-bold text-blue-400 hover:text-blue-300 transition"
+                  >
                     Xem tất cả
-                  </span>
+                  </button>
                 </div>
 
                 {/* Booking list empty placeholder as requested */}
@@ -1559,11 +1502,11 @@ export const ProfilePage: React.FC = () => {
                         myBookings.map((booking) => {
                           const isSuccess = booking.status === 'confirmed' || booking.status === 'completed';
                           const isCancelled = booking.status === 'cancelled';
-                          
+
                           // Check if booking is in the past
                           const bookingEndTime = new Date(`${booking.date.split('T')[0]}T${booking.end_time}:00`);
                           const isPlayed = isSuccess && bookingEndTime < new Date();
-                          
+
                           let statusClass = "bg-slate-500/10 text-slate-400 border-white/[0.05]";
                           let statusLabel = booking.status;
                           if (isPlayed) {
@@ -1599,7 +1542,7 @@ export const ProfilePage: React.FC = () => {
                               </td>
                               <td className="py-4 text-center">
                                 {!isPlayed && isSuccess ? (
-                                  <button 
+                                  <button
                                     onClick={() => setBookingToCancel(booking)}
                                     disabled={cancellingBookingId === booking._id}
                                     className="px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 text-xs font-bold hover:bg-rose-500/20 transition disabled:opacity-50"
@@ -1622,34 +1565,16 @@ export const ProfilePage: React.FC = () => {
           </div>
         )}
 
-        {/* Global Notification Success block */}
-        <div className="mt-4 min-h-6">
-          {successMessage ? (
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
-              <svg
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-              >
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-              <span>{successMessage}</span>
-            </div>
-          ) : null}
-        </div>
+
 
         {/* Cancel Confirmation Modal */}
         {bookingToCancel && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm transition duration-200">
             <div className="w-full max-w-md rounded-2xl border border-white/[0.05] bg-[#121320] p-6 shadow-[0_28px_70px_-35px_rgba(0,0,0,0.9)] relative overflow-hidden">
               <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-rose-500/40 to-transparent" />
-              
+
               <div className="flex items-center gap-3 mb-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-500/20 text-rose-400">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                </div>
+
                 <h3 className="text-lg font-bold text-white">Xác nhận hủy sân</h3>
               </div>
 
@@ -1718,6 +1643,220 @@ export const ProfilePage: React.FC = () => {
             </div>
           </div>
         ) : null}
+
+        {/* All Bookings Modal */}
+        {showAllBookingsModal && (
+          <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm">
+            <div className="w-full max-w-3xl rounded-3xl border border-white/[0.05] bg-[#10111a] p-6 shadow-[0_28px_70px_-35px_rgba(0,0,0,0.9)] relative overflow-hidden">
+              <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500/25 to-transparent" />
+              <div className="flex items-center justify-between border-b border-white/[0.05] pb-4 mb-5">
+                <h3 className="text-base font-bold text-white tracking-wide">Tất cả lịch đặt sân</h3>
+                <button onClick={() => setShowAllBookingsModal(false)}
+                  className="text-slate-400 hover:text-white transition text-lg font-bold px-1.5">✕</button>
+              </div>
+              <div className="overflow-y-auto max-h-[60vh] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-white/[0.04]">
+                      <th className="text-[10px] font-bold text-slate-500 tracking-wider uppercase py-3.5">SÂN</th>
+                      <th className="text-[10px] font-bold text-slate-500 tracking-wider uppercase py-3.5">NGÀY</th>
+                      <th className="text-[10px] font-bold text-slate-500 tracking-wider uppercase py-3.5">GIỜ</th>
+                      <th className="text-[10px] font-bold text-slate-500 tracking-wider uppercase py-3.5">TRẠNG THÁI</th>
+                      <th className="text-[10px] font-bold text-slate-500 tracking-wider uppercase py-3.5 text-right">CHI PHÍ</th>
+                      <th className="text-[10px] font-bold text-slate-500 tracking-wider uppercase py-3.5 text-center">THAO TÁC</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {myBookings.length === 0 ? (
+                      <tr><td colSpan={6} className="text-center py-10 text-xs text-slate-500 italic">Chưa có lịch đặt sân</td></tr>
+                    ) : myBookings.map((booking) => {
+                      const isSuccess = booking.status === 'confirmed' || booking.status === 'completed';
+                      const isCancelled = booking.status === 'cancelled';
+                      const bookingEndTime = new Date(`${booking.date.split('T')[0]}T${booking.end_time}:00`);
+                      const isPlayed = isSuccess && bookingEndTime < new Date();
+                      let statusClass = "bg-slate-500/10 text-slate-400 border-white/[0.05]";
+                      let statusLabel = booking.status;
+                      if (isPlayed) { statusClass = "bg-[#1D9E75]/10 text-[#1D9E75] border-[#1D9E75]/20"; statusLabel = "Đã chơi"; }
+                      else if (isSuccess) { statusClass = "bg-blue-500/10 text-blue-400 border-blue-500/20"; statusLabel = "Thành công"; }
+                      else if (isCancelled) { statusClass = "bg-rose-500/10 text-rose-400 border-rose-500/20"; statusLabel = "Đã hủy"; }
+                      return (
+                        <tr key={booking._id} className="border-b border-white/[0.02] hover:bg-white/[0.01] transition">
+                          <td className="py-3.5 text-sm font-semibold text-slate-200">
+                            {booking.court_name}
+                            <span className="block text-[10px] text-slate-500 font-normal">{booking.sub_court_name}</span>
+                          </td>
+                          <td className="py-3.5 text-sm text-slate-300">{new Date(booking.date).toLocaleDateString('vi-VN')}</td>
+                          <td className="py-3.5 text-sm font-mono text-slate-400">{booking.start_time} - {booking.end_time}</td>
+                          <td className="py-3.5">
+                            <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusClass}`}>{statusLabel}</span>
+                          </td>
+                          <td className="py-3.5 text-sm font-bold text-right text-emerald-400">
+                            {new Intl.NumberFormat('vi-VN').format(booking.total_price)} đ
+                          </td>
+                          <td className="py-3.5 text-center">
+                            {!isPlayed && isSuccess ? (
+                              <button
+                                onClick={() => { setBookingToCancel(booking); setShowAllBookingsModal(false); }}
+                                disabled={cancellingBookingId === booking._id}
+                                className="px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 text-xs font-bold hover:bg-rose-500/20 transition disabled:opacity-50"
+                              >Hủy sân</button>
+                            ) : <span className="text-xs text-slate-600">-</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-4 pt-4 border-t border-white/[0.05] flex justify-end">
+                <button onClick={() => setShowAllBookingsModal(false)}
+                  className="px-5 py-2 rounded-xl bg-white/[0.02] border border-white/10 hover:bg-white/[0.05] text-slate-200 text-xs font-bold uppercase transition">
+                  Đóng
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Profile Modal */}
+        {isEditModalOpen && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm">
+            <div className="w-full max-w-lg rounded-3xl border border-white/[0.05] bg-[#10111a] p-6 shadow-[0_28px_70px_-35px_rgba(0,0,0,0.9)] relative overflow-hidden">
+              <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500/30 to-transparent" />
+
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b border-white/[0.05] pb-4 mb-5">
+                <div className="flex items-center gap-2.5">
+                  <PencilIcon />
+                  <h3 className="text-base font-bold text-white tracking-wide">Chỉnh sửa hồ sơ</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCancelEditing}
+                  className="text-slate-400 hover:text-white transition text-lg font-bold px-1.5"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Avatar inside modal */}
+              <div className="flex items-center gap-4 mb-5">
+                <div className="relative w-16 h-16 shrink-0">
+                  <div className="w-16 h-16 rounded-full overflow-hidden border border-slate-700 bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-xl font-black text-white">
+                    {draftAvatarUrl ? (
+                      <img src={draftAvatarUrl} alt="avatar" className="h-full w-full object-cover" />
+                    ) : (
+                      avatarInitial
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handlePickAvatar}
+                    className="absolute inset-0 rounded-full bg-black/60 flex flex-col items-center justify-center text-white opacity-0 hover:opacity-100 transition cursor-pointer"
+                    title="Đổi ảnh đại diện"
+                  >
+                    <CameraIcon />
+                  </button>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">{profileName}</p>
+                  <button
+                    type="button"
+                    onClick={handlePickAvatar}
+                    className="text-[11px] text-blue-400 hover:text-blue-300 transition mt-0.5"
+                  >
+                    Thay đổi ảnh đại diện
+                  </button>
+                </div>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarFileChange}
+                  className="hidden"
+                />
+              </div>
+
+              {/* Fields */}
+              <div className="grid grid-cols-2 gap-x-5 gap-y-4 mb-4">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">HỌ VÀ TÊN</label>
+                  <input
+                    value={draftName}
+                    onChange={(e) => setDraftName(e.target.value)}
+                    placeholder="Nhập họ và tên"
+                    className="mt-1 h-9 w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-xs font-semibold text-white outline-none focus:border-blue-500/50 transition"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">SỐ ĐIỆN THOẠI</label>
+                  <input
+                    value={draftPhone}
+                    onChange={(e) => setDraftPhone(e.target.value)}
+                    placeholder="Số điện thoại"
+                    className="mt-1 h-9 w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-xs font-semibold text-white outline-none focus:border-blue-500/50 transition"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">ĐỊA CHỈ</label>
+                  <input
+                    type="text"
+                    value={draftAddress}
+                    onChange={(e) => setDraftAddress(e.target.value)}
+                    placeholder="Nhập địa chỉ"
+                    className="mt-1 h-9 w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-xs font-semibold text-white outline-none focus:border-blue-500/50 transition"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">NGÀY SINH</label>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <input
+                      ref={dateOfBirthInputRef}
+                      type="date"
+                      value={draftDateOfBirth}
+                      onChange={(e) => setDraftDateOfBirth(e.target.value)}
+                      max={new Date().toISOString().slice(0, 10)}
+                      min="1900-01-01"
+                      className="h-9 w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-xs font-semibold text-white outline-none focus:border-blue-500/50 transition"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const input = dateOfBirthInputRef.current as (HTMLInputElement & { showPicker?: () => void; }) | null;
+                        input?.showPicker?.();
+                        input?.focus();
+                      }}
+                      className="h-9 w-9 rounded-xl border border-white/10 bg-slate-800 text-blue-100 flex items-center justify-center transition hover:bg-slate-700 active:scale-95"
+                      aria-label="Chọn ngày sinh"
+                    >
+                      <CalendarIcon />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end gap-3.5 border-t border-white/[0.05] pt-4">
+                <button
+                  type="button"
+                  onClick={handleCancelEditing}
+                  disabled={isSaving}
+                  className="px-4 py-2 rounded-xl border border-white/10 bg-white/[0.01] text-xs font-bold text-slate-300 transition hover:bg-white/[0.05]"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveProfile}
+                  disabled={isSaving}
+                  className="px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-400 text-xs font-bold text-white transition flex items-center gap-1.5 shadow-md"
+                >
+                  {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Deposit QR Modal Popup */}
         <DepositModal
