@@ -4,6 +4,7 @@ import Wallet from "../models/walletModel.js";
 import WalletTransaction from "../models/walletTransactionModel.js";
 import PaymentWebhookLog from "../models/paymentWebhookLogModel.js";
 import { generateTransferCode, buildVietQRUrl } from "../utils/vietqr.js";
+import { processSubscriptionCheckout } from "./webhookController.js";
 
 const DEPOSIT_EXPIRY_MINUTES = 5;
 const MIN_DEPOSIT_AMOUNT = 2_000;
@@ -253,7 +254,8 @@ export async function handleWebhook(req: Request, res: Response): Promise<void> 
 			if (typeof field === "string") {
 				const match = field.match(codeRegex);
 				if (match) {
-					transferCode = match[0].toUpperCase();
+					// Normalize: strip dashes and uppercase (banks may insert dashes)
+					transferCode = match[0].replace(/-/g, "").toUpperCase();
 					break;
 				}
 			}
@@ -273,11 +275,25 @@ export async function handleWebhook(req: Request, res: Response): Promise<void> 
 			return;
 		}
 
-		const result = await processWebhookTransfer(transferCode);
+		// Smart fallback: try wallet transaction first, if not found try subscription checkout
+		const walletResult = await processWebhookTransfer(transferCode);
+
+		if (walletResult.success || walletResult.message !== "transaction_not_found") {
+			// Wallet transaction was found (or had a non-missing error like expired)
+			res.status(200).json({
+				message: walletResult.message,
+				success: walletResult.success,
+			});
+			return;
+		}
+
+		// Not found in wallet — try subscription checkout
+		const transferAmount = Number(rawData?.transferAmount || rawData?.amount) || 0;
+		const subResult = await processSubscriptionCheckout(transferCode, transferAmount);
 
 		res.status(200).json({
-			message: result.message,
-			success: result.success,
+			message: subResult.message,
+			success: subResult.success,
 		});
 	} catch (error: unknown) {
 		const errorMessage = error instanceof Error ? error.message : "unknown error";
@@ -306,28 +322,37 @@ export async function fakeWebhook(req: Request, res: Response): Promise<void> {
 			return;
 		}
 
+		const normalizedCode = transferCode.replace(/-/g, "").toUpperCase();
+
 		// Log as fake webhook
 		await PaymentWebhookLog.create({
 			provider: "fake",
-			rawData: { transferCode, fake: true },
-			transferCode,
+			rawData: { transferCode: normalizedCode, fake: true },
+			transferCode: normalizedCode,
 			processedAt: new Date(),
 		});
 
-		const result = await processWebhookTransfer(transferCode);
+		// Smart fallback: try wallet transaction first, if not found try subscription checkout
+		const walletResult = await processWebhookTransfer(normalizedCode);
 
-		if (!result.success && !result.alreadyProcessed) {
-			res.status(400).json({
-				message: result.message,
-				success: false,
-			});
+		if (walletResult.success || walletResult.message !== "transaction_not_found") {
+			if (!walletResult.success && !walletResult.alreadyProcessed) {
+				res.status(400).json({ message: walletResult.message, success: false });
+				return;
+			}
+			res.status(200).json({ message: walletResult.message, success: true });
 			return;
 		}
 
-		res.status(200).json({
-			message: result.message,
-			success: true,
-		});
+		// Not found in wallet — try subscription checkout
+		const subResult = await processSubscriptionCheckout(normalizedCode);
+
+		if (!subResult.success && !subResult.alreadyProcessed) {
+			res.status(400).json({ message: subResult.message, success: false });
+			return;
+		}
+
+		res.status(200).json({ message: subResult.message, success: true });
 	} catch (error: unknown) {
 		const errorMessage = error instanceof Error ? error.message : "unknown error";
 		res.status(500).json({

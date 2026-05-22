@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { NavLink } from 'react-router-dom';
-import { getCurrentUserProfile, type AuthUser } from '../../Axios/Axios';
+import { getCurrentUserProfile, getMySubscription, type AuthUser, type FESubscription } from '../../Axios/Axios';
 
 type OwnerSidebarKey = 'overview' | 'courts' | 'revenue' | 'bookings' | 'settings';
 
@@ -92,51 +92,97 @@ const secondaryItems: Array<{ key: OwnerSidebarKey | 'home' | 'logout'; label: s
 export const OwnerSidebar: React.FC<OwnerSidebarProps> = ({ activeKey, collapsed, onToggleCollapse }) => {
   const [logoSpinTurns, setLogoSpinTurns] = useState(0);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [activeSubscription, setActiveSubscription] = useState<FESubscription | null>(null);
+
+  const loadCurrentUserAndSubscription = async (isMounted: boolean) => {
+    try {
+      const response = await getCurrentUserProfile();
+      if (!isMounted) return;
+
+      setCurrentUser(response.user);
+
+      if (response.user.role === 'owner') {
+        try {
+          const sub = await getMySubscription();
+          if (isMounted) {
+            setActiveSubscription(sub);
+          }
+        } catch (err) {
+          console.error('Error fetching subscription:', err);
+          if (isMounted) {
+            setActiveSubscription(null);
+          }
+        }
+      }
+    } catch {
+      if (!isMounted) return;
+
+      const storedUser = localStorage.getItem('currentUser');
+      if (!storedUser) {
+        setCurrentUser(null);
+        setActiveSubscription(null);
+        return;
+      }
+
+      try {
+        const parsedUser = JSON.parse(storedUser) as AuthUser;
+        setCurrentUser(parsedUser);
+        if (parsedUser.role === 'owner') {
+          try {
+            const sub = await getMySubscription();
+            if (isMounted) {
+              setActiveSubscription(sub);
+            }
+          } catch (err) {
+            console.error('Error fetching subscription:', err);
+            if (isMounted) {
+              setActiveSubscription(null);
+            }
+          }
+        }
+      } catch {
+        setCurrentUser(null);
+        setActiveSubscription(null);
+      }
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
 
-    const loadCurrentUser = async () => {
-      try {
-        const response = await getCurrentUserProfile();
+    void loadCurrentUserAndSubscription(isMounted);
 
-        if (isMounted) {
-          setCurrentUser(response.user);
-        }
-      } catch {
-        if (!isMounted) {
-          return;
-        }
-
-        const storedUser = localStorage.getItem('currentUser');
-
-        if (!storedUser) {
-          setCurrentUser(null);
-          return;
-        }
-
-        try {
-          setCurrentUser(JSON.parse(storedUser) as AuthUser);
-        } catch {
-          setCurrentUser(null);
-        }
-      }
+    const handleUpdate = () => {
+      void loadCurrentUserAndSubscription(isMounted);
     };
 
-    void loadCurrentUser();
+    window.addEventListener('currentUserUpdated', handleUpdate);
 
     return () => {
       isMounted = false;
+      window.removeEventListener('currentUserUpdated', handleUpdate);
     };
   }, []);
 
   const displayName = currentUser?.name?.trim() || currentUser?.userName?.trim() || 'Tài khoản';
   const displayEmail = currentUser?.email?.trim() || 'Chưa có email';
+  
   const profileInitial = useMemo(() => {
     const sourceName = currentUser?.name?.trim() || currentUser?.userName?.trim() || 'U';
     return sourceName.charAt(0).toUpperCase();
   }, [currentUser?.name, currentUser?.userName]);
-  const profileBadgeLabel = currentUser?.role === 'admin' ? 'Admin' : currentUser?.role === 'owner' ? 'Owner' : 'User';
+
+  const profileBadgeLabel = useMemo(() => {
+    if (currentUser?.role === 'admin') return 'Admin';
+    if (currentUser?.role === 'user') return 'User';
+    
+    // For owner, show their plan name or 'Free Plan'
+    if (activeSubscription?.status === 'active' && activeSubscription.plan) {
+      return activeSubscription.plan.displayName || activeSubscription.plan.name;
+    }
+    return 'Chưa đăng ký';
+  }, [currentUser, activeSubscription]);
+
   const profileAvatarUrl = currentUser?.avatarUrl?.trim() || '';
 
   const handleLogoToggle = () => {

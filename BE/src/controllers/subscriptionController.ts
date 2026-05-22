@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import mongoose from "mongoose";
 import Plan from "../models/planModel.js";
 import Subscription, { BillingCycle } from "../models/subscriptionModel.js";
+import SubscriptionCheckout from "../models/subscriptionCheckoutModel.js";
+import { BANK_ID, ACCOUNT_NO, ACCOUNT_NAME, generateTransferCode } from "../utils/vietqr.js";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -20,17 +22,206 @@ function computeEndDate(startDate: Date, billingCycle: BillingCycle): Date {
 	return end;
 }
 
-// ─── handlePaymentSuccess ─────────────────────────────────────────────────────
+// ─── createCheckoutSession ────────────────────────────────────────────────────
+
+/**
+ * POST /api/subscriptions/checkout
+ *
+ * Triggered when an authenticated owner chooses a plan to buy or upgrade.
+ *
+ * Request Body:
+ *   { planId: string, billingCycle: 'monthly' | 'yearly' }
+ */
+export async function createCheckoutSession(req: Request, res: Response): Promise<void> {
+	try {
+		const ownerId = req.user?._id;
+		if (!ownerId) {
+			res.status(401).json({
+				success: false,
+				message: "Unauthorized. Owner context is missing.",
+				error: "unauthorized",
+			});
+			return;
+		}
+
+		const { planId, billingCycle } = req.body as {
+			planId?: string;
+			billingCycle?: "monthly" | "yearly";
+		};
+
+		// Validation of inputs
+		if (!planId || !mongoose.Types.ObjectId.isValid(planId)) {
+			res.status(400).json({
+				success: false,
+				message: "A valid planId is required.",
+				error: "invalid_plan_id",
+			});
+			return;
+		}
+
+		if (!billingCycle || !["monthly", "yearly"].includes(billingCycle)) {
+			res.status(400).json({
+				success: false,
+				message: "billingCycle must be either 'monthly' or 'yearly'.",
+				error: "invalid_billing_cycle",
+			});
+			return;
+		}
+
+		// a) Fetch the selected Plan from the database. Return 404 if not found or inactive.
+		// Return 400 if plan.isCustom is true (Enterprise plans are handled offline).
+		const plan = await Plan.findById(planId);
+		if (!plan) {
+			res.status(404).json({
+				success: false,
+				message: "Plan not found.",
+				error: "plan_not_found",
+			});
+			return;
+		}
+
+		if (!plan.isActive) {
+			res.status(400).json({
+				success: false,
+				message: "This plan is inactive and cannot be purchased.",
+				error: "plan_inactive",
+			});
+			return;
+		}
+
+		if (plan.isCustom) {
+			res.status(400).json({
+				success: false,
+				message: "Custom or Enterprise plans must be handled offline with support.",
+				error: "plan_is_custom",
+			});
+			return;
+		}
+
+		// b) Calculate the Base Price for the new plan based on the chosen billingCycle.
+		// For 'yearly', apply the formula: Math.round(plan.pricing.monthly * 0.83) * 12.
+		// For 'monthly', use plan.pricing.monthly.
+		let basePrice = 0;
+		if (billingCycle === "yearly") {
+			basePrice = Math.round(plan.pricing.monthly * 0.83) * 12;
+		} else {
+			basePrice = plan.pricing.monthly;
+		}
+
+		// c) Support Seamless UPGRADES (Pro-Rata Calculation): Check if the owner has an existing subscription with status: "active".
+		// If they are upgrading to a higher-priced plan:
+		// - Calculate the unused value of the current subscription: Remaining Days = (currentSub.endDate - Current Date) / Total Subscription Days.
+		// - Unused Credit = currentSub.amountPaid * (Remaining Days).
+		// - Net Amount to Pay = Base Price of New Plan - Unused Credit. Ensure Net Amount is at least 0.
+		let netAmount = basePrice;
+		let unusedCredit = 0;
+		let isUpgrade = false;
+
+		const currentSub = await Subscription.findOne({
+			ownerId,
+			status: "active",
+		});
+
+		if (currentSub) {
+			// Compare base price of new plan with the amount paid for the current subscription
+			// to determine if it is an upgrade to a higher-priced plan.
+			if (basePrice > currentSub.amountPaid) {
+				isUpgrade = true;
+				const now = new Date();
+				const totalSubDaysMs = currentSub.endDate.getTime() - currentSub.startDate.getTime();
+				const remainingDaysMs = currentSub.endDate.getTime() - now.getTime();
+
+				if (totalSubDaysMs > 0 && remainingDaysMs > 0) {
+					const remainingDaysRatio = remainingDaysMs / totalSubDaysMs;
+					unusedCredit = Math.round(currentSub.amountPaid * remainingDaysRatio);
+					netAmount = basePrice - unusedCredit;
+					if (netAmount < 0) {
+						netAmount = 0;
+					}
+				}
+			}
+		}
+
+		// d) Store a temporary tracking object/document or payment log in your DB containing the generated paymentCode
+		// (format: PAY + YYYYMMDD + 5 random alphanumeric characters) to uniquely map to this pending payment.
+		let paymentCode = "";
+		let isUnique = false;
+		let attempts = 0;
+
+		while (!isUnique && attempts < 10) {
+			const code = generateTransferCode("payment");
+			const existingCheckout = await SubscriptionCheckout.findOne({ paymentCode: code });
+			if (!existingCheckout) {
+				paymentCode = code;
+				isUnique = true;
+			}
+			attempts++;
+		}
+
+		if (!paymentCode) {
+			res.status(500).json({
+				success: false,
+				message: "Failed to generate a unique payment code. Please try again.",
+				error: "payment_code_generation_failed",
+			});
+			return;
+		}
+
+		// Expire checkout session in 1 hour
+		const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+		await SubscriptionCheckout.create({
+			paymentCode,
+			ownerId,
+			planId: plan._id,
+			billingCycle,
+			amountToPay: netAmount,
+			status: "pending",
+			expiresAt,
+		});
+
+		// e) Generate and return a VietQR image link using this format:
+		// https://img.vietqr.io/image/<BANK_ID>-<ACCOUNT_NO>-qr_only.png?amount=${netAmount}&addInfo=${paymentCode}&accountName=${ACCOUNT_NAME}
+		// along with the calculated amount.
+		const encodedAccountName = encodeURIComponent(ACCOUNT_NAME);
+		const qrUrl = `https://img.vietqr.io/image/${BANK_ID}-${ACCOUNT_NO}-compact2.jpg?amount=${netAmount}&addInfo=${paymentCode}&accountName=${encodedAccountName}`;
+
+		res.status(200).json({
+			success: true,
+			message: "Checkout session created successfully.",
+			checkout: {
+				paymentCode,
+				qrUrl,
+				amount: netAmount,
+				basePrice,
+				unusedCredit,
+				isUpgrade,
+				billingCycle,
+				plan: {
+					id: String(plan._id),
+					name: plan.name,
+					displayName: plan.displayName,
+				},
+				expiresAt: expiresAt.toISOString(),
+			},
+		});
+	} catch (error: unknown) {
+		const errorMessage = error instanceof Error ? error.message : "unknown error";
+		console.error("[subscriptionController] createCheckoutSession error:", errorMessage);
+		res.status(500).json({
+			success: false,
+			message: "Failed to create checkout session.",
+			error: errorMessage,
+		});
+	}
+}
+
+// ─── handlePaymentSuccess (Legacy / Manual Activation Flow) ──────────────────
 
 /**
  * POST /api/subscriptions/payment-success
  *
- * Triggered after a successful VietQR / SePay payment confirmation.
- * Idempotent: if the owner already has an active subscription for the same
- * plan, it is renewed rather than duplicated.
- *
- * Body:
- *   { ownerId: string, planId: string, billingCycle: "monthly" | "yearly" }
+ * Triggered manually or after confirmation of manual payment.
  */
 export async function handlePaymentSuccess(req: Request, res: Response): Promise<void> {
 	const session = await mongoose.startSession();
@@ -41,8 +232,6 @@ export async function handlePaymentSuccess(req: Request, res: Response): Promise
 			planId?: string;
 			billingCycle?: BillingCycle;
 		};
-
-		// ── Input validation ──────────────────────────────────────────────────
 
 		if (!ownerId || !mongoose.isValidObjectId(ownerId)) {
 			res.status(400).json({
@@ -71,8 +260,6 @@ export async function handlePaymentSuccess(req: Request, res: Response): Promise
 			return;
 		}
 
-		// ── Fetch the plan ────────────────────────────────────────────────────
-
 		const plan = await Plan.findById(planId);
 
 		if (!plan) {
@@ -93,24 +280,14 @@ export async function handlePaymentSuccess(req: Request, res: Response): Promise
 			return;
 		}
 
-		// ── Build dates & price ───────────────────────────────────────────────
-
 		const startDate = new Date();
 		const endDate = computeEndDate(startDate, billingCycle);
 		const amountPaid =
-			billingCycle === "monthly" ? plan.pricing.monthly : plan.pricing.yearly;
-
-		// ── Upsert subscription inside a transaction ──────────────────────────
-		// Strategy:
-		//   1. Cancel any currently active subscription (different plan or renewal).
-		//   2. Create a fresh subscription with a features snapshot from the plan.
-		// This keeps historical records intact for auditing.
+			billingCycle === "monthly" ? plan.pricing.monthly : plan.pricing.yearly || (plan.pricing.monthly * 12);
 
 		let subscription: InstanceType<typeof Subscription>;
 
 		await session.withTransaction(async () => {
-			// Expire all currently active subs for this owner (only one should exist
-			// at a time, but this handles edge cases defensively).
 			await Subscription.updateMany(
 				{
 					ownerId: new mongoose.Types.ObjectId(ownerId),
@@ -125,9 +302,6 @@ export async function handlePaymentSuccess(req: Request, res: Response): Promise
 				{ session }
 			);
 
-			// Create the new subscription with a *snapshot* of the plan's features.
-			// Using `plan.features.toObject()` ensures we detach from the Plan
-			// document and store a plain object in the sub.
 			const [created] = await Subscription.create(
 				[
 					{
@@ -146,8 +320,6 @@ export async function handlePaymentSuccess(req: Request, res: Response): Promise
 
 			subscription = created;
 		});
-
-		// ── Success response ──────────────────────────────────────────────────
 
 		res.status(201).json({
 			success: true,
@@ -186,8 +358,7 @@ export async function handlePaymentSuccess(req: Request, res: Response): Promise
 /**
  * GET /api/subscriptions/me
  *
- * Returns the currently authenticated owner's active subscription,
- * or a 404 if they have none.
+ * Returns the currently authenticated owner's active subscription.
  */
 export async function getMySubscription(req: Request, res: Response): Promise<void> {
 	try {
@@ -258,7 +429,6 @@ export async function getMySubscription(req: Request, res: Response): Promise<vo
  * DELETE /api/subscriptions/me
  *
  * Cancels the authenticated owner's active subscription immediately.
- * The subscription remains in the DB with status "cancelled" for audit trails.
  */
 export async function cancelSubscription(req: Request, res: Response): Promise<void> {
 	try {
@@ -320,6 +490,40 @@ export async function getAllPlans(_req: Request, res: Response): Promise<void> {
 		res.status(500).json({
 			success: false,
 			message: "Failed to load plans.",
+			error: errorMessage,
+		});
+	}
+}
+
+// ─── getCheckoutStatus ────────────────────────────────────────────────────────
+/**
+ * GET /api/subscriptions/checkout-status/:paymentCode
+ *
+ * Public/User status endpoint to verify if a pending checkout has been completed.
+ */
+export async function getCheckoutStatus(req: Request, res: Response): Promise<void> {
+	try {
+		const { paymentCode } = req.params;
+		const checkout = await SubscriptionCheckout.findOne({ paymentCode });
+
+		if (!checkout) {
+			res.status(404).json({
+				success: false,
+				message: "Checkout session not found.",
+				error: "checkout_not_found",
+			});
+			return;
+		}
+
+		res.status(200).json({
+			success: true,
+			status: checkout.status, // "pending" | "completed" | "expired"
+		});
+	} catch (error: unknown) {
+		const errorMessage = error instanceof Error ? error.message : "unknown error";
+		res.status(500).json({
+			success: false,
+			message: "Failed to get checkout status.",
 			error: errorMessage,
 		});
 	}

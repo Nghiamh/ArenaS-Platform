@@ -146,7 +146,7 @@ export async function updateCurrentUserProfile(req: Request, res: Response): Pro
 
 		if (avatarUrl !== undefined) {
 			const normalizedAvatarUrl = normalizeOptionalText(avatarUrl);
-			if (normalizedAvatarUrl && normalizedAvatarUrl.length > 2_000_000) {
+			if (normalizedAvatarUrl && normalizedAvatarUrl.length > 5_000_000) {
 				throw new Error("avatar_too_large");
 			}
 
