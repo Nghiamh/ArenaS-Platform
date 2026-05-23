@@ -2,7 +2,7 @@ import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { NavLink } from 'react-router-dom';
 
-export type AdminSectionKey = 'dashboard' | 'stadiums' | 'users';
+export type AdminSectionKey = 'dashboard' | 'stadiums' | 'users' | 'moderation';
 
 type AdminSidebarProps = {
   activeKey: AdminSectionKey;
@@ -36,6 +36,13 @@ const StadiumIcon = () => (
     <path d="M4 12h16" />
     <path d="M8.5 9.5v5" />
     <path d="M15.5 9.5v5" />
+  </svg>
+);
+
+const ModerationIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    <path d="m9 12 2 2 4-4" />
   </svg>
 );
 
@@ -85,6 +92,13 @@ const sidebarItems: SidebarItem[] = [
     description: 'Quản lý tài khoản',
     to: '/admin/manage-users',
     icon: <UsersIcon />,
+  },
+  {
+    key: 'moderation',
+    label: 'Kiểm duyệt',
+    description: 'Chat, đánh giá, báo cáo',
+    to: '/admin/moderation',
+    icon: <ModerationIcon />,
   },
 ];
 
