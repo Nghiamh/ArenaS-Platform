@@ -478,6 +478,61 @@ export async function adminUpdateCourtStatus(
 	}
 }
 
+// ---------------------------------------------------------------------------
+// ADMIN — INCOME MANAGEMENT
+// ---------------------------------------------------------------------------
+
+export type AdminIncomeType = 'deposit' | 'subscription';
+
+export type AdminIncomeEntry = {
+	id: string;
+	type: AdminIncomeType;
+	amount: number;
+	userName: string;
+	userEmail: string;
+	description: string;
+	transferCode?: string;
+	createdAt: string;
+};
+
+export type AdminIncomeSummary = {
+	totalRevenue: number;
+	depositTotal: number;
+	depositCount: number;
+	subscriptionTotal: number;
+	subscriptionCount: number;
+	thisMonthRevenue: number;
+	lastMonthRevenue: number;
+};
+
+export type AdminIncomeResponse = {
+	message: string;
+	summary: AdminIncomeSummary;
+	total: number;
+	page: number;
+	limit: number;
+	totalPages: number;
+	items: AdminIncomeEntry[];
+};
+
+export async function adminGetIncome(params?: {
+	type?: 'all' | AdminIncomeType;
+	page?: number;
+	limit?: number;
+	dateFrom?: string;
+	dateTo?: string;
+}): Promise<AdminIncomeResponse> {
+	try {
+		const { data } = await axiosClient.get<AdminIncomeResponse>('/admin/income', {
+			headers: withAuthHeaders(),
+			params,
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
 export async function getPublicCourts(params?: { sport?: string }): Promise<PublicCourt[]> {
 	try {
 		const { data } = await axiosClient.get<PublicCourtsResponse>('/courts/public', {
