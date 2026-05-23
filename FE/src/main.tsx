@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/Layout';
+import { PrivateRoute } from './components/PrivateRoute';
 import { HomePage } from './pages/HomePage/HomePage';
 import { FindFieldPage } from './pages/FindFieldPage/FindFieldPage';
 import { LoginPage } from './pages/LoginPage/LoginPage';
@@ -37,88 +38,153 @@ function App() {
       }}
     >
       <Routes>
-        <Route
-          path="/"
-          element={
-            <Layout>
-              <HomePage />
-            </Layout>
-          }
-        />
+        {/* ─── Public routes ─────────────────────────────────── */}
+        <Route path="/" element={<Layout><HomePage /></Layout>} />
+        <Route path="/home" element={<Layout><HomePage /></Layout>} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/owner/dashboard" element={<OwnerDashboardScreen />} />
-        <Route path="/owner/manage-courts" element={<OwnerManageCourtScreen />} />
-        <Route path="/owner/revenue" element={<OwnerRevenueScreen />} />
-        <Route path="/owner/bookings" element={<OwnerBookingScheduleScreen />} />
-        <Route path="/owner/settings" element={<OwnerSettingsScreen />} />
-        <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-        <Route path="/admin/manage-stadiums" element={<AdminManageStadiumPage />} />
-        <Route path="/admin/manage-users" element={<AdminManageUsersPage />} />
-        <Route path="/admin/moderation" element={<AdminModerationPage />} />
-        <Route path="/admin/vouchers" element={<AdminVoucherPage />} />
-        <Route path="/admin/income" element={<AdminIncomePage />} />
+        <Route path="/tim-san" element={<Layout><FindFieldPage /></Layout>} />
+        <Route path="/bang-gia" element={<Layout><PriceListPage /></Layout>} />
+        <Route path="/courts/:courtId" element={<Layout><CourtDetailPage /></Layout>} />
+
+        {/* ─── Any logged-in user ────────────────────────────── */}
         <Route
           path="/profile"
           element={
-            <Layout>
-              <ProfilePage />
-            </Layout>
-          }
-        />
-        <Route
-          path="/home"
-          element={
-            <Layout>
-              <HomePage />
-            </Layout>
-          }
-        />
-        <Route
-          path="/tim-san"
-          element={
-            <Layout>
-              <FindFieldPage />
-            </Layout>
-          }
-        />
-        <Route
-          path="/bang-gia"
-          element={
-            <Layout>
-              <PriceListPage />
-            </Layout>
-          }
-        />
-        <Route path="/checkout" element={<CheckoutPage />} />
-        <Route path="/payment-qr" element={<VietQRPaymentPage />} />
-        <Route path="/payment-success" element={<PaymentSuccessPage />} />
-        <Route
-          path="/courts/:courtId"
-          element={
-            <Layout>
-              <CourtDetailPage />
-            </Layout>
+            <PrivateRoute>
+              <Layout><ProfilePage /></Layout>
+            </PrivateRoute>
           }
         />
         <Route
           path="/wallet"
           element={
-            <Layout>
-              <WalletPage />
-            </Layout>
+            <PrivateRoute>
+              <Layout><WalletPage /></Layout>
+            </PrivateRoute>
           }
         />
         <Route
-          path="*"
+          path="/checkout"
           element={
-            <Layout>
-              <HomePage />
-            </Layout>
+            <PrivateRoute>
+              <CheckoutPage />
+            </PrivateRoute>
           }
         />
+        <Route
+          path="/payment-qr"
+          element={
+            <PrivateRoute>
+              <VietQRPaymentPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/payment-success"
+          element={
+            <PrivateRoute>
+              <PaymentSuccessPage />
+            </PrivateRoute>
+          }
+        />
+
+        {/* ─── Owner only ────────────────────────────────────── */}
+        <Route
+          path="/owner/dashboard"
+          element={
+            <PrivateRoute allowedRoles={['owner']}>
+              <OwnerDashboardScreen />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/owner/manage-courts"
+          element={
+            <PrivateRoute allowedRoles={['owner']}>
+              <OwnerManageCourtScreen />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/owner/revenue"
+          element={
+            <PrivateRoute allowedRoles={['owner']}>
+              <OwnerRevenueScreen />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/owner/bookings"
+          element={
+            <PrivateRoute allowedRoles={['owner']}>
+              <OwnerBookingScheduleScreen />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/owner/settings"
+          element={
+            <PrivateRoute allowedRoles={['owner']}>
+              <OwnerSettingsScreen />
+            </PrivateRoute>
+          }
+        />
+
+        {/* ─── Admin only ────────────────────────────────────── */}
+        <Route
+          path="/admin/dashboard"
+          element={
+            <PrivateRoute allowedRoles={['admin']}>
+              <AdminDashboardPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/manage-stadiums"
+          element={
+            <PrivateRoute allowedRoles={['admin']}>
+              <AdminManageStadiumPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/manage-users"
+          element={
+            <PrivateRoute allowedRoles={['admin']}>
+              <AdminManageUsersPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/moderation"
+          element={
+            <PrivateRoute allowedRoles={['admin']}>
+              <AdminModerationPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/vouchers"
+          element={
+            <PrivateRoute allowedRoles={['admin']}>
+              <AdminVoucherPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/income"
+          element={
+            <PrivateRoute allowedRoles={['admin']}>
+              <AdminIncomePage />
+            </PrivateRoute>
+          }
+        />
+
+        {/* ─── Fallback ──────────────────────────────────────── */}
+        <Route path="*" element={<Layout><HomePage /></Layout>} />
       </Routes>
     </Router>
   );
