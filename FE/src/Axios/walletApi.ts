@@ -55,10 +55,6 @@ type DeductResponse = {
 	wallet: WalletInfo | null;
 };
 
-type FakeWebhookResponse = {
-	message: string;
-	success: boolean;
-};
 
 // ─── API Functions ──────────────────────────────────────────────────────────
 
@@ -119,18 +115,3 @@ export async function deductBalance(
 	}
 }
 
-export async function sendFakeWebhook(
-	transferCode: string
-): Promise<FakeWebhookResponse> {
-	try {
-		const { data } = await axiosClient.post<FakeWebhookResponse>(
-			'/payment/fake-webhook',
-			{ transferCode }
-		);
-		return data;
-	} catch (error: unknown) {
-		throw new Error(
-			error instanceof Error ? error.message : 'Failed to send fake webhook'
-		);
-	}
-}

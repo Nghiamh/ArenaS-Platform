@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Copy, Check, Loader2, QrCode, AlertCircle } from 'lucide-react';
-import { getSubscriptionCheckoutStatus, sendFakeSubscriptionPayment } from '../../Axios/Axios';
+import { getSubscriptionCheckoutStatus } from '../../Axios/Axios';
 
 interface OrderResponse {
   success: boolean;
@@ -36,7 +36,7 @@ export const VietQRPaymentPage: React.FC = () => {
   const [copiedField, setCopiedField] = useState<'amount' | 'code' | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [fakeLoading, setFakeLoading] = useState(false);
+
 
   useEffect(() => {
     if (orderData) {
@@ -132,42 +132,7 @@ export const VietQRPaymentPage: React.FC = () => {
     }
   };
 
-  const handleFakePayment = async () => {
-    if (!orderData?.paymentCode || orderData.paymentCode === 'PAYDEFAULT') {
-      setPaymentError("Mã thanh toán không hợp lệ.");
-      return;
-    }
-    
-    setFakeLoading(true);
-    setPaymentError(null);
-    try {
-      const res = await sendFakeSubscriptionPayment(orderData.paymentCode);
-      if (res.success) {
-        try {
-          localStorage.setItem('subscription_activated', '1');
-          window.dispatchEvent(new Event('currentUserUpdated'));
-        } catch (e) {}
 
-        navigate('/payment-success', {
-          state: {
-            planName: planInfo.planName,
-            price: planInfo.price,
-            paymentMethod: 'banking',
-            transactionId: orderData.paymentCode,
-            date: new Date().toLocaleDateString('vi-VN', {
-              hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
-            })
-          }
-        });
-      } else {
-        setPaymentError(res.message || "Giả lập thanh toán thất bại.");
-      }
-    } catch (err: any) {
-      setPaymentError(err.message || "Lỗi kết nối giả lập thanh toán.");
-    } finally {
-      setFakeLoading(false);
-    }
-  };
 
   const handleCopy = async (text: string, field: 'amount' | 'code') => {
     try {
@@ -313,7 +278,7 @@ export const VietQRPaymentPage: React.FC = () => {
                 
                 <button 
                   onClick={handleManualCheck}
-                  disabled={checkingStatus || fakeLoading}
+                  disabled={checkingStatus}
                   className="w-full mt-2 py-4 flex justify-center items-center gap-2 text-[15px] font-semibold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-70 disabled:cursor-not-allowed rounded-[1rem] shadow-[0_4px_20px_rgba(37,99,235,0.2)] hover:shadow-[0_4px_24px_rgba(37,99,235,0.3)] transition-all duration-300"
                 >
                   {checkingStatus ? (
@@ -323,22 +288,6 @@ export const VietQRPaymentPage: React.FC = () => {
                     </>
                   ) : (
                     'Tôi đã thanh toán'
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleFakePayment}
-                  disabled={checkingStatus || fakeLoading}
-                  className="w-full mt-2 py-3.5 flex justify-center items-center gap-2 text-[14px] font-semibold text-amber-400 bg-amber-950/20 border border-amber-500/20 hover:bg-amber-950/40 disabled:opacity-70 disabled:cursor-not-allowed rounded-[1.25rem] transition-all active:scale-[0.98]"
-                >
-                  {fakeLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
-                      Đang giả lập...
-                    </>
-                  ) : (
-                    '🧪 Giả lập thanh toán (Dev)'
                   )}
                 </button>
               </div>

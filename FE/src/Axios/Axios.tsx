@@ -735,19 +735,7 @@ export async function getSubscriptionCheckoutStatus(
 	}
 }
 
-export async function sendFakeSubscriptionPayment(
-	paymentCode: string,
-): Promise<{ success: boolean; message: string }> {
-	try {
-		const { data } = await axiosClient.post<{ success: boolean; message: string }>(
-			'/subscriptions/fake-payment',
-			{ paymentCode },
-		);
-		return data;
-	} catch (error: unknown) {
-		throw new Error(toErrorMessage(error));
-	}
-}
+
 
 export type MyStatusSubscriptionResponse = {
 	success: boolean;

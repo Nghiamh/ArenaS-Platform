@@ -232,42 +232,4 @@ export async function handleSepayWebhook(req: Request, res: Response): Promise<v
 	}
 }
 
-// ─── Fake Subscription Payment (Dev Only) ─────────────────────────────────────
 
-/**
- * POST /api/subscriptions/fake-payment
- *
- * Development-only endpoint to simulate a successful bank transfer payment for a subscription.
- */
-export async function fakeSubscriptionPayment(req: Request, res: Response): Promise<void> {
-	try {
-		const { paymentCode } = req.body as { paymentCode?: string };
-
-		if (!paymentCode || typeof paymentCode !== "string") {
-			res.status(400).json({
-				success: false,
-				message: "paymentCode is required.",
-				error: "missing_payment_code",
-			});
-			return;
-		}
-
-		const normalizedCode = paymentCode.replace(/-/g, "").toUpperCase();
-
-		const result = await processSubscriptionCheckout(normalizedCode);
-
-		if (!result.success && !result.alreadyProcessed) {
-			res.status(400).json(result);
-			return;
-		}
-
-		res.status(200).json(result);
-	} catch (error: unknown) {
-		const errorMessage = error instanceof Error ? error.message : "unknown error";
-		res.status(500).json({
-			success: false,
-			message: "Failed to simulate payment.",
-			error: errorMessage,
-		});
-	}
-}

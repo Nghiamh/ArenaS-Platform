@@ -306,61 +306,7 @@ export async function handleWebhook(req: Request, res: Response): Promise<void> 
 	}
 }
 
-/**
- * POST /api/payment/fake-webhook
- * Development-only endpoint to simulate a successful payment.
- */
-export async function fakeWebhook(req: Request, res: Response): Promise<void> {
-	try {
-		const { transferCode } = req.body as { transferCode?: string };
 
-		if (!transferCode || typeof transferCode !== "string") {
-			res.status(400).json({
-				message: "transferCode is required",
-				error: "missing_transfer_code",
-			});
-			return;
-		}
-
-		const normalizedCode = transferCode.replace(/-/g, "").toUpperCase();
-
-		// Log as fake webhook
-		await PaymentWebhookLog.create({
-			provider: "fake",
-			rawData: { transferCode: normalizedCode, fake: true },
-			transferCode: normalizedCode,
-			processedAt: new Date(),
-		});
-
-		// Smart fallback: try wallet transaction first, if not found try subscription checkout
-		const walletResult = await processWebhookTransfer(normalizedCode);
-
-		if (walletResult.success || walletResult.message !== "transaction_not_found") {
-			if (!walletResult.success && !walletResult.alreadyProcessed) {
-				res.status(400).json({ message: walletResult.message, success: false });
-				return;
-			}
-			res.status(200).json({ message: walletResult.message, success: true });
-			return;
-		}
-
-		// Not found in wallet — try subscription checkout
-		const subResult = await processSubscriptionCheckout(normalizedCode);
-
-		if (!subResult.success && !subResult.alreadyProcessed) {
-			res.status(400).json({ message: subResult.message, success: false });
-			return;
-		}
-
-		res.status(200).json({ message: subResult.message, success: true });
-	} catch (error: unknown) {
-		const errorMessage = error instanceof Error ? error.message : "unknown error";
-		res.status(500).json({
-			message: "failed to process fake webhook",
-			error: errorMessage,
-		});
-	}
-}
 
 /**
  * POST /api/payment/create-order
