@@ -18,6 +18,7 @@ import { AdminDashboardPage } from './pages/Admin/AdminDashboardPage';
 import { AdminManageStadiumPage } from './pages/Admin/AdminManageStadiumPage';
 import { AdminManageUsersPage } from './pages/Admin/AdminManageUsersPage';
 import { AdminModerationPage } from './pages/Admin/AdminModerationPage';
+import { AdminVoucherPage } from './pages/Admin/AdminVoucherPage';
 import { PriceListPage } from './pages/HomePage/PriceListPage';
 import CourtDetailPage from './pages/CourtDetailPage/CourtDetailPage';
 import { WalletPage } from './pages/WalletPage/WalletPage';
@@ -56,6 +57,7 @@ function App() {
         <Route path="/admin/manage-stadiums" element={<AdminManageStadiumPage />} />
         <Route path="/admin/manage-users" element={<AdminManageUsersPage />} />
         <Route path="/admin/moderation" element={<AdminModerationPage />} />
+        <Route path="/admin/vouchers" element={<AdminVoucherPage />} />
         <Route
           path="/profile"
           element={
