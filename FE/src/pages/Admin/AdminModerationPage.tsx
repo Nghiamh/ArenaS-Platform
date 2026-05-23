@@ -5,7 +5,7 @@ import { AdminLayout } from '../../components';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type ModerationTab = 'reviews' | 'chat' | 'reports';
-type ItemStatus = 'pending' | 'approved' | 'removed' | 'dismissed';
+type ItemStatus = 'pending' | 'approved' | 'removed' | 'dismissed' | 'resolved';
 
 type ReviewItem = {
   id: string;
@@ -72,12 +72,14 @@ const statusLabel: Record<ItemStatus, string> = {
   approved:  'Đã duyệt',
   removed:   'Đã xóa',
   dismissed: 'Bỏ qua',
+  resolved:  'Đã xử lý',
 };
 const statusClass: Record<ItemStatus, string> = {
   pending:   'bg-amber-500/20 text-amber-200 ring-1 ring-amber-400/35',
   approved:  'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/35',
   removed:   'bg-rose-500/20 text-rose-200 ring-1 ring-rose-400/35',
   dismissed: 'bg-slate-500/20 text-slate-400 ring-1 ring-slate-500/25',
+  resolved:  'bg-cyan-500/20 text-cyan-200 ring-1 ring-cyan-400/30',
 };
 
 const formatDate = (iso: string) => {
