@@ -2,7 +2,7 @@ import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { NavLink } from 'react-router-dom';
 
-export type AdminSectionKey = 'dashboard' | 'stadiums';
+export type AdminSectionKey = 'dashboard' | 'stadiums' | 'users';
 
 type AdminSidebarProps = {
   activeKey: AdminSectionKey;
@@ -39,6 +39,14 @@ const StadiumIcon = () => (
   </svg>
 );
 
+const UsersIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+    <circle cx="9" cy="7" r="4" />
+    <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75M21 21v-2a4 4 0 0 0-3-3.85" />
+  </svg>
+);
+
 const HomeIcon = () => (
   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
     <path d="m3 10 9-7 9 7" />
@@ -70,6 +78,13 @@ const sidebarItems: SidebarItem[] = [
     description: 'Duyệt và cập nhật sân',
     to: '/admin/manage-stadiums',
     icon: <StadiumIcon />,
+  },
+  {
+    key: 'users',
+    label: 'Người dùng',
+    description: 'Quản lý tài khoản',
+    to: '/admin/manage-users',
+    icon: <UsersIcon />,
   },
 ];
 
