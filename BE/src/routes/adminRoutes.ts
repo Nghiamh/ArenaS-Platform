@@ -6,6 +6,7 @@ import {
 	adminApproveCourt,
 	adminRejectCourt,
 } from "../controllers/adminCourtController.js";
+import { adminGetIncome } from "../controllers/adminIncomeController.js";
 
 const adminRoutes = Router();
 
@@ -26,5 +27,8 @@ adminRoutes.get("/courts", ...adminOnly, adminGetAllCourts);
 adminRoutes.post("/courts/:id/approve", ...adminOnly, adminApproveCourt);
 adminRoutes.post("/courts/:id/reject",  ...adminOnly, adminRejectCourt);
 adminRoutes.put("/courts/:id/status",   ...adminOnly, adminUpdateCourtStatus);
+
+// GET  /api/admin/income  — all "+"-direction revenue (deposits + subscriptions)
+adminRoutes.get("/income", ...adminOnly, adminGetIncome);
 
 export default adminRoutes;

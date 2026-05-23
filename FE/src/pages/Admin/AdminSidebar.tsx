@@ -2,7 +2,7 @@ import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { NavLink } from 'react-router-dom';
 
-export type AdminSectionKey = 'dashboard' | 'stadiums' | 'users' | 'moderation' | 'vouchers';
+export type AdminSectionKey = 'dashboard' | 'stadiums' | 'users' | 'moderation' | 'vouchers' | 'income';
 
 type AdminSidebarProps = {
   activeKey: AdminSectionKey;
@@ -72,6 +72,13 @@ const HomeIcon = () => (
   </svg>
 );
 
+const IncomeIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+    <line x1="12" y1="1" x2="12" y2="23" />
+    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+  </svg>
+);
+
 const LogoutIcon = () => (
   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
     <path d="M10 7V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2v-1" />
@@ -116,6 +123,13 @@ const sidebarItems: SidebarItem[] = [
     description: 'Hệ thống & đối tác',
     to: '/admin/vouchers',
     icon: <VoucherIcon />,
+  },
+  {
+    key: 'income',
+    label: 'Thu nhập',
+    description: 'Nạp ví & mua gói',
+    to: '/admin/income',
+    icon: <IncomeIcon />,
   },
 ];
 
