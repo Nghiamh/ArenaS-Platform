@@ -297,7 +297,7 @@ export async function deleteCurrentUserSkill(skillId: string): Promise<BasicMess
 	}
 }
 
-export type OwnerCourtStatus = 'available' | 'closed' | 'open';
+export type OwnerCourtStatus = 'available' | 'closed' | 'open' | 'pending';
 
 export type OwnerCourtCoordinates = {
 	latitude: number;
@@ -391,6 +391,143 @@ export async function getOwnerCourts(): Promise<OwnerCourt[]> {
 		});
 
 		return data.courts;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ADMIN — COURT MANAGEMENT
+// ---------------------------------------------------------------------------
+
+export type AdminCourt = OwnerCourt & {
+	owner_id: string;
+};
+
+type AdminCourtsResponse = {
+	message: string;
+	total: number;
+	page: number;
+	limit: number;
+	totalPages: number;
+	courts: AdminCourt[];
+};
+
+type AdminCourtResponse = {
+	message: string;
+	court: AdminCourt;
+};
+
+export async function adminGetAllCourts(params?: {
+	status?: string;
+	sport?: string;
+	keyword?: string;
+	page?: number;
+	limit?: number;
+}): Promise<{ courts: AdminCourt[]; total: number; totalPages: number }> {
+	try {
+		const { data } = await axiosClient.get<AdminCourtsResponse>('/admin/courts', {
+			headers: withAuthHeaders(),
+			params,
+		});
+		return { courts: data.courts, total: data.total, totalPages: data.totalPages };
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function adminApproveCourt(courtId: string): Promise<AdminCourt> {
+	try {
+		const { data } = await axiosClient.post<AdminCourtResponse>(
+			`/admin/courts/${courtId}/approve`,
+			{},
+			{ headers: withAuthHeaders() },
+		);
+		return data.court;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function adminRejectCourt(courtId: string): Promise<AdminCourt> {
+	try {
+		const { data } = await axiosClient.post<AdminCourtResponse>(
+			`/admin/courts/${courtId}/reject`,
+			{},
+			{ headers: withAuthHeaders() },
+		);
+		return data.court;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function adminUpdateCourtStatus(
+	courtId: string,
+	status: 'available' | 'closed' | 'pending',
+): Promise<AdminCourt> {
+	try {
+		const { data } = await axiosClient.put<AdminCourtResponse>(
+			`/admin/courts/${courtId}/status`,
+			{ status },
+			{ headers: withAuthHeaders() },
+		);
+		return data.court;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ADMIN — INCOME MANAGEMENT
+// ---------------------------------------------------------------------------
+
+export type AdminIncomeType = 'deposit' | 'subscription';
+
+export type AdminIncomeEntry = {
+	id: string;
+	type: AdminIncomeType;
+	amount: number;
+	userName: string;
+	userEmail: string;
+	description: string;
+	transferCode?: string;
+	createdAt: string;
+};
+
+export type AdminIncomeSummary = {
+	totalRevenue: number;
+	depositTotal: number;
+	depositCount: number;
+	subscriptionTotal: number;
+	subscriptionCount: number;
+	thisMonthRevenue: number;
+	lastMonthRevenue: number;
+};
+
+export type AdminIncomeResponse = {
+	message: string;
+	summary: AdminIncomeSummary;
+	total: number;
+	page: number;
+	limit: number;
+	totalPages: number;
+	items: AdminIncomeEntry[];
+};
+
+export async function adminGetIncome(params?: {
+	type?: 'all' | AdminIncomeType;
+	page?: number;
+	limit?: number;
+	dateFrom?: string;
+	dateTo?: string;
+}): Promise<AdminIncomeResponse> {
+	try {
+		const { data } = await axiosClient.get<AdminIncomeResponse>('/admin/income', {
+			headers: withAuthHeaders(),
+			params,
+		});
+		return data;
 	} catch (error: unknown) {
 		throw new Error(toErrorMessage(error));
 	}
