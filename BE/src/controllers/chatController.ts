@@ -74,6 +74,7 @@ export async function getChatHistory(req: Request, res: Response): Promise<void>
 			votesRemaining: Math.max(0, totalParties - match.chat_deleted_by.length),
 			chat_deleted_by: match.chat_deleted_by.map((id: any) => id.toString()),
 			canVote: isParticipant, // only participants can vote, not the court owner
+			court_id: match.court_id ? (typeof match.court_id === 'object' && '_id' in match.court_id ? (match.court_id as any)._id.toString() : match.court_id.toString()) : undefined,
 			pagination: {
 				page,
 				limit,

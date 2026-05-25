@@ -8,6 +8,7 @@ import {
 	Loader2,
 	MessageSquareOff,
 	ShieldAlert,
+	MapPin,
 } from 'lucide-react';
 import {
 	getChatHistory,
@@ -15,7 +16,6 @@ import {
 	type ChatMessageData,
 } from '../../Axios/matchmakingApi';
 import { useSocket } from '../../hooks/useSocket';
-import './ChatPage.css';
 
 function formatMessageTime(isoStr: string): string {
 	try {
@@ -53,6 +53,7 @@ export const ChatPage: React.FC = () => {
 	const [chatDeletedBy, setChatDeletedBy] = useState<string[]>([]);
 	const [showScrollFab, setShowScrollFab] = useState(false);
 	const [error, setError] = useState('');
+	const [courtId, setCourtId] = useState<string | null>(null);
 
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -113,6 +114,9 @@ export const ChatPage: React.FC = () => {
 					if (res.canVote !== undefined) {
 						setCanVote(res.canVote);
 					}
+					if (res.court_id) {
+						setCourtId(res.court_id);
+					}
 				}
 			})
 			.catch((err) => {
@@ -170,7 +174,9 @@ export const ChatPage: React.FC = () => {
 	}, []);
 
 	const scrollToBottom = useCallback(() => {
-		messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+		if (messagesContainerRef.current) {
+			messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+		}
 	}, []);
 
 	// Send message
@@ -237,8 +243,8 @@ export const ChatPage: React.FC = () => {
 
 	if (!matchId) {
 		return (
-			<div className="chat-page">
-				<div className="chat-deleted-overlay">
+			<div className="h-[calc(100vh-80px)] flex flex-col max-w-[720px] mx-auto overflow-hidden bg-[#030712]">
+				<div className="flex flex-col items-center justify-center flex-1 gap-4 p-8 animate-in fade-in slide-in-from-bottom-4">
 					<ShieldAlert className="w-12 h-12 text-red-400" />
 					<p className="text-slate-400">Match không hợp lệ.</p>
 					<button
@@ -253,9 +259,9 @@ export const ChatPage: React.FC = () => {
 	}
 
 	return (
-		<div className="chat-page">
+		<div className="h-[calc(100vh-80px)] flex flex-col max-w-[720px] mx-auto overflow-hidden bg-[#030712]">
 			{/* Header */}
-			<div className="chat-header">
+			<div className="shrink-0 z-20 px-5 py-4 border-b border-slate-700/60 bg-slate-950/92 backdrop-blur-md">
 				<div className="flex items-center gap-3">
 					<button
 						type="button"
@@ -299,7 +305,7 @@ export const ChatPage: React.FC = () => {
 
 			{/* Vote remaining banner */}
 			{deleteVotesRemaining != null && deleteVotesRemaining > 0 && !chatDeleted && (
-				<div className="chat-vote-banner text-amber-300">
+				<div className="mx-5 my-2 px-4 py-2.5 rounded-xl text-[0.8rem] border border-slate-700/60 bg-slate-800/60 flex items-center gap-2 text-amber-300">
 					<ShieldAlert className="w-4 h-4 shrink-0" />
 					<span>
 						Đã vote xoá. Còn cần <strong>{deleteVotesRemaining}</strong> vote nữa để xoá chat.
@@ -323,7 +329,7 @@ export const ChatPage: React.FC = () => {
 
 			{/* Chat deleted */}
 			{chatDeleted && !loading && (
-				<div className="chat-deleted-overlay">
+				<div className="flex flex-col items-center justify-center flex-1 gap-4 p-8 animate-in fade-in slide-in-from-bottom-4">
 					<MessageSquareOff className="w-14 h-14 text-slate-600" />
 					<p className="text-slate-400 text-sm text-center">
 						Lịch sử chat đã được xoá bởi tất cả các bên.
@@ -342,11 +348,11 @@ export const ChatPage: React.FC = () => {
 				<>
 					<div
 						ref={messagesContainerRef}
-						className="chat-messages arena-scroll"
+						className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-2 scroll-smooth overscroll-contain arena-scroll"
 						onScroll={handleScroll}
 					>
 						{messages.length === 0 && (
-							<div className="chat-system-msg mt-8">
+							<div className="text-center text-xs text-slate-500 py-2 mt-8">
 								<p>Chưa có tin nhắn nào. Hãy bắt đầu cuộc trò chuyện! 👋</p>
 							</div>
 						)}
@@ -359,13 +365,13 @@ export const ChatPage: React.FC = () => {
 							return (
 								<div
 									key={msg._id}
-									className={`chat-bubble ${isMine ? 'chat-bubble-mine' : 'chat-bubble-other'}`}
+									className={`w-fit max-w-[78%] px-4 py-2.5 rounded-2xl break-words animate-in fade-in slide-in-from-bottom-2 duration-300 leading-relaxed ${isMine ? "self-end bg-gradient-to-br from-blue-600 to-cyan-600 text-white rounded-br-md" : "self-start bg-slate-800/85 border border-slate-700/60 text-slate-200 rounded-bl-md"}`}
 								>
 									{showName && (
-										<div className="chat-sender-name">{getSenderName(msg.sender_id)}</div>
+										<div className="text-[0.7rem] font-semibold text-blue-400 mb-0.5">{getSenderName(msg.sender_id)}</div>
 									)}
-									<div className="text-sm">{msg.message}</div>
-									<div className="chat-bubble-time">
+									<div className="text-sm whitespace-pre-wrap">{msg.message}</div>
+									<div className={`text-[0.65rem] mt-1 opacity-60 ${isMine ? "text-right text-white/70" : "text-left text-slate-400"}`}>
 										{formatMessageTime(msg.createdAt)}
 									</div>
 								</div>
@@ -380,14 +386,14 @@ export const ChatPage: React.FC = () => {
 						<button
 							type="button"
 							onClick={scrollToBottom}
-							className="chat-scroll-fab"
+							className="sticky bottom-[80px] self-center flex items-center justify-center w-9 h-9 rounded-full bg-slate-800/90 border border-slate-700/50 text-slate-400 transition hover:bg-blue-500/20 hover:border-blue-500/40 hover:text-blue-400 z-10"
 						>
 							<ChevronDown className="w-4 h-4" />
 						</button>
 					)}
 
 					{/* Input area */}
-					<div className="chat-input-area">
+					<div className="shrink-0 px-5 py-3.5 border-t border-slate-700/60 bg-slate-950/95 backdrop-blur-md">
 						<div className="flex items-center gap-2.5">
 							<input
 								ref={inputRef}
@@ -396,7 +402,7 @@ export const ChatPage: React.FC = () => {
 								onChange={(e) => setInputText(e.target.value)}
 								onKeyDown={handleKeyDown}
 								placeholder="Nhập tin nhắn..."
-								className="chat-input"
+								className="flex-1 bg-slate-800/65 border border-slate-700/60 rounded-xl px-4 py-3 text-white text-sm outline-none transition focus:border-blue-500/50 placeholder:text-slate-500"
 								maxLength={1000}
 								autoComplete="off"
 							/>
@@ -404,9 +410,17 @@ export const ChatPage: React.FC = () => {
 								type="button"
 								onClick={handleSend}
 								disabled={!inputText.trim() || sending}
-								className="chat-send-btn"
+								className="flex shrink-0 items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-600 border-none text-white transition hover:brightness-110 hover:shadow-[0_0_16px_rgba(59,130,246,0.3)] disabled:opacity-40 disabled:cursor-not-allowed"
 							>
 								<Send className="w-4 h-4" />
+							</button>
+							<button
+								type="button"
+								title="Đặt Sân"
+								onClick={() => navigate(courtId ? `/courts/${courtId}` : '/tim-san', { state: { fromMatch: matchId } })}
+								className="flex shrink-0 items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-r from-violet-600 to-purple-500 text-white shadow-lg transition hover:shadow-violet-500/40 hover:brightness-110"
+							>
+								<MapPin className="w-5 h-5" />
 							</button>
 						</div>
 					</div>
