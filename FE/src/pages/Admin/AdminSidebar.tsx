@@ -2,7 +2,7 @@ import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { NavLink } from 'react-router-dom';
 
-export type AdminSectionKey = 'dashboard' | 'stadiums';
+export type AdminSectionKey = 'dashboard' | 'stadiums' | 'users' | 'moderation' | 'vouchers' | 'income';
 
 type AdminSidebarProps = {
   activeKey: AdminSectionKey;
@@ -39,11 +39,43 @@ const StadiumIcon = () => (
   </svg>
 );
 
+const VoucherIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+    <path d="M20 12V22H4V12" />
+    <path d="M22 7H2v5h20V7z" />
+    <path d="M12 22V7" />
+    <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
+    <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+  </svg>
+);
+
+const ModerationIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    <path d="m9 12 2 2 4-4" />
+  </svg>
+);
+
+const UsersIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+    <circle cx="9" cy="7" r="4" />
+    <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75M21 21v-2a4 4 0 0 0-3-3.85" />
+  </svg>
+);
+
 const HomeIcon = () => (
   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
     <path d="m3 10 9-7 9 7" />
     <path d="M5 10v10h14V10" />
     <path d="M10 20v-6h4v6" />
+  </svg>
+);
+
+const IncomeIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+    <line x1="12" y1="1" x2="12" y2="23" />
+    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
   </svg>
 );
 
@@ -70,6 +102,34 @@ const sidebarItems: SidebarItem[] = [
     description: 'Duyệt và cập nhật sân',
     to: '/admin/manage-stadiums',
     icon: <StadiumIcon />,
+  },
+  {
+    key: 'users',
+    label: 'Người dùng',
+    description: 'Quản lý tài khoản',
+    to: '/admin/manage-users',
+    icon: <UsersIcon />,
+  },
+  {
+    key: 'moderation',
+    label: 'Kiểm duyệt',
+    description: 'Chat, đánh giá, báo cáo',
+    to: '/admin/moderation',
+    icon: <ModerationIcon />,
+  },
+  {
+    key: 'vouchers',
+    label: 'Kho Voucher',
+    description: 'Hệ thống & đối tác',
+    to: '/admin/vouchers',
+    icon: <VoucherIcon />,
+  },
+  {
+    key: 'income',
+    label: 'Thu nhập',
+    description: 'Nạp ví & mua gói',
+    to: '/admin/income',
+    icon: <IncomeIcon />,
   },
 ];
 

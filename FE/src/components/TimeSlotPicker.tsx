@@ -1,162 +1,172 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export type SlotStatus = 'available' | 'booked' | 'locked';
 
 export interface TimeSlot {
-  start: string; // '06:00'
-  end: string;   // '06:30'
+  startHour: number;
+  endHour: number;
+  startLabel: string;
+  endLabel: string;
   status: SlotStatus;
 }
 
 interface TimeSlotPickerProps {
   slots: TimeSlot[];
-  onChange: (range: { start_time: string; end_time: string } | null) => void;
+  startHour: number;
+  endHour: number;
+  onChange: (startHour: number, endHour: number) => void;
 }
 
-export const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({ slots, onChange }) => {
-  // Save indexes of the selected range [startIndex, endIndex]
-  const [selection, setSelection] = useState<[number, number] | null>(null);
+export const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({ slots, startHour, endHour, onChange }) => {
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // When slots change (e.g., changing date or court), reset selection
-  useEffect(() => {
-    setSelection(null);
-    onChange(null);
-  }, [slots]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const checkRangeValidity = (startIdx: number, endIdx: number): boolean => {
-    const min = Math.min(startIdx, endIdx);
-    const max = Math.max(startIdx, endIdx);
-    for (let i = min; i <= max; i++) {
-      if (slots[i].status !== 'available') {
-        return false;
-      }
-    }
-    return true;
+  const showError = (msg: string) => {
+    setErrorMsg(msg);
+    setTimeout(() => setErrorMsg(null), 3000);
   };
 
-  const handleSlotClick = (index: number) => {
-    if (slots[index].status !== 'available') return; // Cannot click booked/locked
-
-    if (!selection) {
-      // First click: select single slot
-      setSelection([index, index]);
-      onChange({ start_time: slots[index].start, end_time: slots[index].end });
-    } else {
-      const [start, end] = selection;
-      
-      // If user clicks the same single slot again, deselect
-      if (start === end && index === start) {
-        setSelection(null);
-        onChange(null);
-        return;
+  const checkRangeValidity = (sHour: number, eHour: number): boolean => {
+    return slots.every(slot => {
+      // Check if slot overlaps with the requested range
+      // A slot overlaps if its start is strictly less than eHour AND its end is strictly greater than sHour
+      if (slot.startHour < eHour && slot.endHour > sHour) {
+        return slot.status === 'available';
       }
+      return true;
+    });
+  };
 
-      // If user already has a range, a new click resets to a single slot selection
-      if (start !== end) {
-        setSelection([index, index]);
-        onChange({ start_time: slots[index].start, end_time: slots[index].end });
-        return;
-      }
+  const handleSlotClick = (slot: TimeSlot) => {
+    if (slot.status !== 'available') return;
 
-      // If user has a single slot and clicks another, form a range
-      const isValid = checkRangeValidity(start, index);
+    // If no selection or invalid selection, just select this single slot
+    if (startHour === 0 || endHour === 0) {
+      onChange(slot.startHour, slot.endHour);
+      return;
+    }
+
+    const isSingleSlot = (endHour - startHour) === 0.5;
+    const isAdjacentStart = slot.endHour === startHour;
+    const isAdjacentEnd = slot.startHour === endHour;
+
+    // If clicking exactly inside the current selection to toggle it off (only for single slot)
+    if (isSingleSlot && slot.startHour === startHour && slot.endHour === endHour) {
+      onChange(0, 0);
+      return;
+    }
+
+    // UX: If adjacent OR we only have a single slot selected, expand the range to include this slot
+    if (isAdjacentStart || isAdjacentEnd || isSingleSlot) {
+      const newStart = Math.min(startHour, slot.startHour);
+      const newEnd = Math.max(endHour, slot.endHour);
       
-      if (!isValid) {
-        alert('Không thể chọn khoảng thời gian chứa giờ đã có người đặt!');
-        // Reset selection to the newly clicked valid slot
-        setSelection([index, index]);
-        onChange({ start_time: slots[index].start, end_time: slots[index].end });
+      if (checkRangeValidity(newStart, newEnd)) {
+        onChange(newStart, newEnd);
       } else {
-        const newStart = Math.min(start, index);
-        const newEnd = Math.max(start, index);
-        setSelection([newStart, newEnd]);
-        onChange({ start_time: slots[newStart].start, end_time: slots[newEnd].end });
+        showError('Khoảng thời gian này có chứa khung giờ đã được đặt!');
+        // Fallback: just start a new selection from the clicked slot
+        onChange(slot.startHour, slot.endHour);
       }
+    } else {
+      // If we already have a multi-slot range and clicked a disjoint slot, start a new selection
+      onChange(slot.startHour, slot.endHour);
     }
-  };
-
-  const isSelected = (index: number) => {
-    if (!selection) return false;
-    const [start, end] = selection;
-    return index >= Math.min(start, end) && index <= Math.max(start, end);
   };
 
   return (
-    <div className="w-full">
-      <div className="mb-3 flex items-center justify-between text-sm">
-        <h3 className="font-semibold text-white">Chọn khung giờ</h3>
-        <div className="flex gap-4">
+    <div className="w-full mt-2 rounded-xl bg-[#0b1426] p-4 border border-white/[0.05] shadow-inner relative">
+      <AnimatePresence>
+        {errorMsg && (
+          <motion.div
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            className="absolute top-2 left-0 right-0 z-50 flex justify-center pointer-events-none"
+          >
+            <div className="rounded-lg bg-rose-500/90 backdrop-blur-sm px-4 py-2 text-xs font-bold text-white shadow-lg border border-rose-400/50">
+              {errorMsg}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-sm font-extrabold text-white">Chọn khung giờ</h3>
+        <div className="flex gap-3">
           <div className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-sm bg-white/10 ring-1 ring-white/20"></span>
-            <span className="text-xs text-slate-400">Trống</span>
+            <span className="h-3 w-3 rounded-[3px] bg-[#162032] ring-1 ring-white/10"></span>
+            <span className="text-[11px] font-semibold text-slate-400">Trống</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-sm bg-cyan-500/80 ring-1 ring-cyan-400"></span>
-            <span className="text-xs text-slate-400">Đang chọn</span>
+            <span className="h-3 w-3 rounded-[3px] bg-cyan-500 ring-1 ring-cyan-400"></span>
+            <span className="text-[11px] font-semibold text-slate-300">Đang chọn</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-sm bg-slate-700/50 relative overflow-hidden">
-                <span className="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_2px,rgba(255,255,255,0.1)_2px,rgba(255,255,255,0.1)_4px)]"></span>
+          <div className="flex items-center gap-1.5 relative">
+            <span className="h-3 w-3 rounded-[3px] bg-slate-800/80 ring-1 ring-white/5 overflow-hidden">
+                <span className="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_2px,rgba(255,255,255,0.05)_2px,rgba(255,255,255,0.05)_4px)]"></span>
             </span>
-            <span className="text-xs text-slate-400">Đã đặt</span>
+            <span className="text-[11px] font-semibold text-slate-400">Đã đặt</span>
           </div>
         </div>
       </div>
 
-      {slots.length === 0 ? (
-        <div className="py-8 text-center text-sm text-slate-400 italic bg-white/5 rounded-xl border border-white/10">
-          Không có khung giờ nào được tìm thấy.
-        </div>
-      ) : (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
-          {slots.map((slot, idx) => {
-            const selected = isSelected(idx);
-            const booked = slot.status !== 'available';
+      <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
+        {slots.map((slot) => {
+          // A slot is selected if its time range is completely within the selected startHour -> endHour
+          const isSelected = slot.startHour >= startHour && slot.endHour <= endHour;
+          const isBooked = slot.status !== 'available';
 
-            return (
-              <motion.button
-                key={`${slot.start}-${slot.end}`}
-                whileHover={!booked ? { scale: 1.05 } : {}}
-                whileTap={!booked ? { scale: 0.95 } : {}}
-                onClick={() => handleSlotClick(idx)}
-                disabled={booked}
-                className={`
-                  relative flex flex-col items-center justify-center rounded-xl border p-2 transition-colors overflow-hidden
-                  ${booked 
-                    ? 'cursor-not-allowed border-white/5 bg-slate-800/40 text-slate-500' 
-                    : selected 
-                      ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.2)]'
-                      : 'cursor-pointer border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:border-white/20'
-                  }
-                `}
-              >
-                {booked && (
-                  <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_4px,rgba(255,255,255,0.03)_4px,rgba(255,255,255,0.03)_8px)] pointer-events-none"></div>
-                )}
-                <span className="text-xs font-bold">{slot.start}</span>
-                <span className="text-[10px] opacity-60">đến</span>
-                <span className="text-xs font-bold">{slot.end}</span>
-              </motion.button>
-            );
-          })}
-        </div>
-      )}
-
-      {selection && (
+          return (
+            <motion.button
+              key={`${slot.startHour}-${slot.endHour}`}
+              type="button"
+              whileHover={!isBooked ? { scale: 1.05 } : {}}
+              whileTap={!isBooked ? { scale: 0.95 } : {}}
+              onClick={() => handleSlotClick(slot)}
+              disabled={isBooked}
+              className={`
+                relative flex flex-col items-center justify-center rounded-xl p-2 transition-all overflow-hidden border
+                ${isBooked 
+                  ? 'cursor-not-allowed border-transparent bg-white/[0.015] text-slate-600 opacity-60' 
+                  : isSelected
+                    ? 'border-cyan-400/50 bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 text-cyan-300 shadow-[0_4px_12px_rgba(34,211,238,0.15)] ring-1 ring-cyan-400/30 z-10'
+                    : 'cursor-pointer border-white/5 bg-[#162032] text-slate-400 hover:bg-[#1e2b42] hover:border-white/15 hover:text-slate-200'
+                }
+              `}
+            >
+              {isBooked && (
+                <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_4px,rgba(255,255,255,0.02)_4px,rgba(255,255,255,0.02)_8px)] pointer-events-none"></div>
+              )}
+              <span className={`text-[13px] font-black tracking-tight ${isSelected ? 'text-white' : ''}`}>
+                {slot.startLabel}
+              </span>
+              <span className={`text-[10px] font-bold opacity-60 ${isSelected ? 'text-cyan-100' : ''}`}>
+                {slot.endLabel}
+              </span>
+            </motion.button>
+          );
+        })}
+      </div>
+      
+      {startHour > 0 && endHour > 0 && (
         <motion.div 
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-4 rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-4 text-center"
+          className="mt-4 flex flex-wrap items-center justify-between rounded-xl border border-cyan-500/20 bg-gradient-to-r from-cyan-500/10 to-transparent px-4 py-3"
         >
-          <p className="text-sm text-cyan-200">
-            Khung giờ bạn chọn: <span className="font-bold text-cyan-400">{slots[Math.min(selection[0], selection[1])].start} - {slots[Math.max(selection[0], selection[1])].end}</span>
-          </p>
-          <p className="text-xs text-cyan-200/60 mt-1">
-            Tổng thời gian: {(Math.abs(selection[1] - selection[0]) + 1) * 30} phút
-          </p>
+          <div className="text-sm">
+             <span className="text-cyan-200/70 font-medium">Đã chọn: </span>
+             <span className="font-black text-cyan-300 text-[15px] ml-1">
+               {Math.floor(startHour).toString().padStart(2, '0')}:{startHour % 1 === 0.5 ? '30' : '00'} - {Math.floor(endHour).toString().padStart(2, '0')}:{endHour % 1 === 0.5 ? '30' : '00'}
+             </span>
+          </div>
+          <div className="text-xs font-bold text-cyan-400 bg-cyan-950/50 border border-cyan-500/20 px-2.5 py-1.5 rounded-lg">
+             {(endHour - startHour) * 60} phút
+          </div>
         </motion.div>
       )}
     </div>
   );
 };
+

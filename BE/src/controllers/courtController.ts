@@ -69,10 +69,10 @@ function parseQueryNumber(value: unknown, fieldName: string): number {
 
 function normalizeCourtStatus(value: unknown): CourtStatus {
 	if (value === undefined || value === null || value === "") {
-		return "available";
+		return "pending";
 	}
 
-	if (value === "available" || value === "closed") {
+	if (value === "available" || value === "closed" || value === "pending") {
 		return value;
 	}
 
@@ -272,7 +272,7 @@ export async function getPublicCourts(req: Request, res: Response): Promise<void
 	try {
 		const sportQuery = normalizeOptionalText(req.query.sport);
 		const filters: Record<string, unknown> = {
-			status: { $ne: "closed" },
+			status: { $in: ["available", "open"] },
 		};
 
 		Object.assign(filters, buildSportFilter(sportQuery));
@@ -302,7 +302,7 @@ export async function getPublicCourtById(req: Request, res: Response): Promise<v
 		}
 
 		const court = await Court.findById(courtId);
-		if (!court || court.status === "closed") {
+		if (!court || court.status === "closed" || court.status === "pending") {
 			res.status(404).json({ message: "court not found" });
 			return;
 		}
@@ -332,7 +332,7 @@ export async function getNearbyCourts(req: Request, res: Response): Promise<void
 
 		const sportQuery = normalizeOptionalText(req.query.sport);
 		const query = {
-			status: { $ne: "closed" },
+			status: { $in: ["available", "open"] },
 			...buildSportFilter(sportQuery),
 		};
 
@@ -383,7 +383,7 @@ export async function getCourtsByArea(req: Request, res: Response): Promise<void
 		const sportQuery = normalizeOptionalText(req.query.sport);
 
 		const filters: Record<string, unknown> = {
-			status: { $ne: "closed" },
+			status: { $in: ["available", "open"] },
 			coordinates: {
 				$geoWithin: {
 					$box: [
@@ -498,7 +498,7 @@ export async function createOwnerCourt(req: Request, res: Response): Promise<voi
 	try {
 		const user = req.user!;
 
-		const { name, sports, price_per_hour, location, coordinates, amenities, images, open_time, close_time, status, sub_courts } = req.body as {
+		const { name, sports, price_per_hour, location, coordinates, amenities, images, open_time, close_time, sub_courts } = req.body as {
 			name?: string;
 			sports?: unknown;
 			price_per_hour?: number | string;
@@ -508,7 +508,6 @@ export async function createOwnerCourt(req: Request, res: Response): Promise<voi
 			images?: unknown;
 			open_time?: string;
 			close_time?: string;
-			status?: CourtStatus;
 			sub_courts?: unknown;
 		};
 
@@ -521,9 +520,9 @@ export async function createOwnerCourt(req: Request, res: Response): Promise<voi
 		const normalizedImages = images === undefined ? [] : normalizeTextArray(images, "images");
 		const normalizedOpenTime = open_time ? open_time.trim() : "06:00";
 		const normalizedCloseTime = close_time ? close_time.trim() : "22:00";
-		const parsedStatus = parseStatus(status);
 		const parsedSubCourts = parseSubCourts(sub_courts);
 
+		// New courts always start as "pending" — admin must approve before going public
 		const createdCourt = await Court.create({
 			owner_id: user._id,
 			name: normalizedName,
@@ -536,7 +535,7 @@ export async function createOwnerCourt(req: Request, res: Response): Promise<voi
 			open_time: normalizedOpenTime,
 			close_time: normalizedCloseTime,
 			avg_rating: 0,
-			status: parsedStatus,
+			status: "pending",
 			number_of_courts: parsedSubCourts.length,
 			sub_courts: parsedSubCourts,
 		});

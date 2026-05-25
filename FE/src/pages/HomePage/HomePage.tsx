@@ -421,7 +421,9 @@ export const HomePage: React.FC = () => {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h3 className="text-xl font-bold text-white">{venue.name}</h3>
-                      <p className="mt-1 text-sm text-slate-400">⭐ {venue.rating} • 📍 {venue.distance}</p>
+                      <p className="mt-1 text-sm text-slate-400">
+                        {Number(venue.rating) > 0 ? `⭐ ${Number(venue.rating).toFixed(1)}` : <span className="italic opacity-60">Chưa có đánh giá</span>}
+                      </p>
                     </div>
                     <div className="text-right">
                       <p className="text-xs uppercase tracking-[0.12em] text-slate-400">từ</p>
