@@ -24,10 +24,7 @@ export const OwnerRevenueScreen: React.FC = () => {
   }, []);
 
   const formatCurrency = (amount: number) => {
-    if (amount >= 1000) {
-      return (amount / 1000).toLocaleString('vi-VN') + 'Kđ';
-    }
-    return amount.toLocaleString('vi-VN') + 'đ';
+    return amount.toLocaleString('vi-VN');
   };
 
   const cards = revenueData ? [
