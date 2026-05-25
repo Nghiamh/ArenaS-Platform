@@ -265,10 +265,13 @@ export async function userBookCourt(req: Request, res: Response) {
 			throw new Error('cannot_book_past_date');
 		}
 
-		// --- Bước 1: Tìm Court + Sub-court ---
 		const court = await Court.findById(court_id).session(session);
 		if (!court) {
 			throw new Error('court_not_found');
+		}
+
+		if (court.owner_id.toString() === userId.toString()) {
+			throw new Error('owner_cannot_book_own_court');
 		}
 
 		const subCourt = court.sub_courts?.find(
@@ -447,6 +450,7 @@ export async function userBookCourt(req: Request, res: Response) {
 			missing_fields: { status: 400, message: 'Thiếu thông tin đặt sân' },
 			cannot_book_past_date: { status: 400, message: 'Không thể đặt sân cho ngày đã qua' },
 			court_not_found: { status: 404, message: 'Không tìm thấy sân' },
+			owner_cannot_book_own_court: { status: 403, message: 'Bạn không thể tự đặt lịch cho sân của chính mình' },
 			invalid_time_range: { status: 400, message: 'Khung thời gian không hợp lệ' },
 			slot_already_booked: { status: 400, message: 'Khung giờ này đã có người đặt. Vui lòng chọn giờ khác.' },
 			wallet_not_found: { status: 404, message: 'Chưa có ví. Vui lòng tạo ví trước.' },
