@@ -295,14 +295,10 @@ export const LoginPage: React.FC = () => {
             </Link>
 
             <div className="max-w-xl pb-6 pt-10 sm:pt-16 lg:pt-0">
-              <div className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.24em] text-blue-400">
-                <span className="text-xl leading-none">⚡</span>
-                Đấu Trường Chờ Bạn
-              </div>
 
               <h1 className="mt-5 max-w-xl text-4xl font-black leading-[0.95] tracking-tight text-white sm:text-5xl lg:text-[4.5rem]">
-                Đặt Sân. Thi Đấu.
-                <span className="block text-blue-500">Chiến Thắng.</span>
+                Đặt Sân
+                <span className="block text-blue-500">Nhanh Chống.</span>
               </h1>
 
               <p className="mt-5 max-w-lg text-base leading-8 text-slate-300 sm:text-lg">
