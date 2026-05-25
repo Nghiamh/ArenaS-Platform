@@ -164,3 +164,86 @@ export async function deductBalance(req: Request, res: Response): Promise<void> 
 		await session.endSession();
 	}
 }
+
+/**
+ * GET /api/wallet/revenue
+ * Calculates the revenue for the current user (owner) for today, this week, and this month.
+ */
+export async function getMyRevenue(req: Request, res: Response): Promise<void> {
+	try {
+		const user = req.user!;
+		const wallet = await Wallet.findOne({ userId: user._id });
+
+		if (!wallet) {
+			res.status(200).json({
+				today: 0,
+				week: 0,
+				month: 0,
+				todayTrend: 0,
+				weekTrend: 0,
+				monthTrend: 0
+			});
+			return;
+		}
+
+		const now = new Date();
+		
+		const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+		const startOfYesterday = new Date(startOfToday.getTime() - 24 * 60 * 60 * 1000);
+
+		const dayOfWeek = now.getDay(); // 0 is Sunday
+		const diffToMonday = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+		const startOfWeek = new Date(now.getFullYear(), now.getMonth(), diffToMonday);
+		const startOfLastWeek = new Date(startOfWeek.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+		const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+		const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+		// Aggregate function
+		const getRevenueBetween = async (start: Date, end: Date) => {
+			const txs = await WalletTransaction.find({
+				walletId: wallet._id,
+				status: 'completed',
+				createdAt: { $gte: start, $lt: end },
+				bookingId: { $exists: true } // Only count transactions related to bookings
+			});
+
+			let revenue = 0;
+			for (const tx of txs) {
+				if (tx.type === 'deposit') revenue += tx.amount;
+				else if (tx.type === 'payment') revenue -= tx.amount; // Refund deduction
+			}
+			return Math.max(0, revenue);
+		};
+
+		const todayRev = await getRevenueBetween(startOfToday, now);
+		const yesterdayRev = await getRevenueBetween(startOfYesterday, startOfToday);
+
+		const weekRev = await getRevenueBetween(startOfWeek, now);
+		const lastWeekRev = await getRevenueBetween(startOfLastWeek, startOfWeek);
+
+		const monthRev = await getRevenueBetween(startOfMonth, now);
+		const lastMonthRev = await getRevenueBetween(startOfLastMonth, startOfMonth);
+
+		const calculateTrend = (current: number, previous: number) => {
+			if (previous === 0) return current > 0 ? 100 : 0;
+			return Math.round(((current - previous) / previous) * 100);
+		};
+
+		res.status(200).json({
+			today: todayRev,
+			todayTrend: calculateTrend(todayRev, yesterdayRev),
+			week: weekRev,
+			weekTrend: calculateTrend(weekRev, lastWeekRev),
+			month: monthRev,
+			monthTrend: calculateTrend(monthRev, lastMonthRev),
+		});
+
+	} catch (error: unknown) {
+		const errorMessage = error instanceof Error ? error.message : "unknown error";
+		res.status(500).json({
+			message: "failed to load revenue",
+			error: errorMessage,
+		});
+	}
+}

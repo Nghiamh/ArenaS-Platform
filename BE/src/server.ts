@@ -19,6 +19,15 @@ import matchmakingRoutes from "./routes/matchmakingRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import { startMatchmakingWorker } from "./services/matchmakingWorker.js";
 import { setupSocketHandlers } from "./services/socketHandler.js";
+import walletRoutes from "./routes/walletRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
+import bookingRoutes from "./routes/bookingRoutes.js";
+import subscriptionRoutes from "./routes/subscriptionRoutes.js";
+import planRoutes from "./routes/planRoutes.js";
+import { startSubscriptionCron } from "./cron/subscriptionCron.js";
+import { startPayoutCron } from "./cron/payoutCron.js";
+import reviewRoutes from "./routes/reviewRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -38,6 +47,10 @@ app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
+app.get("/health", (_req, res) => {
+	res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
 app.use("/api/auth", authRoutes);
 app.use("/api/courts", courtRoutes);
 app.use("/api/owner/courts", courtRoutes);
@@ -46,6 +59,13 @@ app.use("/api/profile", userProfileRoutes);
 app.use("/api/profile/skills", userSkillRoutes);
 app.use("/api/matchmaking", matchmakingRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/wallet", walletRoutes);
+app.use("/api/payment", paymentRoutes);
+app.use("/api/bookings", bookingRoutes);
+app.use("/api/subscriptions", subscriptionRoutes);
+app.use("/api/plans", planRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/admin", adminRoutes);
 app.get("/api/health", (_req, res) => {
 	res.status(200).json({ status: "ok", service: "arena-backend" });
 });
@@ -77,6 +97,9 @@ async function startServer(): Promise<void> {
 
 	// Start the matchmaking worker (runs every 5 seconds)
 	startMatchmakingWorker(io);
+	// Initialize background jobs
+	startSubscriptionCron();
+	startPayoutCron();
 
 	await new Promise<void>((resolve, reject) => {
 		const server = httpServer.listen(PORT, () => {

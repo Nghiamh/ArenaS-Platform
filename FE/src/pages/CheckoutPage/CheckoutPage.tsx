@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { createSubscriptionCheckout } from '../../Axios/Axios';
+import serverRackImg from '../../assets/server_rack.png';
 
 export const CheckoutPage: React.FC = () => {
   const location = useLocation();
@@ -12,7 +13,7 @@ export const CheckoutPage: React.FC = () => {
   const plan = location.state?.plan || {
     id: '',
     name: 'Chuyên Nghiệp',
-    price: '6.948.000',
+    price: '6.710.400',
     period: '/ năm',
     originalPrice: '8.388.000',
   };
@@ -36,7 +37,7 @@ export const CheckoutPage: React.FC = () => {
       try {
         setIsProcessing(true);
         const billingCycle = plan.period.includes('năm') ? 'yearly' : 'monthly';
-        
+
         // Trực tiếp gọi API của Backend
         const response = await createSubscriptionCheckout(plan.id || '65b2a3a4c5d6e7f8a9b0c1d2', billingCycle);
 
@@ -60,47 +61,55 @@ export const CheckoutPage: React.FC = () => {
   });
 
   return (
-    <div className="min-h-screen bg-[#071024] text-white font-sans selection:bg-blue-500/30">
+    <div className="min-h-screen bg-[#071024] text-white font-sans selection:bg-blue-500/30 flex flex-col">
       {/* Background gradients */}
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(37,99,235,0.08),transparent_28%),radial-gradient(circle_at_80%_10%,rgba(168,85,247,0.08),transparent_25%),radial-gradient(circle_at_50%_80%,rgba(14,165,233,0.05),transparent_32%)]" />
 
-      <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col lg:flex-row">
+      {/* Top Header */}
+      <header className="relative z-10 w-full max-w-6xl mx-auto flex items-center justify-between px-6 py-4 border-b border-white/5">
+        <button
+          onClick={() => navigate('/bang-gia')}
+          className="flex items-center text-[10px] font-black tracking-[0.2em] text-slate-400 hover:text-white transition uppercase"
+        >
+          <svg className="mr-1.5 h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+          </svg>
+          Quay lại bảng giá
+        </button>
+        <div className="flex items-center gap-1.5 text-[11px] font-black tracking-widest text-slate-300 uppercase">
+          <span className="text-sm"></span> Thanh toán an toàn
+        </div>
+      </header>
+
+      {/* Main Container */}
+      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-col lg:flex-row items-stretch gap-8 px-6 py-6 flex-1 justify-center">
 
         {/* Left Section - Payment Form */}
-        <div className="flex-[1.2] px-6 py-12 lg:px-16 lg:py-24">
-          <button
-            onClick={() => navigate('/bang-gia')}
-            className="mb-10 flex items-center text-[15px] font-medium text-blue-400 transition hover:text-blue-300"
-          >
-            <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-            </svg>
-            Quay lại bảng giá
-          </button>
+        <div className="flex-[1.2] flex flex-col justify-center max-w-xl lg:max-w-none">
+          <h1 className="mb-1 text-[26px] font-black tracking-tight text-white leading-tight">Thanh toán an toàn.</h1>
+          <p className="mb-6 text-[13px] leading-relaxed text-slate-400">
+            Hoàn tất thông tin để kích hoạt gói {plan.name}. Mọi thông tin của bạn được bảo mật tuyệt đối.
+          </p>
 
-          <h1 className="mb-2 text-[40px] font-semibold tracking-tight text-white">Thanh toán an toàn.</h1>
-          <p className="mb-12 text-[17px] leading-relaxed text-slate-400">Hoàn tất thông tin của bạn dưới đây để kích hoạt gói {plan.name}.</p>
-
-          <form onSubmit={formik.handleSubmit} className="space-y-10">
+          <form onSubmit={formik.handleSubmit} className="space-y-5">
             {/* Contact Info */}
-            <section>
-              <h2 className="mb-5 text-[21px] font-semibold tracking-tight text-white">Thông tin liên hệ</h2>
-              <div className="space-y-4">
+            <section className="space-y-3">
+              <h2 className="text-[10px] font-black tracking-[0.2em] text-slate-400 uppercase">Thông tin liên hệ</h2>
+              <div className="space-y-3.5">
                 <div className="relative">
+                  <label htmlFor="email" className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                    Địa chỉ Email
+                  </label>
                   <input
                     type="email"
                     id="email"
                     {...formik.getFieldProps('email')}
-                    className={`peer w-full rounded-xl border bg-slate-800/40 px-4 pb-2.5 pt-6 text-[17px] text-white placeholder-transparent outline-none transition focus:ring-1 ${formik.touched.email && formik.errors.email
+                    placeholder="example@email.com"
+                    className={`w-full rounded-xl border bg-slate-900/60 px-4 py-2.5 text-[14px] text-white placeholder-slate-600 outline-none transition duration-200 focus:ring-1 ${formik.touched.email && formik.errors.email
                       ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                      : 'border-white/10 focus:border-blue-500 focus:ring-blue-500'
+                      : 'border-white/10 focus:border-blue-500 focus:ring-blue-500/30'
                       }`}
-                    placeholder="Email"
                   />
-                  <label htmlFor="email" className={`absolute left-4 top-2 text-[13px] font-medium transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-[17px] peer-focus:top-2 peer-focus:text-[13px] ${formik.touched.email && formik.errors.email ? 'text-red-400' : 'text-slate-400 peer-focus:text-blue-400'
-                    }`}>
-                    Địa chỉ Email
-                  </label>
                   {formik.touched.email && formik.errors.email && (
                     <p className="mt-1 text-xs text-red-400">{formik.errors.email}</p>
                   )}
@@ -108,44 +117,38 @@ export const CheckoutPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        id="fullname"
-                        {...formik.getFieldProps('fullname')}
-                        className={`peer w-full rounded-xl border bg-slate-800/40 px-4 pb-2.5 pt-6 text-[17px] text-white placeholder-transparent outline-none transition focus:ring-1 ${formik.touched.fullname && formik.errors.fullname
-                          ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                          : 'border-white/10 focus:border-blue-500 focus:ring-blue-500'
-                          }`}
-                        placeholder="Họ và tên"
-                      />
-                      <label htmlFor="fullname" className={`absolute left-4 top-2 text-[13px] font-medium transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-[17px] peer-focus:top-2 peer-focus:text-[13px] ${formik.touched.fullname && formik.errors.fullname ? 'text-red-400' : 'text-slate-400 peer-focus:text-blue-400'
-                        }`}>
-                        Họ và tên
-                      </label>
-                    </div>
+                    <label htmlFor="fullname" className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                      Họ và tên
+                    </label>
+                    <input
+                      type="text"
+                      id="fullname"
+                      {...formik.getFieldProps('fullname')}
+                      placeholder="Nguyễn Văn A"
+                      className={`w-full rounded-xl border bg-slate-900/60 px-4 py-2.5 text-[14px] text-white placeholder-slate-600 outline-none transition duration-200 focus:ring-1 ${formik.touched.fullname && formik.errors.fullname
+                        ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                        : 'border-white/10 focus:border-blue-500 focus:ring-blue-500/30'
+                        }`}
+                    />
                     {formik.touched.fullname && formik.errors.fullname && (
                       <p className="mt-1 text-xs text-red-400">{formik.errors.fullname}</p>
                     )}
                   </div>
 
                   <div>
-                    <div className="relative">
-                      <input
-                        type="tel"
-                        id="phone"
-                        {...formik.getFieldProps('phone')}
-                        className={`peer w-full rounded-xl border bg-slate-800/40 px-4 pb-2.5 pt-6 text-[17px] text-white placeholder-transparent outline-none transition focus:ring-1 ${formik.touched.phone && formik.errors.phone
-                          ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                          : 'border-white/10 focus:border-blue-500 focus:ring-blue-500'
-                          }`}
-                        placeholder="Số điện thoại"
-                      />
-                      <label htmlFor="phone" className={`absolute left-4 top-2 text-[13px] font-medium transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-[17px] peer-focus:top-2 peer-focus:text-[13px] ${formik.touched.phone && formik.errors.phone ? 'text-red-400' : 'text-slate-400 peer-focus:text-blue-400'
-                        }`}>
-                        Số điện thoại
-                      </label>
-                    </div>
+                    <label htmlFor="phone" className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                      Số điện thoại
+                    </label>
+                    <input
+                      type="tel"
+                      id="phone"
+                      {...formik.getFieldProps('phone')}
+                      placeholder="090 123 4567"
+                      className={`w-full rounded-xl border bg-slate-900/60 px-4 py-2.5 text-[14px] text-white placeholder-slate-600 outline-none transition duration-200 focus:ring-1 ${formik.touched.phone && formik.errors.phone
+                        ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                        : 'border-white/10 focus:border-blue-500 focus:ring-blue-500/30'
+                        }`}
+                    />
                     {formik.touched.phone && formik.errors.phone && (
                       <p className="mt-1 text-xs text-red-400">{formik.errors.phone}</p>
                     )}
@@ -154,113 +157,156 @@ export const CheckoutPage: React.FC = () => {
               </div>
             </section>
 
-            <hr className="border-white/10" />
-
             {/* Payment Method */}
-            <section>
-              <h2 className="mb-5 text-[21px] font-semibold tracking-tight text-white">Thanh toán bằng</h2>
-              <div className="grid grid-cols-1 gap-3">
-                <button
-                  type="button"
-                  className="flex flex-col items-center justify-center rounded-2xl border p-4 transition-all duration-300 border-emerald-500 bg-emerald-500/10 text-emerald-400 shadow-[0_0_0_1px_rgba(16,185,129,0.3)]"
-                >
-                  <svg className="mb-2.5 h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+            <section className="space-y-3">
+              <h2 className="text-[10px] font-black tracking-[0.2em] text-slate-400 uppercase">Thanh toán bằng</h2>
+              <div className="relative w-full rounded-2xl border border-emerald-500 bg-[#102a24]/30 p-4 transition-all duration-300 shadow-[0_0_15px_rgba(16,185,129,0.1)] flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-400/30">
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <span className="text-[13px] font-black tracking-wider uppercase text-emerald-400 block">Banking </span>
+                    <span className="text-[11px] text-slate-400 block mt-0.5">Xử lý tự động 24/7 qua cổng Napas</span>
+                  </div>
+                </div>
+                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/25 text-emerald-400 border border-emerald-400/40">
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                   </svg>
-                  <span className="text-[13px] font-semibold">Banking</span>
-                </button>
+                </div>
               </div>
             </section>
 
-            <div className="pt-6">
+            {/* CTA Button Block */}
+            <div className="pt-3 space-y-3">
               <button
                 type="submit"
                 disabled={isProcessing}
-                className={`flex w-full items-center justify-center rounded-2xl bg-blue-500 px-4 py-4 text-[17px] font-semibold tracking-wide text-white transition-all duration-300 hover:bg-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-500/30 ${isProcessing ? 'cursor-not-allowed opacity-80' : ''
-                  }`}
+                className={`flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-6 py-4 text-[15px] font-black tracking-widest uppercase text-white shadow-[0_12px_30px_-6px_rgba(37,99,235,0.4)] transition-all duration-300 hover:bg-blue-500 hover:shadow-[0_16px_35px_-4px_rgba(37,99,235,0.6)] transform hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-blue-500/30 ${isProcessing ? 'cursor-not-allowed opacity-80' : ''}`}
               >
                 {isProcessing ? (
                   <>
-                    <svg className="mr-3 h-5 w-5 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                    <svg className="mr-3 h-4 w-4 animate-spin text-white" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                     Đang xử lý...
                   </>
                 ) : (
-                  `Thanh toán ${plan.price}đ`
+                  <>
+                    Thanh toán {plan.price}đ <span className="text-[17px] font-bold">→</span>
+                  </>
                 )}
               </button>
-              <div className="mt-4 flex items-center justify-center text-[12px] text-slate-400">
-                <svg className="mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                Dữ liệu được mã hóa SSL an toàn.
+              <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500 font-semibold">
+                <span></span> Hệ thống mã hóa SSL 256-bit bảo mật cao.
               </div>
             </div>
           </form>
         </div>
 
         {/* Right Section - Order Summary */}
-        <div className="flex-1 px-6 py-12 lg:pl-0 lg:pr-8 lg:py-24">
-          <div className="sticky top-24 rounded-3xl border border-white/10 bg-slate-900/60 p-8 shadow-[0_8px_30px_rgb(0,0,0,0.4)] backdrop-blur-2xl">
-            <h2 className="mb-6 text-[21px] font-semibold tracking-tight text-white">Tóm tắt đơn hàng</h2>
+        <div className="flex-1 flex flex-col justify-center animate-fade-in">
+          <div className="rounded-3xl border border-white/8 bg-slate-900/60 p-6 shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-2xl relative overflow-hidden">
+            <h2 className="mb-4 text-[10px] font-black tracking-[0.2em] text-slate-400 uppercase">Tóm tắt đơn hàng</h2>
 
-            <div className="mb-6 border-b border-white/10 pb-6">
+            <div className="mb-4 border-b border-white/5 pb-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="text-[17px] font-semibold text-white">{`Gói ${plan.name}`}</h3>
-                  <p className="mt-1 text-[14px] text-slate-400">Chu kỳ: {plan.period.includes('năm') ? 'Hàng năm' : 'Hàng tháng'}</p>
+                  <h3 className="text-[16px] font-extrabold text-white">{`Gói ${plan.name}`}</h3>
+                  <p className="mt-1 text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Chu kỳ: {plan.period.includes('năm') ? 'Hàng năm (Tiết kiệm 20%)' : 'Hàng tháng'}
+                  </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[17px] font-semibold text-white">{plan.price}đ</p>
+                  <p className="text-[16px] font-extrabold text-white">{plan.price}đ</p>
                 </div>
               </div>
             </div>
 
-            <div className="mb-6 space-y-3 border-b border-white/10 pb-6 text-[15px]">
-              <div className="flex justify-between text-white">
+            <div className="mb-5 space-y-2.5 border-b border-white/5 pb-4 text-[13px]">
+              <div className="flex justify-between text-slate-400">
                 <span>Tạm tính</span>
                 <span>{plan.originalPrice || plan.price}đ</span>
               </div>
               {plan.originalPrice && (
-                <div className="flex justify-between text-emerald-400">
+                <div className="flex justify-between text-emerald-400 font-bold">
                   <span>Chiết khấu thanh toán năm</span>
                   <span>-{parseInt(plan.originalPrice.replace(/\./g, '')) - parseInt(plan.price.replace(/\./g, ''))}đ</span>
                 </div>
               )}
-              <div className="flex justify-between text-white">
+              <div className="flex justify-between text-slate-400">
                 <span>Thuế VAT (10%)</span>
                 <span>0đ</span>
               </div>
             </div>
 
-            <div className="mb-8 flex items-end justify-between">
-              <span className="text-[19px] font-semibold text-white">Tổng cộng</span>
+            <div className="mb-6 flex items-end justify-between">
+              <span className="text-[13px] font-black text-slate-300 uppercase tracking-widest">Tổng cộng</span>
               <div className="text-right">
-                <span className="text-[28px] font-bold tracking-tight text-white">{plan.price}đ</span>
-                <p className="mt-0.5 text-[12px] text-slate-400">Bao gồm các loại thuế có thể áp dụng</p>
+                <span className="text-[28px] font-black tracking-tight text-white">{plan.price}đ</span>
+                <p className="mt-0.5 text-[10px] text-slate-500 font-medium">Bao gồm các loại thuế có thể áp dụng</p>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 p-5">
-              <div className="flex gap-4">
-                <svg className="mt-0.5 h-6 w-6 shrink-0 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            {/* Glowing 14 days refund guarantee block */}
+            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 flex gap-3 shadow-[0_0_15px_rgba(16,185,129,0.05)]">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-400/35">
+                <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
-                <div>
-                  <h4 className="text-[15px] font-semibold text-blue-100">Cam kết hoàn tiền</h4>
-                  <p className="mt-1 text-[13px] leading-relaxed text-blue-200/70">
-                    Bạn có 14 ngày để trải nghiệm đầy đủ tính năng. Hoàn tiền 100% nếu không hài lòng. Hủy bỏ bất cứ lúc nào.
-                  </p>
-                </div>
+              </div>
+              <div>
+                <h4 className="text-[12px] font-extrabold text-emerald-400 uppercase tracking-widest">Cam kết dùng thử 14 ngày</h4>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">
+                  Trải nghiệm đầy đủ tất cả tính năng vận hành. Nhận hoàn tiền 100% nếu không hài lòng, hủy bỏ phiên bất cứ lúc nào.
+                </p>
               </div>
             </div>
 
           </div>
+
+          {/* Datacenter Server Rack background element fading under card */}
+          <div className="mt-4 w-full h-[120px] rounded-3xl overflow-hidden border border-white/5 relative group shadow-[0_8px_30px_rgba(0,0,0,0.3)]">
+            <img
+              src={serverRackImg}
+              alt="Secure high-tech cloud infrastructure"
+              className="w-full h-full object-cover opacity-35 group-hover:opacity-50 transition-opacity duration-500 filter brightness-90 saturate-75"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#071024] via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#071024] via-transparent to-[#071024]" />
+          </div>
         </div>
 
-      </div>
+      </main>
+
+      {/* Footer Section */}
+      <footer className="relative z-10 w-full max-w-6xl mx-auto border-t border-white/5 py-8 px-6 mt-8 flex flex-col items-center gap-4 text-center">
+        {/* Navigation Links */}
+        <div className="flex items-center gap-6 text-[13px] font-semibold text-slate-400">
+          <a href="#terms" className="hover:text-white transition">Điều khoản</a>
+          <a href="#privacy" className="hover:text-white transition">Bảo mật</a>
+          <a href="#support" className="hover:text-white transition">Hỗ trợ</a>
+        </div>
+
+        {/* SECURE BLOCK LINE */}
+        <div className="flex items-center gap-3 w-full max-w-md justify-center">
+          <div className="h-[1px] bg-gradient-to-r from-transparent to-white/10 flex-1" />
+          <span className="text-[10px] font-extrabold tracking-[0.25em] text-slate-500 uppercase flex items-center gap-1.5">
+            🛡️ SSL ENCRYPTED SECURE PAYMENT
+          </span>
+          <div className="h-[1px] bg-gradient-to-l from-transparent to-white/10 flex-1" />
+        </div>
+
+        {/* Copyright */}
+        <p className="text-[11px] text-slate-500 leading-normal">
+          Hệ thống mã hóa SSL 256-bit bảo mật cao. © 2024. All rights reserved.
+        </p>
+      </footer>
     </div>
   );
 };

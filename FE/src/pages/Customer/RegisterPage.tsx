@@ -113,7 +113,7 @@ export const RegisterPage: React.FC = () => {
     <div className="min-h-screen bg-[#050816] text-white">
       <div className="grid min-h-screen lg:grid-cols-[1.08fr_0.92fr]">
         <section
-          className="relative hidden min-h-screen overflow-hidden border-r border-white/5 lg:flex"
+          className="relative hidden h-screen sticky top-0 overflow-hidden border-r border-white/5 lg:flex"
           style={{
             backgroundImage:
               'linear-gradient(90deg, rgba(3,8,25,0.92) 0%, rgba(3,8,25,0.74) 50%, rgba(3,8,25,0.86) 100%), url(https://images.unsplash.com/photo-1489944440615-453fc2b6a9a9?q=80&w=1600&auto=format&fit=crop)',
@@ -140,7 +140,7 @@ export const RegisterPage: React.FC = () => {
               </div>
               <h1 className="mt-5 text-5xl font-black leading-[0.95] tracking-tight text-white">
                 Tạo Tài Khoản.
-                <span className="block text-blue-500">Vào Trận Nhanh.</span>
+                <span className="block text-blue-500">Đặt Sân Dễ Dàng.</span>
               </h1>
               <p className="mt-6 max-w-lg text-lg leading-8 text-slate-300">
                 Đăng ký trong 1 phút để đặt sân, kết nối đối thủ và quản lý lịch thi đấu ngay trên ArenaS.

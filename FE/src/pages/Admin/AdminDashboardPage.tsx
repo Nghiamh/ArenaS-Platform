@@ -132,7 +132,7 @@ const sportStats = [
 const quickActions = [
   { label: 'Quản lý sân',    desc: 'Duyệt và cập nhật sân',  icon: <StadiumIcon />,   color: 'from-cyan-600 to-blue-700',    to: '/admin/manage-stadiums' },
   { label: 'Quản lý booking', desc: 'Xem và xử lý đơn đặt', icon: <ClipboardIcon />, color: 'from-emerald-600 to-teal-700',  to: '#' },
-  { label: 'Người dùng',     desc: 'Quản lý tài khoản',     icon: <UsersIcon />,     color: 'from-purple-600 to-violet-700', to: '#' },
+  { label: 'Người dùng',     desc: 'Quản lý tài khoản',     icon: <UsersIcon />,     color: 'from-purple-600 to-violet-700', to: '/admin/manage-users' },
   { label: 'Báo cáo',        desc: 'Thống kê doanh thu',    icon: <BarChartIcon />,  color: 'from-orange-600 to-amber-700',  to: '#' },
 ];
 

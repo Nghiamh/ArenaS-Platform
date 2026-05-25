@@ -1,6 +1,6 @@
 import mongoose, { Document, Model, Schema, Types } from "mongoose";
 
-export type CourtStatus = "available" | "closed" | "open";
+export type CourtStatus = "available" | "closed" | "open" | "pending";
 
 export type SubCourtType = "football_5" | "football_7" | "badminton" | "tennis" | "pickleball" | "other";
 
@@ -59,7 +59,6 @@ const courtCoordinatesSchema = new Schema<ICourtCoordinates>(
 			},
 		},
 	},
-	{ _id: false }
 );
 
 const courtSchema = new Schema<ICourt, ICourtModel>(
@@ -130,8 +129,8 @@ const courtSchema = new Schema<ICourt, ICourtModel>(
 		status: {
 			type: String,
 			required: true,
-			default: "available",
-			enum: ["available", "closed", "open"],
+			default: "pending",
+			enum: ["available", "closed", "open", "pending"],
 		},
 		number_of_courts: {
 			type: Number,
@@ -169,8 +168,7 @@ const courtSchema = new Schema<ICourt, ICourtModel>(
 							default: "open",
 							enum: ["open", "closed"],
 						},
-					},
-					{ _id: false }
+					}
 				),
 			],
 			default: [],

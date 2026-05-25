@@ -6,6 +6,8 @@ type DepositModalProps = {
 	isOpen: boolean;
 	onClose: () => void;
 	onSuccess: () => void;
+	initialAmount?: number;
+	autoCreate?: boolean;
 };
 
 type DepositStep = 'amount' | 'qr' | 'success';
@@ -16,7 +18,7 @@ function formatVND(amount: number): string {
 	return amount.toLocaleString('vi-VN') + 'đ';
 }
 
-export function DepositModal({ isOpen, onClose, onSuccess }: DepositModalProps) {
+export function DepositModal({ isOpen, onClose, onSuccess, initialAmount, autoCreate }: DepositModalProps) {
 	const [step, setStep] = useState<DepositStep>('amount');
 	const [amount, setAmount] = useState<number>(0);
 	const [inputValue, setInputValue] = useState('');
@@ -36,8 +38,9 @@ export function DepositModal({ isOpen, onClose, onSuccess }: DepositModalProps) 
 	useEffect(() => {
 		if (isOpen) {
 			setStep('amount');
-			setAmount(0);
-			setInputValue('');
+			const startingAmount = initialAmount || 0;
+			setAmount(startingAmount);
+			setInputValue(startingAmount > 0 ? startingAmount.toLocaleString('vi-VN') : '');
 			setTransferCode(null);
 			setQrUrl(null);
 			setExpiredAt(null);
@@ -45,7 +48,7 @@ export function DepositModal({ isOpen, onClose, onSuccess }: DepositModalProps) 
 			setError(null);
 			setCountdown(0);
 		}
-	}, [isOpen]);
+	}, [isOpen, initialAmount]);
 
 	// Handle completion
 	useEffect(() => {
@@ -124,6 +127,12 @@ export function DepositModal({ isOpen, onClose, onSuccess }: DepositModalProps) 
 		}
 	};
 
+	useEffect(() => {
+		if (isOpen && autoCreate && amount >= 10_000 && step === 'amount') {
+			handleCreateDeposit();
+		}
+	}, [isOpen, autoCreate, amount, step]);
+
 	const handleFakePayment = async () => {
 		if (!transferCode) return;
 		try {
@@ -139,7 +148,7 @@ export function DepositModal({ isOpen, onClose, onSuccess }: DepositModalProps) 
 	if (!isOpen) return null;
 
 	return (
-		<div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+		<div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
 			{/* Backdrop */}
 			<div
 				className="absolute inset-0 bg-black/60 backdrop-blur-sm"

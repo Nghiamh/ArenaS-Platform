@@ -297,7 +297,7 @@ export async function deleteCurrentUserSkill(skillId: string): Promise<BasicMess
 	}
 }
 
-export type OwnerCourtStatus = 'available' | 'closed' | 'open';
+export type OwnerCourtStatus = 'available' | 'closed' | 'open' | 'pending';
 
 export type OwnerCourtCoordinates = {
 	latitude: number;
@@ -396,6 +396,143 @@ export async function getOwnerCourts(): Promise<OwnerCourt[]> {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// ADMIN — COURT MANAGEMENT
+// ---------------------------------------------------------------------------
+
+export type AdminCourt = OwnerCourt & {
+	owner_id: string;
+};
+
+type AdminCourtsResponse = {
+	message: string;
+	total: number;
+	page: number;
+	limit: number;
+	totalPages: number;
+	courts: AdminCourt[];
+};
+
+type AdminCourtResponse = {
+	message: string;
+	court: AdminCourt;
+};
+
+export async function adminGetAllCourts(params?: {
+	status?: string;
+	sport?: string;
+	keyword?: string;
+	page?: number;
+	limit?: number;
+}): Promise<{ courts: AdminCourt[]; total: number; totalPages: number }> {
+	try {
+		const { data } = await axiosClient.get<AdminCourtsResponse>('/admin/courts', {
+			headers: withAuthHeaders(),
+			params,
+		});
+		return { courts: data.courts, total: data.total, totalPages: data.totalPages };
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function adminApproveCourt(courtId: string): Promise<AdminCourt> {
+	try {
+		const { data } = await axiosClient.post<AdminCourtResponse>(
+			`/admin/courts/${courtId}/approve`,
+			{},
+			{ headers: withAuthHeaders() },
+		);
+		return data.court;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function adminRejectCourt(courtId: string): Promise<AdminCourt> {
+	try {
+		const { data } = await axiosClient.post<AdminCourtResponse>(
+			`/admin/courts/${courtId}/reject`,
+			{},
+			{ headers: withAuthHeaders() },
+		);
+		return data.court;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function adminUpdateCourtStatus(
+	courtId: string,
+	status: 'available' | 'closed' | 'pending',
+): Promise<AdminCourt> {
+	try {
+		const { data } = await axiosClient.put<AdminCourtResponse>(
+			`/admin/courts/${courtId}/status`,
+			{ status },
+			{ headers: withAuthHeaders() },
+		);
+		return data.court;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ADMIN — INCOME MANAGEMENT
+// ---------------------------------------------------------------------------
+
+export type AdminIncomeType = 'deposit' | 'subscription';
+
+export type AdminIncomeEntry = {
+	id: string;
+	type: AdminIncomeType;
+	amount: number;
+	userName: string;
+	userEmail: string;
+	description: string;
+	transferCode?: string;
+	createdAt: string;
+};
+
+export type AdminIncomeSummary = {
+	totalRevenue: number;
+	depositTotal: number;
+	depositCount: number;
+	subscriptionTotal: number;
+	subscriptionCount: number;
+	thisMonthRevenue: number;
+	lastMonthRevenue: number;
+};
+
+export type AdminIncomeResponse = {
+	message: string;
+	summary: AdminIncomeSummary;
+	total: number;
+	page: number;
+	limit: number;
+	totalPages: number;
+	items: AdminIncomeEntry[];
+};
+
+export async function adminGetIncome(params?: {
+	type?: 'all' | AdminIncomeType;
+	page?: number;
+	limit?: number;
+	dateFrom?: string;
+	dateTo?: string;
+}): Promise<AdminIncomeResponse> {
+	try {
+		const { data } = await axiosClient.get<AdminIncomeResponse>('/admin/income', {
+			headers: withAuthHeaders(),
+			params,
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
 export async function getPublicCourts(params?: { sport?: string }): Promise<PublicCourt[]> {
 	try {
 		const { data } = await axiosClient.get<PublicCourtsResponse>('/courts/public', {
@@ -466,8 +603,28 @@ export async function deleteOwnerCourt(courtId: string): Promise<BasicMessageRes
 }
 
 // ---------------------------------------------------------------------------
-// COURT DASHBOARD / STATS
+// COURT DASHBOARD / STATS / REVENUE
 // ---------------------------------------------------------------------------
+
+export type OwnerRevenueResponse = {
+	today: number;
+	todayTrend: number;
+	week: number;
+	weekTrend: number;
+	month: number;
+	monthTrend: number;
+};
+
+export async function getOwnerRevenue(): Promise<OwnerRevenueResponse> {
+	try {
+		const { data } = await axiosClient.get<OwnerRevenueResponse>('/wallet/revenue', {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
 
 export type CourtDashboard = {
 	_id: string;
@@ -749,3 +906,296 @@ export async function sendFakeSubscriptionPayment(
 	}
 }
 
+export type MyStatusSubscriptionResponse = {
+	success: boolean;
+	subscription: {
+		_id: string;
+		ownerId: string;
+		status: 'active' | 'expired' | 'cancelled';
+		billingCycle: 'monthly' | 'yearly';
+		startDate: string;
+		endDate: string;
+		amountPaid: number;
+		currentFeatures: FEPlan['features'];
+		planId: {
+			_id: string;
+			name: string;
+			displayName: string;
+			sortOrder: number;
+			description?: string;
+			pricing?: { monthly: number; yearly: number };
+			features?: FEPlan['features'];
+		};
+		isSimulated?: boolean;
+	};
+};
+
+export async function getCurrentSubscriptionStatus(): Promise<MyStatusSubscriptionResponse['subscription']> {
+	try {
+		const { data } = await axiosClient.get<MyStatusSubscriptionResponse>('/subscriptions/my-status', {
+			headers: withAuthHeaders(),
+		});
+		return data.subscription;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export type ValidateSubscriptionActionResponse = {
+	success: boolean;
+	action: 'renew' | 'upgrade' | 'downgrade';
+	allowed: boolean;
+	message: string;
+	billingCycle: 'monthly' | 'yearly';
+	closeToExpiry?: boolean;
+	currentPlan?: {
+		id: string;
+		name: string;
+		displayName: string;
+		sortOrder: number;
+	};
+	targetPlan?: {
+		id: string;
+		name: string;
+		displayName: string;
+		sortOrder: number;
+	};
+	pricing: {
+		basePrice: number;
+		unusedCredit: number;
+		netAmount: number;
+		daysRemaining: number;
+	};
+	reason?: string;
+	details?: {
+		currentUsage: {
+			locations: number;
+			courts: number;
+		};
+		targetLimits: {
+			locations: number;
+			courts: number;
+		};
+		violations: string[];
+		recommendations: string[];
+		featureLosses: string[];
+	};
+	warningMessage?: string;
+};
+
+export async function validateSubscriptionAction(
+	targetPlanId: string,
+	billingCycle: 'monthly' | 'yearly',
+): Promise<ValidateSubscriptionActionResponse> {
+	try {
+		const { data } = await axiosClient.post<ValidateSubscriptionActionResponse>('/subscriptions/validate-action', {
+			targetPlanId,
+			billingCycle,
+		}, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		if (axios.isAxiosError(error) && error.response?.data) {
+			return error.response.data as ValidateSubscriptionActionResponse;
+		}
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+// ---------------------------------------------------------------------------
+// USER BOOKING
+// ---------------------------------------------------------------------------
+
+export type UserBookingPayload = {
+	court_id: string;
+	sub_court_id: string;
+	date: string;
+	start_time: string;
+	end_time: string;
+};
+
+export type UserBookingResponse = {
+	message: string;
+	booking: {
+		_id: string;
+		court_id: string;
+		sub_court_id: string;
+		court_name: string;
+		sub_court_name: string;
+		date: string;
+		start_time: string;
+		end_time: string;
+		total_price: number;
+		status: string;
+		slots_booked: number;
+		wallet_balance: number;
+	};
+};
+
+export type UserBooking = {
+	_id: string;
+	user_id: string;
+	court_id: string;
+	sub_court_id: string;
+	date: string;
+	start_time: string;
+	end_time: string;
+	customer_name: string;
+	customer_phone?: string;
+	note?: string;
+	total_price: number;
+	status: string;
+	source: string;
+	tone?: string;
+	court_name: string;
+	sub_court_name: string;
+	createdAt: string;
+	updatedAt?: string;
+};
+
+export type MyBookingsResponse = {
+	message: string;
+	bookings: UserBooking[];
+	pagination: {
+		page: number;
+		limit: number;
+		total: number;
+		totalPages: number;
+	};
+};
+
+export async function userBookCourt(payload: UserBookingPayload): Promise<UserBookingResponse> {
+	try {
+		const { data } = await axiosClient.post<UserBookingResponse>('/bookings/user-book', payload, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function getMyBookings(params?: { status?: string; page?: number; limit?: number }): Promise<MyBookingsResponse> {
+	try {
+		const { data } = await axiosClient.get<MyBookingsResponse>('/bookings/my-bookings', {
+			headers: withAuthHeaders(),
+			params,
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function cancelBooking(bookingId: string): Promise<{ message: string; refundAmount: number; refundPercentage: number }> {
+	try {
+		const { data } = await axiosClient.post(`/bookings/${bookingId}/cancel`, {}, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+// ---------------------------------------------------------------------------
+// REVIEWS
+// ---------------------------------------------------------------------------
+
+export type CourtReview = {
+	_id: string;
+	user_id: string;
+	court_id: string;
+	rating: number;
+	comment?: string;
+	user_name: string;
+	user_avatar?: string;
+	createdAt: string;
+};
+
+export type CourtReviewsResponse = {
+	reviews: CourtReview[];
+	total: number;
+	avgRating: number;
+	pagination: {
+		page: number;
+		limit: number;
+		total: number;
+		totalPages: number;
+	};
+};
+
+export type CanReviewResponse = {
+	canReview: boolean;
+};
+
+export async function getCourtReviews(courtId: string, page = 1, limit = 10): Promise<CourtReviewsResponse> {
+	try {
+		const { data } = await axiosClient.get<CourtReviewsResponse>(`/reviews/court/${courtId}`, {
+			params: { page, limit },
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function getCanReview(courtId: string): Promise<CanReviewResponse> {
+	try {
+		const { data } = await axiosClient.get<CanReviewResponse>(`/reviews/can-review/${courtId}`, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function createReview(payload: {
+	court_id: string;
+	rating: number;
+	comment?: string;
+}): Promise<{ message: string; review: CourtReview }> {
+	try {
+		const { data } = await axiosClient.post<{ message: string; review: CourtReview }>('/reviews', payload, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function updateReview(reviewId: string, payload: { rating: number; comment?: string }): Promise<{ message: string; review: CourtReview }> {
+	try {
+		const { data } = await axiosClient.put<{ message: string; review: CourtReview }>(`/reviews/${reviewId}`, payload, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function deleteReview(reviewId: string): Promise<{ message: string }> {
+	try {
+		const { data } = await axiosClient.delete<{ message: string }>(`/reviews/${reviewId}`, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function getMyCourtReview(courtId: string): Promise<CourtReview | null> {
+	try {
+		const { data } = await axiosClient.get<{ review: CourtReview | null }>(`/reviews/my-review/${courtId}`, {
+			headers: withAuthHeaders(),
+		});
+		return data.review;
+	} catch (error: unknown) {
+		return null;
+	}
+}
