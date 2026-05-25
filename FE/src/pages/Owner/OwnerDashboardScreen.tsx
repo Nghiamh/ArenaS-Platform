@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { OwnerSidebar } from './OwnerSidebar';
+import { getOwnerCourts, getOwnerBookings, getOwnerRevenue, type OwnerCourt, type OwnerBooking, type OwnerRevenueResponse } from '../../Axios/Axios';
 
 type StatCard = {
   title: string;
@@ -15,14 +16,7 @@ type RevenuePoint = {
   value: number;
 };
 
-type TopField = {
-  rank: number;
-  name: string;
-  bookings: number;
-  fillRate: number;
-  revenue: string;
-  rating: number;
-};
+
 
 type RecentBooking = {
   customer: string;
@@ -32,96 +26,7 @@ type RecentBooking = {
   status: 'Đã xác nhận' | 'Chờ thanh toán' | 'Đã hoàn tất';
 };
 
-const statCards: StatCard[] = [
-  {
-    title: 'Doanh Thu Tháng Này',
-    value: '28.450Kđ',
-    change: '+12.5% so với tháng trước',
-    icon: '$',
-    gradient: 'from-blue-600/30 via-blue-500/15 to-transparent',
-  },
-  {
-    title: 'Lượt Đặt Tuần Này',
-    value: '94',
-    change: '+8.2% so với tuần trước',
-    icon: '🗓',
-    gradient: 'from-cyan-500/30 via-sky-500/15 to-transparent',
-  },
-  {
-    title: 'Tỷ Lệ Lấp Đầy',
-    value: '78%',
-    change: '+5.1% so với tháng trước',
-    icon: '⚡',
-    gradient: 'from-amber-500/30 via-orange-500/15 to-transparent',
-  },
-  {
-    title: 'Đánh Giá Trung Bình',
-    value: '4.8',
-    change: '+0.2 so với tháng trước',
-    icon: '☆',
-    gradient: 'from-violet-500/30 via-indigo-500/15 to-transparent',
-  },
-];
 
-const revenueSeries: RevenuePoint[] = [
-  { month: 'Th10', value: 18 },
-  { month: 'Th11', value: 22 },
-  { month: 'Th12', value: 31 },
-  { month: 'Th1', value: 25 },
-  { month: 'Th2', value: 19 },
-  { month: 'Th3', value: 28 },
-];
-
-const topFields: TopField[] = [
-  {
-    rank: 1,
-    name: 'Champions Arena',
-    bookings: 42,
-    fillRate: 87,
-    revenue: '12.600Kđ',
-    rating: 4.9,
-  },
-  {
-    rank: 2,
-    name: 'Elite Football',
-    bookings: 31,
-    fillRate: 72,
-    revenue: '9.300Kđ',
-    rating: 4.7,
-  },
-  {
-    rank: 3,
-    name: 'Victory Stadium',
-    bookings: 21,
-    fillRate: 56,
-    revenue: '6.550Kđ',
-    rating: 4.6,
-  },
-];
-
-const recentBookings: RecentBooking[] = [
-  {
-    customer: 'Nguyễn Văn An',
-    field: 'Champions Arena',
-    time: 'Hôm nay - 18:00',
-    price: '900Kđ',
-    status: 'Đã xác nhận',
-  },
-  {
-    customer: 'Trần Minh Quân',
-    field: 'Elite Football',
-    time: 'Hôm nay - 20:00',
-    price: '750Kđ',
-    status: 'Chờ thanh toán',
-  },
-  {
-    customer: 'Hoàng Gia Bảo',
-    field: 'Victory Stadium',
-    time: 'Ngày mai - 16:00',
-    price: '850Kđ',
-    status: 'Đã hoàn tất',
-  },
-];
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -152,10 +57,12 @@ const statusClass: Record<RecentBooking['status'], string> = {
   'Đã hoàn tất': 'bg-blue-500/20 text-blue-200 ring-1 ring-blue-400/40',
 };
 
-const buildLinePath = (points: RevenuePoint[]): string => {
+const buildLinePath = (points: RevenuePoint[], maxValue: number): string => {
+  if (points.length === 0) return '';
   const width = 680;
   const height = 260;
-  const max = 32;
+  // Make the chart scale dynamically, ensure max is at least 1 to avoid divide by zero
+  const max = Math.max(maxValue * 1.2, 10);
   const min = 0;
 
   return points
@@ -168,12 +75,148 @@ const buildLinePath = (points: RevenuePoint[]): string => {
 };
 
 export const OwnerDashboardScreen: React.FC = () => {
-  const path = buildLinePath(revenueSeries);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => localStorage.getItem('ownerSidebarCollapsed') === '1');
+  const [courts, setCourts] = useState<OwnerCourt[]>([]);
+  const [bookings, setBookings] = useState<OwnerBooking[]>([]);
+  const [revenueData, setRevenueData] = useState<OwnerRevenueResponse | null>(null);
 
   useEffect(() => {
     localStorage.setItem('ownerSidebarCollapsed', sidebarCollapsed ? '1' : '0');
   }, [sidebarCollapsed]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [cts, bks, rev] = await Promise.all([
+          getOwnerCourts(),
+          getOwnerBookings(), // Lấy toàn bộ lịch đặt để phân tích
+          getOwnerRevenue()
+        ]);
+        setCourts(cts);
+        setBookings(bks);
+        setRevenueData(rev);
+      } catch (error) {
+        console.error("Lỗi khi tải dữ liệu tổng quan:", error);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // 1. Tính toán Thống kê tổng quan (StatCards)
+  const now = new Date();
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1));
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  const weeklyBookingsCount = bookings.filter(b => new Date(b.date) >= startOfWeek).length;
+  const avgRating = courts.length > 0
+    ? (courts.reduce((sum, c) => sum + (c.avg_rating || 0), 0) / courts.length).toFixed(1)
+    : '0.0';
+
+  const statCards: StatCard[] = [
+    {
+      title: 'Doanh Thu Tháng Này',
+      value: revenueData ? `${revenueData.month.toLocaleString('vi-VN')}` : '...',
+      change: revenueData ? `${revenueData.monthTrend >= 0 ? '+' : ''}${revenueData.monthTrend}% so với kỳ trước` : '...',
+      icon: '$',
+      gradient: 'from-blue-600/30 via-blue-500/15 to-transparent',
+    },
+    {
+      title: 'Lượt Đặt Tuần Này',
+      value: weeklyBookingsCount.toString(),
+      change: 'Cập nhật trực tiếp',
+      icon: '🗓',
+      gradient: 'from-cyan-500/30 via-sky-500/15 to-transparent',
+    },
+    {
+      title: 'Tỷ Lệ Lấp Đầy',
+      value: courts.length > 0 ? 'Phân tích từ lịch' : '...', // Bạn có thể tính logic thật
+      change: 'Cập nhật trực tiếp',
+      icon: '⚡',
+      gradient: 'from-amber-500/30 via-orange-500/15 to-transparent',
+    },
+    {
+      title: 'Đánh Giá Trung Bình',
+      value: avgRating,
+      change: 'Điểm trung bình các sân',
+      icon: '☆',
+      gradient: 'from-violet-500/30 via-indigo-500/15 to-transparent',
+    },
+  ];
+
+  // 2. Tính toán Doanh thu 6 tháng qua (Chỉ tính các booking đã thanh toán)
+  const revenueSeries = useMemo(() => {
+    const series: RevenuePoint[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthStr = `Th${d.getMonth() + 1}`;
+
+      const monthBookings = bookings.filter(b => {
+        const bd = new Date(b.date);
+        return bd.getMonth() === d.getMonth() && bd.getFullYear() === d.getFullYear() && (b.status === 'confirmed' || b.status === 'completed');
+      });
+      const rev = monthBookings.reduce((sum, b) => sum + (b.total_price || 0), 0);
+      series.push({ month: monthStr, value: rev }); // Giá trị thực tế
+    }
+    return series;
+  }, [bookings]);
+
+  const maxSeriesValue = Math.max(...revenueSeries.map(r => r.value), 10);
+  const path = buildLinePath(revenueSeries, maxSeriesValue);
+
+  // 3. Xếp hạng Sân nổi bật
+  const topFields = useMemo(() => {
+    const stats: Record<string, { bookings: number, revenue: number }> = {};
+    bookings.forEach(b => {
+      if (b.status === 'confirmed' || b.status === 'completed') {
+        if (!stats[b.court_id]) stats[b.court_id] = { bookings: 0, revenue: 0 };
+        stats[b.court_id].bookings += 1;
+        stats[b.court_id].revenue += b.total_price || 0;
+      }
+    });
+
+    const arr = Object.keys(stats).map(courtId => {
+      const court = courts.find(c => c.id === courtId);
+      return {
+        id: courtId,
+        name: court?.name || 'Sân không xác định',
+        bookings: stats[courtId].bookings,
+        revenue: stats[courtId].revenue,
+        rating: court?.avg_rating || 0,
+        fillRate: Math.min(100, Math.round((stats[courtId].bookings / (10 * 30)) * 100)) // Ước tính fill rate
+      };
+    }).sort((a, b) => b.revenue - a.revenue).slice(0, 3); // Lấy top 3
+
+    return arr.map((f, i) => ({
+      rank: i + 1,
+      name: f.name,
+      bookings: f.bookings,
+      fillRate: f.fillRate,
+      revenue: (f.revenue).toLocaleString('vi-VN') + '₫',
+      rating: f.rating
+    }));
+  }, [bookings, courts]);
+
+  // 4. Lượt đặt gần đây
+  const recentBookingsList = useMemo(() => {
+    return [...bookings]
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+      .slice(0, 5) // Lấy 5 lượt mới nhất
+      .map(b => {
+        const court = courts.find(c => c.id === b.court_id);
+        let statusText: RecentBooking['status'] = 'Chờ thanh toán';
+        if (b.status === 'confirmed') statusText = 'Đã xác nhận';
+        if (b.status === 'completed') statusText = 'Đã hoàn tất';
+
+        return {
+          customer: b.customer_name,
+          field: court?.name || 'Sân không rõ',
+          time: `${b.date.split('-').reverse().join('/')} - ${b.start_time}`,
+          price: (b.total_price || 0).toLocaleString('vi-VN') + '₫',
+          status: statusText
+        };
+      });
+  }, [bookings, courts]);
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-[#020B1F] text-slate-100">
@@ -195,7 +238,7 @@ export const OwnerDashboardScreen: React.FC = () => {
             <motion.header variants={fadeUp} className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h1 className="text-3xl font-extrabold tracking-tight text-white">Tổng Quan</h1>
-                <p className="mt-1 text-sm text-slate-400">Xin chào, Minh Tuấn - Thứ Hai, 02/03/2026</p>
+                <p className="mt-1 text-sm text-slate-400">Dữ liệu thực tế trực tiếp từ hệ thống ArenaS</p>
               </div>
               <div className="flex items-center gap-3">
                 <button className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-slate-300 transition hover:bg-white/10 hover:text-white">
@@ -260,7 +303,8 @@ export const OwnerDashboardScreen: React.FC = () => {
 
                     {revenueSeries.map((point, index) => {
                       const x = (index / (revenueSeries.length - 1)) * 680;
-                      const y = 260 - (point.value / 32) * 260;
+                      const max = Math.max(maxSeriesValue * 1.2, 10);
+                      const y = 260 - (point.value / max) * 260;
 
                       return (
                         <g key={point.month}>
@@ -347,25 +391,31 @@ export const OwnerDashboardScreen: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {recentBookings.map((booking, index) => (
-                      <motion.tr
-                        key={`${booking.customer}-${booking.time}`}
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 + index * 0.08 }}
-                        className="rounded-2xl bg-[#081A3A]/80 text-slate-100"
-                      >
-                        <td className="rounded-l-xl px-4 py-4 font-semibold">{booking.customer}</td>
-                        <td className="px-4 py-4 text-slate-300">{booking.field}</td>
-                        <td className="px-4 py-4 text-slate-300">{booking.time}</td>
-                        <td className="px-4 py-4 font-bold text-blue-300">{booking.price}</td>
-                        <td className="rounded-r-xl px-4 py-4">
-                          <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${statusClass[booking.status]}`}>
-                            {booking.status}
-                          </span>
-                        </td>
-                      </motion.tr>
-                    ))}
+                    {recentBookingsList.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-slate-400">Chưa có lượt đặt sân nào.</td>
+                      </tr>
+                    ) : (
+                      recentBookingsList.map((booking, index) => (
+                        <motion.tr
+                          key={`${booking.customer}-${booking.time}-${index}`}
+                          initial={{ opacity: 0, y: 12 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.2 + index * 0.08 }}
+                          className="rounded-2xl bg-[#081A3A]/80 text-slate-100"
+                        >
+                          <td className="rounded-l-xl px-4 py-4 font-semibold">{booking.customer}</td>
+                          <td className="px-4 py-4 text-slate-300">{booking.field}</td>
+                          <td className="px-4 py-4 text-slate-300">{booking.time}</td>
+                          <td className="px-4 py-4 font-bold text-blue-300">{booking.price}</td>
+                          <td className="rounded-r-xl px-4 py-4">
+                            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${statusClass[booking.status] || 'bg-slate-500/20 text-slate-300'}`}>
+                              {booking.status}
+                            </span>
+                          </td>
+                        </motion.tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
