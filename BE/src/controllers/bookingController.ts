@@ -368,16 +368,37 @@ export async function userBookCourt(req: Request, res: Response) {
 		await courtSlot.save({ session });
 
 		// --- Bước 8: Tạo WalletTransaction ---
-		await WalletTransaction.create(
-			[{
+		const transactionsToCreate: any[] = [
+			{
 				walletId: wallet._id,
 				bookingId: newBooking._id,
 				amount: total_price,
 				type: 'payment',
 				status: 'completed',
-			}],
-			{ session }
-		);
+			}
+		];
+
+		// Cộng tiền cho chủ sân
+		let ownerWallet = await Wallet.findOne({ userId: court.owner_id }).session(session);
+		if (!ownerWallet) {
+			ownerWallet = new Wallet({
+				userId: court.owner_id,
+				balance: 0,
+				status: 'active',
+			});
+		}
+		ownerWallet.balance += total_price;
+		await ownerWallet.save({ session });
+
+		transactionsToCreate.push({
+			walletId: ownerWallet._id,
+			bookingId: newBooking._id,
+			amount: total_price,
+			type: 'deposit',
+			status: 'completed',
+		});
+
+		await WalletTransaction.insertMany(transactionsToCreate, { session });
 
 		// --- Bước 9: Cập nhật Dashboard ---
 		const dashDate = new Date(date);
@@ -575,6 +596,25 @@ export async function cancelBooking(req: Request, res: Response) {
 					status: 'completed',
 				});
 				await tx.save({ session });
+			}
+
+			// Trừ tiền hoàn lại từ ví chủ sân
+			const court = await Court.findById(booking.court_id).session(session);
+			if (court) {
+				const ownerWallet = await Wallet.findOne({ userId: court.owner_id }).session(session);
+				if (ownerWallet) {
+					ownerWallet.balance -= refundAmount;
+					await ownerWallet.save({ session });
+
+					const ownerTx = new WalletTransaction({
+						walletId: ownerWallet._id,
+						bookingId: booking._id,
+						type: 'payment', // Giao dịch trừ tiền
+						amount: refundAmount,
+						status: 'completed',
+					});
+					await ownerTx.save({ session });
+				}
 			}
 		}
 
