@@ -75,8 +75,11 @@ export const MatchmakingPage: React.FC = () => {
 	// Rewards Earned
 	const [rewardsEarned, setRewardsEarned] = useState<{ xpGained: number; pointsGained: number } | null>(null);
 
+
 	const waitTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 	const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+	// Race-condition guard: set true the moment user clicks Hủy so socket events are ignored
+	const isCancellingRef = useRef(false);
 
 	// Load current user
 	useEffect(() => {
@@ -253,6 +256,8 @@ export const MatchmakingPage: React.FC = () => {
 	// Listen for match_found
 	useEffect(() => {
 		onMatchFound((payload) => {
+			// Ignore if user just cancelled (race condition guard)
+			if (isCancellingRef.current) return;
 			setMmState('MATCHED');
 			setMatchData(payload.match as MatchData);
 			setResolvedMatchId(String(payload.matchId));
@@ -393,10 +398,15 @@ export const MatchmakingPage: React.FC = () => {
 	}, [selectedSport, selectedCourtId, userLocation]);
 
 	const handleCancel = useCallback(async () => {
+		isCancellingRef.current = true; // Block any incoming match_found socket events
 		setLoading(true); setError('');
-		try { await cancelMatchmaking(); setMmState('IDLE'); setTicket(null); setWaitSeconds(0); }
-		catch (err: unknown) { setError(err instanceof Error ? err.message : 'Không thể huỷ.'); }
-		finally { setLoading(false); }
+		try {
+			await cancelMatchmaking();
+			setMmState('IDLE'); setTicket(null); setWaitSeconds(0);
+		} catch (err: unknown) {
+			isCancellingRef.current = false; // Restore on error so matching works again
+			setError(err instanceof Error ? err.message : 'Không thể huỷ.');
+		} finally { setLoading(false); }
 	}, []);
 
 	const handleGoToChat = useCallback(() => {
@@ -604,8 +614,8 @@ export const MatchmakingPage: React.FC = () => {
 									type="button"
 									onClick={() => { setSelectedSport(sport.key); setSelectedCourtId(''); setSelectedCourtName(''); }}
 									className={`mm-sport-card flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all ${selectedSport === sport.key
-											? 'selected border-blue-500/80 bg-blue-500/12'
-											: 'border-slate-700/60 bg-slate-800/40'
+										? 'selected border-blue-500/80 bg-blue-500/12'
+										: 'border-slate-700/60 bg-slate-800/40'
 										}`}
 								>
 									<span className="text-2xl">{sport.emoji}</span>
@@ -664,8 +674,8 @@ export const MatchmakingPage: React.FC = () => {
 													className={`mm-map-marker flex flex-col items-center transition-transform ${isSelected ? 'scale-125' : 'scale-100 hover:scale-110'}`}
 												>
 													<span className={`rounded-lg px-2 py-0.5 text-[10px] font-bold shadow-lg whitespace-nowrap ${isSelected
-															? 'bg-cyan-400 text-slate-900'
-															: 'bg-slate-800/90 text-white border border-slate-600/60'
+														? 'bg-cyan-400 text-slate-900'
+														: 'bg-slate-800/90 text-white border border-slate-600/60'
 														}`}>
 														{court.name.length > 18 ? court.name.slice(0, 18) + '…' : court.name}
 													</span>
@@ -869,13 +879,13 @@ export const MatchmakingPage: React.FC = () => {
 										<div className="flex items-center justify-between">
 											<span className="text-slate-400">Trạng thái điểm danh của bạn:</span>
 											<span className={isMeCheckedIn ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"}>
-												{isMeCheckedIn ? "Đã Check-in ✅" : "Chưa Check-in 📍"}
+												{isMeCheckedIn ? "Đã Check-in " : "Chưa Check-in "}
 											</span>
 										</div>
 										<div className="flex items-center justify-between">
 											<span className="text-slate-400">Trạng thái đối thủ:</span>
 											<span className={isOpponentCheckedIn ? "text-emerald-400 font-bold" : "text-slate-500 font-normal"}>
-												{isOpponentCheckedIn ? "Đã Check-in ✅" : "Chưa Check-in 📍"}
+												{isOpponentCheckedIn ? "Đã Check-in " : "Chưa Check-in "}
 											</span>
 										</div>
 									</div>
@@ -946,20 +956,6 @@ export const MatchmakingPage: React.FC = () => {
 											className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-blue-500/25 transition hover:shadow-blue-500/40 hover:brightness-110">
 											<MessageCircle className="w-5 h-5" /> Vào Chat
 										</button>
-										{matchData.court_id && (
-											<button type="button"
-												onClick={() => {
-													const cid = typeof matchData.court_id === 'object'
-														? (matchData.court_id as any)._id?.toString() ?? ''
-														: String(matchData.court_id);
-													if (cid && !cid.includes('[object')) {
-														navigate(`/courts/${cid}`);
-													}
-												}}
-												className="w-full flex items-center justify-center gap-3 rounded-xl border border-slate-700/60 bg-slate-800/40 px-6 py-3.5 text-sm font-semibold text-slate-300 transition hover:bg-slate-700/50">
-												<MapPin className="w-4 h-4" /> Đặt Sân
-											</button>
-										)}
 										<button type="button" onClick={handleReset}
 											className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-700/60 bg-slate-800/40 px-6 py-3 text-sm font-semibold text-slate-300 transition hover:bg-slate-700/50">
 											<RotateCcw className="w-4 h-4" /> Tìm Đối Thủ Khác
@@ -971,7 +967,7 @@ export const MatchmakingPage: React.FC = () => {
 					)}
 				</div>
 			)}
-			
+
 			{/* ── POST-MATCH SURVEY MODAL ── */}
 			{matchData?.status === 'COMPLETED' && !feedbackSubmitted && (
 				<div className="mm-modal-overlay">
@@ -1007,22 +1003,20 @@ export const MatchmakingPage: React.FC = () => {
 											<button
 												type="button"
 												onClick={() => setSurveyPunctual(true)}
-												className={`py-2.5 rounded-xl border font-bold text-xs transition-all ${
-													surveyPunctual === true
+												className={`py-2.5 rounded-xl border font-bold text-xs transition-all ${surveyPunctual === true
 														? 'border-emerald-500 bg-emerald-500/15 text-emerald-400 shadow-lg shadow-emerald-500/10'
 														: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
-												}`}
+													}`}
 											>
 												Có, đúng giờ 👍
 											</button>
 											<button
 												type="button"
 												onClick={() => setSurveyPunctual(false)}
-												className={`py-2.5 rounded-xl border font-bold text-xs transition-all ${
-													surveyPunctual === false
+												className={`py-2.5 rounded-xl border font-bold text-xs transition-all ${surveyPunctual === false
 														? 'border-red-500 bg-red-500/15 text-red-400 shadow-lg shadow-red-500/10'
 														: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
-												}`}
+													}`}
 											>
 												Không, đi muộn ⏰
 											</button>
@@ -1036,11 +1030,10 @@ export const MatchmakingPage: React.FC = () => {
 											<button
 												type="button"
 												onClick={() => setSurveyAttitude('friendly')}
-												className={`flex flex-col items-center gap-1 py-2 rounded-xl border font-bold text-[10px] transition-all ${
-													surveyAttitude === 'friendly'
+												className={`flex flex-col items-center gap-1 py-2 rounded-xl border font-bold text-[10px] transition-all ${surveyAttitude === 'friendly'
 														? 'border-emerald-500 bg-emerald-500/15 text-emerald-400'
 														: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
-												}`}
+													}`}
 											>
 												<span className="text-lg">🙂</span>
 												Thân thiện
@@ -1048,11 +1041,10 @@ export const MatchmakingPage: React.FC = () => {
 											<button
 												type="button"
 												onClick={() => setSurveyAttitude('neutral')}
-												className={`flex flex-col items-center gap-1 py-2 rounded-xl border font-bold text-[10px] transition-all ${
-													surveyAttitude === 'neutral'
+												className={`flex flex-col items-center gap-1 py-2 rounded-xl border font-bold text-[10px] transition-all ${surveyAttitude === 'neutral'
 														? 'border-amber-500 bg-amber-500/15 text-amber-400'
 														: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
-												}`}
+													}`}
 											>
 												<span className="text-lg">😐</span>
 												Bình thường
@@ -1060,11 +1052,10 @@ export const MatchmakingPage: React.FC = () => {
 											<button
 												type="button"
 												onClick={() => setSurveyAttitude('bad')}
-												className={`flex flex-col items-center gap-1 py-2 rounded-xl border font-bold text-[10px] transition-all ${
-													surveyAttitude === 'bad'
+												className={`flex flex-col items-center gap-1 py-2 rounded-xl border font-bold text-[10px] transition-all ${surveyAttitude === 'bad'
 														? 'border-pink-500 bg-pink-500/15 text-pink-400'
 														: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
-												}`}
+													}`}
 											>
 												<span className="text-lg">🙁</span>
 												Không tốt
@@ -1079,22 +1070,20 @@ export const MatchmakingPage: React.FC = () => {
 											<button
 												type="button"
 												onClick={() => setSurveySkill(true)}
-												className={`py-2.5 rounded-xl border font-bold text-xs transition-all ${
-													surveySkill === true
+												className={`py-2.5 rounded-xl border font-bold text-xs transition-all ${surveySkill === true
 														? 'border-blue-500 bg-blue-500/15 text-blue-400 shadow-lg shadow-blue-500/10'
 														: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
-												}`}
+													}`}
 											>
 												Chuẩn mô tả ✔
 											</button>
 											<button
 												type="button"
 												onClick={() => setSurveySkill(false)}
-												className={`py-2.5 rounded-xl border font-bold text-xs transition-all ${
-													surveySkill === false
+												className={`py-2.5 rounded-xl border font-bold text-xs transition-all ${surveySkill === false
 														? 'border-amber-500 bg-amber-500/15 text-amber-400 shadow-lg shadow-amber-500/10'
 														: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
-												}`}
+													}`}
 											>
 												Lệch mô tả ✘
 											</button>
@@ -1108,22 +1097,20 @@ export const MatchmakingPage: React.FC = () => {
 											<button
 												type="button"
 												onClick={() => setSurveyPlayAgain(true)}
-												className={`py-2.5 rounded-xl border font-bold text-xs transition-all ${
-													surveyPlayAgain === true
+												className={`py-2.5 rounded-xl border font-bold text-xs transition-all ${surveyPlayAgain === true
 														? 'border-emerald-500 bg-emerald-500/15 text-emerald-400 shadow-lg shadow-emerald-500/10'
 														: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
-												}`}
+													}`}
 											>
 												Có, muốn chơi lại 👍
 											</button>
 											<button
 												type="button"
 												onClick={() => setSurveyPlayAgain(false)}
-												className={`py-2.5 rounded-xl border font-bold text-xs transition-all ${
-													surveyPlayAgain === false
+												className={`py-2.5 rounded-xl border font-bold text-xs transition-all ${surveyPlayAgain === false
 														? 'border-red-500 bg-red-500/15 text-red-400 shadow-lg shadow-red-500/10'
 														: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
-												}`}
+													}`}
 											>
 												Không, không hợp 👎
 											</button>
