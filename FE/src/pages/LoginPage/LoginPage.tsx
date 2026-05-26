@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { login as loginApi, loginWithGoogle as loginWithGoogleApi } from '../../Axios/Axios';
 
 declare global {
@@ -103,7 +103,6 @@ const RunIcon = () => (
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const googleClientRef = useRef<GoogleCodeClient | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [identifier, setIdentifier] = useState('');
@@ -112,8 +111,6 @@ export const LoginPage: React.FC = () => {
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
   const [isGoogleReady, setIsGoogleReady] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-
-  const loginState = location.state as { returnTo?: string } | null;
 
   const resolvePostLoginPath = (role: 'user' | 'owner' | 'admin', redirectPath?: string): string => {
     if (redirectPath?.trim()) {

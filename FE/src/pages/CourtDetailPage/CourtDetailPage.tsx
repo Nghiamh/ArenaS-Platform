@@ -128,19 +128,6 @@ const CourtDetailPage: React.FC = () => {
 
   const isLoggedIn = !!localStorage.getItem('accessToken');
 
-  const handleBookingNow = () => {
-    if (!isLoggedIn) {
-      navigate('/login', {
-        state: {
-          returnTo: `/courts/${courtId}`,
-        },
-      });
-      return;
-    }
-
-    setBookingModalOpen(true);
-  };
-
   useEffect(() => {
     if (!courtId || !selectedDateStr) return;
     let isMounted = true;
@@ -850,7 +837,6 @@ const CourtDetailPage: React.FC = () => {
                 Hủy chọn
               </button>
               <button
-                onClick={handleBookingNow}
                 onClick={handleOpenBookingModal}
                 className="rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-300"
               >
