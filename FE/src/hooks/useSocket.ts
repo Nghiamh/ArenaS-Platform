@@ -76,6 +76,20 @@ type CourtCancelledPayload = {
 	date: string;
 	start_time: string;
 	end_time: string;
+	reason?: string;
+};
+
+type OpponentDepositRequiredPayload = {
+	matchId: string;
+	bookingId: string;
+	bookedByUserId: string;
+	courtName: string;
+	date: string;
+	start_time: string;
+	end_time: string;
+	total_price: number;
+	opponent_amount: number;
+	deadline: string;
 };
 
 type UseSocketReturn = {
@@ -95,6 +109,7 @@ type UseSocketReturn = {
 	onCourtBooked: (callback: (payload: CourtBookedPayload) => void) => void;
 	onCourtCancelled: (callback: (payload: CourtCancelledPayload) => void) => void;
 	onPlayerReported: (callback: (payload: PlayerReportedPayload) => void) => void;
+	onOpponentDepositRequired: (callback: (payload: OpponentDepositRequiredPayload) => void) => void;
 };
 
 export function useSocket(): UseSocketReturn {
@@ -113,6 +128,7 @@ export function useSocket(): UseSocketReturn {
 	const courtBookedCb = useRef<((payload: CourtBookedPayload) => void) | null>(null);
 	const courtCancelledCb = useRef<((payload: CourtCancelledPayload) => void) | null>(null);
 	const playerReportedCb = useRef<((payload: PlayerReportedPayload) => void) | null>(null);
+	const opponentDepositRequiredCb = useRef<((payload: OpponentDepositRequiredPayload) => void) | null>(null);
 
 	useEffect(() => {
 		const token = localStorage.getItem('accessToken')?.trim();
@@ -199,6 +215,11 @@ export function useSocket(): UseSocketReturn {
 			playerReportedCb.current?.(payload);
 		});
 
+		socket.on('opponent_deposit_required', (payload: OpponentDepositRequiredPayload) => {
+			console.log('[Socket] opponent_deposit_required:', payload);
+			opponentDepositRequiredCb.current?.(payload);
+		});
+
 		socket.on('error', (err: { message: string }) => {
 			console.error('[Socket] Server error:', err.message);
 		});
@@ -267,6 +288,10 @@ export function useSocket(): UseSocketReturn {
 		playerReportedCb.current = callback;
 	}, []);
 
+	const onOpponentDepositRequired = useCallback((callback: (payload: OpponentDepositRequiredPayload) => void) => {
+		opponentDepositRequiredCb.current = callback;
+	}, []);
+
 	return {
 		socket: socketRef.current,
 		isConnected,
@@ -284,5 +309,6 @@ export function useSocket(): UseSocketReturn {
 		onCourtBooked,
 		onCourtCancelled,
 		onPlayerReported,
+		onOpponentDepositRequired,
 	};
 }

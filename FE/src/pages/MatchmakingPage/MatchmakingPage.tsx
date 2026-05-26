@@ -11,7 +11,7 @@ import {
 	acceptMatch, declineMatch, completeMatch, submitMatchFeedback, reportOpponent,
 	type MatchData, type MatchmakingTicket,
 } from '../../Axios/matchmakingApi';
-import { getPublicCourts, type PublicCourt } from '../../Axios/Axios';
+import { getPublicCourts, type PublicCourt, opponentPayBooking } from '../../Axios/Axios';
 import { useSocket } from '../../hooks/useSocket';
 import './MatchmakingPage.css';
 
@@ -38,7 +38,7 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
 
 export const MatchmakingPage: React.FC = () => {
 	const navigate = useNavigate();
-	const { onMatchFound, onPlayerAccepted, onMatchConfirmed, onMatchCancelled, onPlayerCheckedIn, onMatchCompleted, onPlayerReported, onCourtBooked, onCourtCancelled } = useSocket();
+	const { onMatchFound, onPlayerAccepted, onMatchConfirmed, onMatchCancelled, onPlayerCheckedIn, onMatchCompleted, onPlayerReported, onCourtBooked, onCourtCancelled, onOpponentDepositRequired } = useSocket();
 	const mapRef = useRef<MapRef | null>(null);
 
 	const [currentUser, setCurrentUser] = useState<{ id: string; name?: string } | null>(null);
@@ -98,6 +98,20 @@ export const MatchmakingPage: React.FC = () => {
 		setToastMessage(msg);
 		setTimeout(() => setToastMessage(''), 4000);
 	}, []);
+
+	// Opponent Deposit Payment State
+	const [opponentDeposit, setOpponentDeposit] = useState<{
+		bookingId: string;
+		courtName: string;
+		date: string;
+		start_time: string;
+		end_time: string;
+		total_price: number;
+		opponent_amount: number;
+		deadline: string;
+	} | null>(null);
+	const [depositCountdown, setDepositCountdown] = useState(0);
+	const [depositPayLoading, setDepositPayLoading] = useState(false);
 
 
 
@@ -424,20 +438,69 @@ export const MatchmakingPage: React.FC = () => {
 		});
 	}, [onPlayerReported]);
 
+	// Listen for opponent_deposit_required
+	useEffect(() => {
+		onOpponentDepositRequired((payload) => {
+			if (String(payload.matchId) === resolvedMatchId) {
+				setOpponentDeposit({
+					bookingId: payload.bookingId,
+					courtName: payload.courtName,
+					date: payload.date,
+					start_time: payload.start_time,
+					end_time: payload.end_time,
+					total_price: payload.total_price,
+					opponent_amount: payload.opponent_amount,
+					deadline: payload.deadline,
+				});
+				// Calculate initial countdown
+				const remainingSec = Math.max(0, Math.floor((new Date(payload.deadline).getTime() - Date.now()) / 1000));
+				setDepositCountdown(remainingSec);
+				showToast('Đối thủ đã đặt cọc 50%. Bạn cần thanh toán phần còn lại!');
+			}
+		});
+	}, [onOpponentDepositRequired, resolvedMatchId, showToast]);
+
+	// Deposit countdown timer
+	useEffect(() => {
+		if (!opponentDeposit || depositCountdown <= 0) return;
+		const timer = setInterval(() => {
+			setDepositCountdown((prev) => {
+				if (prev <= 1) {
+					setOpponentDeposit(null); // expired
+					return 0;
+				}
+				return prev - 1;
+			});
+		}, 1000);
+		return () => clearInterval(timer);
+	}, [opponentDeposit, depositCountdown]);
+
 	// Listen for court_booked
 	useEffect(() => {
 		onCourtBooked((payload) => {
 			if (String(payload.matchId) === resolvedMatchId) {
-				setMatchData((prev) => {
-					if (!prev) return null;
-					// Parse the date to set scheduled_at correctly
-					const d = new Date(`${payload.date}T${payload.start_time}:00`);
-					return {
-						...prev,
-						scheduled_at: d.toISOString(),
-					};
-				});
-				showToast('Đối thủ đã đặt sân thành công!');
+				const status = (payload as any).status;
+				if (status === 'confirmed') {
+					// Both have paid — set scheduled_at
+					setMatchData((prev) => {
+						if (!prev) return null;
+						const d = new Date(`${payload.date}T${payload.start_time}:00`);
+						return { ...prev, scheduled_at: d.toISOString() };
+					});
+					setOpponentDeposit(null); // Clear deposit prompt
+					showToast('Đặt sân đã được xác nhận! ✅');
+				} else if (status === 'waiting_opponent') {
+					// Booker sees this — don't set scheduled_at yet
+					showToast('Đã đặt cọc 50%. Đợi đối thủ thanh toán...');
+				} else {
+					// Default (old behavior)
+					setMatchData((prev) => {
+						if (!prev) return null;
+						const d = new Date(`${payload.date}T${payload.start_time}:00`);
+						return { ...prev, scheduled_at: d.toISOString() };
+					});
+					showToast('Đối thủ đã đặt sân thành công!');
+				}
 			}
 		});
 	}, [onCourtBooked, resolvedMatchId, showToast]);
@@ -1026,6 +1089,50 @@ export const MatchmakingPage: React.FC = () => {
 									</>
 								) : (
 									<>
+										{/* Opponent deposit payment prompt */}
+										{opponentDeposit && depositCountdown > 0 && (
+											<div className="relative z-10 rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-500/10 to-orange-500/5 p-5 mb-4">
+												<div className="flex items-center gap-2 mb-3">
+													<span className="text-lg">💳</span>
+													<h4 className="text-base font-bold text-amber-300">Thanh toán 50% còn lại</h4>
+												</div>
+												<p className="text-sm text-slate-300 mb-2">
+													Đối thủ đã đặt cọc 50% cho sân <span className="font-semibold text-white">{opponentDeposit.courtName}</span>.
+													Bạn cần thanh toán phần còn lại để xác nhận đặt sân.
+												</p>
+												<div className="flex items-center justify-between text-sm mb-3">
+													<span className="text-slate-400">Số tiền cần trả:</span>
+													<span className="text-lg font-bold text-amber-300">{new Intl.NumberFormat('vi-VN').format(opponentDeposit.opponent_amount)} đ</span>
+												</div>
+												<div className="flex items-center gap-2 mb-4">
+													<Clock className="w-4 h-4 text-amber-400 animate-pulse" />
+													<span className="text-sm text-amber-400 font-mono font-bold">{formatTime(depositCountdown)}</span>
+													<span className="text-xs text-slate-500">còn lại</span>
+												</div>
+												<button
+													type="button"
+													disabled={depositPayLoading}
+													onClick={async () => {
+														try {
+															setDepositPayLoading(true);
+															setError('');
+															await opponentPayBooking(opponentDeposit.bookingId);
+															setOpponentDeposit(null);
+															showToast('Thanh toán thành công! Đặt sân đã xác nhận ✅');
+														} catch (err: any) {
+															setError(err.message || 'Thanh toán thất bại');
+														} finally {
+															setDepositPayLoading(false);
+														}
+													}}
+													className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-3.5 text-base font-bold text-white shadow-lg shadow-amber-500/25 transition hover:shadow-amber-500/40 hover:brightness-110 disabled:opacity-50"
+												>
+													{depositPayLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
+													Thanh toán {new Intl.NumberFormat('vi-VN').format(opponentDeposit.opponent_amount)} đ
+												</button>
+											</div>
+										)}
+
 										{matchData.scheduled_at && (
 											<button type="button" onClick={handleCompleteMatch} disabled={completeLoading || !completeUnlockInfo.canComplete}
 												className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-emerald-500/25 transition hover:shadow-emerald-500/40 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed">

@@ -9,13 +9,17 @@ import {
 	MessageSquareOff,
 	ShieldAlert,
 	MapPin,
+	Clock,
+	Zap,
 } from 'lucide-react';
 import {
 	getChatHistory,
 	voteChatDelete,
 	type ChatMessageData,
 } from '../../Axios/matchmakingApi';
+import { opponentPayBooking } from '../../Axios/Axios';
 import { useSocket } from '../../hooks/useSocket';
+import { DepositModal } from '../WalletPage/DepositModal';
 
 function formatMessageTime(isoStr: string): string {
 	try {
@@ -39,7 +43,7 @@ function getSenderName(sender: ChatMessageData['sender_id']): string {
 export const ChatPage: React.FC = () => {
 	const { matchId } = useParams<{ matchId: string }>();
 	const navigate = useNavigate();
-	const { joinMatchRoom, leaveMatchRoom, sendMessage: socketSendMessage, onReceiveMessage, onChatVoteUpdated, isConnected } = useSocket();
+	const { joinMatchRoom, leaveMatchRoom, sendMessage: socketSendMessage, onReceiveMessage, onChatVoteUpdated, onOpponentDepositRequired, isConnected } = useSocket();
 
 	const [currentUserId, setCurrentUserId] = useState<string>('');
 	const [messages, setMessages] = useState<ChatMessageData[]>([]);
@@ -54,6 +58,14 @@ export const ChatPage: React.FC = () => {
 	const [showScrollFab, setShowScrollFab] = useState(false);
 	const [error, setError] = useState('');
 	const [courtId, setCourtId] = useState<string | null>(null);
+
+	// Opponent deposit payment in chat
+	const [depositInfo, setDepositInfo] = useState<{ bookingId: string; amount: number; deadline: string } | null>(null);
+	const [depositCountdown, setDepositCountdown] = useState(0);
+	const [depositPayLoading, setDepositPayLoading] = useState(false);
+	const [depositPaid, setDepositPaid] = useState(false);
+	const [showDeposit, setShowDeposit] = useState(false);
+	const [missingAmount, setMissingAmount] = useState<number | null>(null);
 
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -140,6 +152,34 @@ export const ChatPage: React.FC = () => {
 			});
 		});
 	}, [onReceiveMessage]);
+
+	// Listen for opponent_deposit_required to get bookingId
+	useEffect(() => {
+		onOpponentDepositRequired((payload) => {
+			if (payload.matchId === matchId) {
+				setDepositInfo({
+					bookingId: payload.bookingId,
+					amount: payload.opponent_amount,
+					deadline: payload.deadline,
+				});
+				const remainingSec = Math.max(0, Math.floor((new Date(payload.deadline).getTime() - Date.now()) / 1000));
+				setDepositCountdown(remainingSec);
+				setDepositPaid(false);
+			}
+		});
+	}, [onOpponentDepositRequired, matchId]);
+
+	// Deposit countdown timer
+	useEffect(() => {
+		if (!depositInfo || depositCountdown <= 0 || depositPaid) return;
+		const timer = setInterval(() => {
+			setDepositCountdown((prev) => {
+				if (prev <= 1) return 0;
+				return prev - 1;
+			});
+		}, 1000);
+		return () => clearInterval(timer);
+	}, [depositInfo, depositCountdown, depositPaid]);
 
 	// Listen for chat deletion/voting updates from socket
 	useEffect(() => {
@@ -286,11 +326,10 @@ export const ChatPage: React.FC = () => {
 							type="button"
 							onClick={handleVoteDelete}
 							disabled={deleteVoting || chatDeleted || chatDeletedBy.includes(currentUserId)}
-							className={`flex items-center justify-center w-9 h-9 rounded-xl border transition disabled:opacity-40 disabled:cursor-not-allowed ${
-								chatDeletedBy.includes(currentUserId)
+							className={`flex items-center justify-center w-9 h-9 rounded-xl border transition disabled:opacity-40 disabled:cursor-not-allowed ${chatDeletedBy.includes(currentUserId)
 									? 'border-amber-500/30 bg-amber-500/10 text-amber-400'
 									: 'border-slate-700/60 bg-slate-800/50 text-slate-500 hover:bg-red-500/15 hover:text-red-400 hover:border-red-500/30'
-							}`}
+								}`}
 							title={chatDeletedBy.includes(currentUserId) ? 'Bạn đã vote xoá' : 'Vote xoá chat'}
 						>
 							{deleteVoting ? (
@@ -370,7 +409,76 @@ export const ChatPage: React.FC = () => {
 									{showName && (
 										<div className="text-[0.7rem] font-semibold text-blue-400 mb-0.5">{getSenderName(msg.sender_id)}</div>
 									)}
-									<div className="text-sm whitespace-pre-wrap">{msg.message}</div>
+									<div className="text-sm whitespace-pre-wrap">
+										{(() => {
+											// Detect deposit 50% message from opponent → show pay button
+											const isDepositMsg = msg.message.includes('đặt cọc 50%') && msg.message.includes('Đợi bạn thanh toán');
+											if (isDepositMsg && !isMine && depositInfo && !depositPaid) {
+												// Show message without "Đợi bạn..." line + add pay button
+												const cleanedMsg = msg.message.replace(/\nĐợi bạn thanh toán 50% còn lại trong 30 phút\.?/, '');
+												const fmtMin = Math.floor(depositCountdown / 60).toString().padStart(2, '0');
+												const fmtSec = (depositCountdown % 60).toString().padStart(2, '0');
+												return (
+													<>
+														{cleanedMsg}
+														<div className="mt-3 pt-3 border-t border-slate-600/40">
+															{depositCountdown > 0 ? (
+																<>
+																	<div className="flex items-center gap-1.5 mb-2">
+																		<Clock className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+																		<span className="text-xs text-amber-400 font-mono font-bold">{fmtMin}:{fmtSec}</span>
+																		<span className="text-xs text-slate-500">còn lại</span>
+																	</div>
+																	<button
+																		type="button"
+																		disabled={depositPayLoading}
+																		onClick={async (e) => {
+																			e.stopPropagation();
+																			try {
+																				setDepositPayLoading(true);
+																				await opponentPayBooking(depositInfo.bookingId);
+																				setDepositPaid(true);
+																			} catch (err: any) {
+																				const errMsg = err.message || 'Thanh toán thất bại';
+																				if (errMsg.includes('Số dư') || errMsg.includes('insufficient_balance')) {
+																					setMissingAmount(depositInfo.amount);
+																					setShowDeposit(true);
+																				} else {
+																					setError(errMsg);
+																				}
+																			} finally {
+																				setDepositPayLoading(false);
+																			}
+																		}}
+																		className="w-full flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2.5 text-sm font-bold text-white shadow-md transition hover:brightness-110 disabled:opacity-50"
+																	>
+																		{depositPayLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+																		💳 Thanh toán 50% ({new Intl.NumberFormat('vi-VN').format(depositInfo.amount)} đ)
+																	</button>
+																</>
+															) : (
+																<p className="text-xs text-red-400">⏰ Hết thời hạn thanh toán</p>
+															)}
+														</div>
+													</>
+												);
+											}
+											// If deposit already paid, show confirmation on that message
+											if (isDepositMsg && !isMine && depositPaid) {
+												const cleanedMsg = msg.message.replace(/\nĐợi bạn thanh toán 50% còn lại trong 30 phút\.?/, '');
+												return (
+													<>
+														{cleanedMsg}
+														<div className="mt-3 pt-3 border-t border-emerald-600/40">
+															<p className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">✅ Đã thanh toán 50% — Đặt sân xác nhận!</p>
+														</div>
+													</>
+												);
+											}
+											// Normal message
+											return msg.message;
+										})()}
+									</div>
 									<div className={`text-[0.65rem] mt-1 opacity-60 ${isMine ? "text-right text-white/70" : "text-left text-slate-400"}`}>
 										{formatMessageTime(msg.createdAt)}
 									</div>
@@ -426,6 +534,13 @@ export const ChatPage: React.FC = () => {
 					</div>
 				</>
 			)}
+
+			<DepositModal
+				isOpen={showDeposit}
+				onClose={() => setShowDeposit(false)}
+				onSuccess={() => setShowDeposit(false)}
+				initialAmount={missingAmount || undefined}
+			/>
 		</div>
 	);
 };

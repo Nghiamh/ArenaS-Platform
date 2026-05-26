@@ -508,14 +508,16 @@ export const ProfilePage: React.FC = () => {
         const aEnd = new Date(`${a.date.split('T')[0]}T${a.end_time}:00`);
         const aPlayed = aSuccess && aEnd < new Date();
         let aScore = 3; // Đã hủy
-        if (aSuccess && !aPlayed) aScore = 1; // Thành công
+        if (a.status === 'waiting_opponent') aScore = 0; // Chờ thanh toán
+        else if (aSuccess && !aPlayed) aScore = 1; // Thành công
         else if (aSuccess && aPlayed) aScore = 2; // Đã chơi
 
         const bSuccess = b.status === 'confirmed' || b.status === 'completed';
         const bEnd = new Date(`${b.date.split('T')[0]}T${b.end_time}:00`);
         const bPlayed = bSuccess && bEnd < new Date();
         let bScore = 3; // Đã hủy
-        if (bSuccess && !bPlayed) bScore = 1; // Thành công
+        if (b.status === 'waiting_opponent') bScore = 0; // Chờ thanh toán
+        else if (bSuccess && !bPlayed) bScore = 1; // Thành công
         else if (bSuccess && bPlayed) bScore = 2; // Đã chơi
 
         if (aScore !== bScore) {
@@ -1658,7 +1660,10 @@ export const ProfilePage: React.FC = () => {
 
                           let statusClass = "bg-slate-500/10 text-slate-400 border-white/[0.05]";
                           let statusLabel = booking.status;
-                          if (isPlayed) {
+                          if (booking.status === 'waiting_opponent') {
+                            statusClass = "bg-amber-500/10 text-amber-400 border-amber-500/20";
+                            statusLabel = "Chờ thanh toán";
+                          } else if (isPlayed) {
                             statusClass = "bg-[#1D9E75]/10 text-[#1D9E75] border-[#1D9E75]/20";
                             statusLabel = "Đã chơi";
                           } else if (isSuccess) {
@@ -1695,7 +1700,7 @@ export const ProfilePage: React.FC = () => {
                                 {new Intl.NumberFormat('vi-VN').format(booking.total_price)} đ
                               </td>
                               <td className="py-4 text-center">
-                                {!isPlayed && isSuccess ? (
+                                {!isPlayed && (isSuccess || booking.status === 'waiting_opponent') ? (
                                   <button
                                     onClick={() => setBookingToCancel(booking)}
                                     disabled={cancellingBookingId === booking._id}
@@ -2006,7 +2011,8 @@ export const ProfilePage: React.FC = () => {
                       const isPlayed = isSuccess && bookingEndTime < new Date();
                       let statusClass = "bg-slate-500/10 text-slate-400 border-white/[0.05]";
                       let statusLabel = booking.status;
-                      if (isPlayed) { statusClass = "bg-[#1D9E75]/10 text-[#1D9E75] border-[#1D9E75]/20"; statusLabel = "Đã chơi"; }
+                      if (booking.status === 'waiting_opponent') { statusClass = "bg-amber-500/10 text-amber-400 border-amber-500/20"; statusLabel = "Chờ thanh toán"; }
+                      else if (isPlayed) { statusClass = "bg-[#1D9E75]/10 text-[#1D9E75] border-[#1D9E75]/20"; statusLabel = "Đã chơi"; }
                       else if (isSuccess) { statusClass = "bg-blue-500/10 text-blue-400 border-blue-500/20"; statusLabel = "Thành công"; }
                       else if (isCancelled) { statusClass = "bg-rose-500/10 text-rose-400 border-rose-500/20"; statusLabel = "Đã hủy"; }
                       return (
@@ -2062,7 +2068,7 @@ export const ProfilePage: React.FC = () => {
                             {new Intl.NumberFormat('vi-VN').format(booking.total_price)} đ
                           </td>
                           <td className="py-3.5 text-center">
-                            {!isPlayed && isSuccess ? (
+                            {!isPlayed && (isSuccess || booking.status === 'waiting_opponent') ? (
                               <button
                                 onClick={() => { setBookingToCancel(booking); setShowAllBookingsModal(false); }}
                                 disabled={cancellingBookingId === booking._id}
