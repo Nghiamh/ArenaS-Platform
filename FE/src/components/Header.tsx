@@ -110,6 +110,14 @@ export const Header: React.FC = () => {
                 Tìm Đối Thủ
               </Link>
             )}
+            {!isManagementAccount && (
+              <Link
+                to="/cho-chu-san"
+                className="hover:text-[#CCFF00] transition duration-300 font-bold"
+              >
+                Liên Hệ Chủ Sân
+              </Link>
+            )}
             {!isPlayerAccount && (
               <>
                 <Link
