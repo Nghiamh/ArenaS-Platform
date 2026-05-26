@@ -140,6 +140,50 @@ export async function getOwnerBookings(req: Request, res: Response) {
 	}
 }
 
+// 5b. API: Lấy danh sách Booking của Owner có phân trang (cho List View)
+export async function getOwnerListBookings(req: Request, res: Response) {
+	try {
+		const ownerId = (req as any).user._id;
+		const { page = '1', limit = '10', startDate, endDate } = req.query;
+
+		const ownerCourts = await Court.find({ owner_id: ownerId }).select('_id');
+		const courtIds = ownerCourts.map(c => c._id);
+
+		let query: any = { court_id: { $in: courtIds } };
+		if (startDate && endDate) {
+			query.date = { $gte: startDate as string, $lte: endDate as string };
+		} else if (startDate) {
+			query.date = startDate as string;
+		}
+
+		const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
+		const limitNum = Math.max(1, parseInt(limit as string, 10) || 10);
+
+		const [bookings, total] = await Promise.all([
+			BookingModel.find(query)
+				.sort({ createdAt: -1 })
+				.skip((pageNum - 1) * limitNum)
+				.limit(limitNum)
+				.lean(),
+			BookingModel.countDocuments(query),
+		]);
+
+		return res.status(200).json({
+			message: 'Lấy danh sách booking phân trang thành công',
+			bookings,
+			pagination: {
+				page: pageNum,
+				limit: limitNum,
+				total,
+				totalPages: Math.ceil(total / limitNum),
+			},
+		});
+	} catch (error) {
+		console.error('Lỗi khi lấy owner list bookings:', error);
+		return res.status(500).json({ error: 'internal_server_error' });
+	}
+}
+
 // 6. API: Owner tạo trực tiếp Booking
 export async function ownerCreateBooking(req: Request, res: Response) {
 	const session = await mongoose.startSession();
