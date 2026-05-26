@@ -1,6 +1,6 @@
 import React from 'react';
 import { Popup } from 'react-map-gl';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import type { Court } from '../hooks/useCourtSearch';
 
 type CourtPopupProps = {
@@ -29,6 +29,8 @@ export const CourtPopup: React.FC<CourtPopupProps> = ({
 	variant = 'map',
 }) => {
 	const navigate = useNavigate();
+	const location = useLocation();
+	const fromMatch = (location.state as any)?.fromMatch;
 
 	const distanceLabel = formatDistance(court.distance_m);
 	const card = (
@@ -38,7 +40,7 @@ export const CourtPopup: React.FC<CourtPopupProps> = ({
 					<h3 className="text-lg font-bold text-slate-900">{court.name}</h3>
 					<p className="mt-1 text-sm text-slate-500">{court.location}</p>
 				</div>
-				<span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-600">
+				<span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-400">
 					{court.status === 'closed' ? 'Tạm đóng' : 'Đang mở'}
 				</span>
 			</div>
@@ -68,7 +70,7 @@ export const CourtPopup: React.FC<CourtPopupProps> = ({
 			<div className="mt-4 grid gap-2">
 				<button
 					type="button"
-					onClick={() => navigate(`/courts/${court.id}`, { state: { court } })}
+					onClick={() => navigate(`/courts/${court.id}`, { state: { court, fromMatch } })}
 					className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
 				>
 					Xem chi tiết

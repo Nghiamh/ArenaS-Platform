@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { RefreshCw, Download, Plus, Search } from 'lucide-react';
 import { createOwnerBooking, type OwnerCourt, type OwnerBooking } from '../../Axios/Axios';
 import {
   bookingHours,
@@ -37,18 +38,29 @@ const STATUS_CHIP = {
   default:   { bg: 'from-cyan-600/15 to-cyan-500/30',    border: 'border-cyan-400/40',    shadow: 'rgba(6,182,212,0.25)',  text: 'text-cyan-300' },
 };
 
-const COL   = '250px repeat(16, 110px)';
-const WIDTH = '2010px';
+const COL   = '250px repeat(16, 200px)';
+const WIDTH = '3450px';
 const HC    = bookingHours.length;
 const fmt   = (h: number) => `${String(Math.floor(h)).padStart(2, '0')}:${(h % 1) * 60 === 30 ? '30' : '00'}`;
 const WEEK_COL = 'minmax(230px,270px) repeat(7,minmax(150px,1fr))';
+
+const getDisplayStatus = (status: string, date: string, endTime: string) => {
+  if (status === 'confirmed') {
+    const now = new Date();
+    const endTimeDate = new Date(`${date}T${endTime}:00+07:00`);
+    if (now > endTimeDate) {
+      return 'completed';
+    }
+  }
+  return status;
+};
 
 /* ═══════════════════════════════════════
    Booking chip (day view)
    ═══════════════════════════════════════ */
 const Chip: React.FC<{ b: any; onClick: () => void }> = ({ b, onClick }) => {
   const s    = b.startHour - 7;
-  const span = Math.max(1, b.endHour - b.startHour);
+  const span = b.endHour - b.startHour;
   
   // Pick chip tone based on booking status
   const statusKey = b.status || 'confirmed';
@@ -71,20 +83,20 @@ const Chip: React.FC<{ b: any; onClick: () => void }> = ({ b, onClick }) => {
       style={{
         left: `calc(${(s / HC) * 100}% + 4px)`,
         width: `calc(${(span / HC) * 100}% - 8px)`,
-        minWidth: 80,
+        minWidth: 40,
         boxShadow: `0 8px 20px -8px ${t.shadow}`,
       }}
     >
       <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
-      <div className="relative px-3 py-2">
-        <p className="text-[12px] font-bold leading-tight text-white truncate">
-          <span className={`mr-1 font-mono text-[10px] font-black opacity-80 ${t.text}`}>{bookingCode}</span> 
+      <div className="relative px-2.5 py-1.5">
+        <p className="text-[11px] font-bold leading-tight text-white truncate">
+          <span className={`mr-1 font-mono text-[9px] font-black opacity-80 ${t.text}`}>{bookingCode}</span> 
           {b.customer}
         </p>
-        <p className="mt-0.5 text-[10px] text-white/60 font-mono">{fmt(b.startHour)}–{fmt(b.endHour)}</p>
+        <p className="text-[9px] text-white/60 font-mono leading-tight">{fmt(b.startHour)}–{fmt(b.endHour)}</p>
       </div>
       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/40 rounded-xl">
-        <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">🔍 Chi tiết</span>
+        <span className="flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm"><Search className="w-3 h-3" /> Chi tiết</span>
       </div>
     </motion.button>
   );
@@ -102,7 +114,7 @@ const AddSlot: React.FC<{ onClick: () => void }> = ({ onClick }) => (
     title="Thêm lịch đặt"
   >
     <span className="flex items-center gap-1 text-[10px] font-bold text-slate-700 opacity-0 group-hover:opacity-100 transition">
-      ＋ Thêm lịch đặt
+      <Plus className="w-3 h-3" /> Thêm lịch đặt
     </span>
   </button>
 );
@@ -322,7 +334,10 @@ const ListView: React.FC<{
   bookingsData: OwnerBooking[];
   courtsData: OwnerCourt[];
   onDetailClick: (booking: OwnerBooking) => void;
-}> = ({ bookingsData, courtsData, onDetailClick }) => {
+  listPage?: number;
+  setListPage?: React.Dispatch<React.SetStateAction<number>>;
+  listTotalPages?: number;
+}> = ({ bookingsData, courtsData, onDetailClick, listPage, setListPage, listTotalPages }) => {
   const getSubCourtName = (courtId: string, subCourtId: string) => {
     const court = courtsData.find(c => c.id === courtId);
     const sub = court?.sub_courts.find(sc => sc._id === subCourtId);
@@ -341,9 +356,6 @@ const ListView: React.FC<{
               <th className="px-6 py-4">Sân đặt</th>
               <th className="px-6 py-4">Ngày đặt</th>
               <th className="px-6 py-4">Khung giờ</th>
-              <th className="px-6 py-4">Tổng tiền</th>
-              <th className="px-6 py-4">Trạng thái</th>
-              <th className="px-6 py-4">Nguồn</th>
               <th className="px-6 py-4 text-right">Thao tác</th>
             </tr>
           </thead>
@@ -359,21 +371,6 @@ const ListView: React.FC<{
                     <td className="px-6 py-4 font-medium text-slate-300">{getSubCourtName(b.court_id, b.sub_court_id)}</td>
                     <td className="px-6 py-4 text-slate-400">{b.date}</td>
                     <td className="px-6 py-4 text-slate-300 font-mono">{b.start_time} - {b.end_time}</td>
-                    <td className="px-6 py-4 font-bold text-[#00B074]">{(b.total_price || 0).toLocaleString('vi-VN')}₫</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-bold border ${
-                        b.status === 'confirmed' || b.status === 'completed'
-                          ? 'bg-[#00B074]/10 text-[#00B074] border-[#00B074]/20'
-                          : b.status === 'cancelled'
-                          ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                          : 'bg-amber-500/10 text-[#E59E0B] border-[#E59E0B]/20'
-                      }`}>
-                        {b.status === 'confirmed' ? 'Đã xác nhận' : b.status === 'cancelled' ? 'Đã hủy' : b.status || 'Chờ xử lý'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-xs">
-                      {b.source === 'app' ? '📱 App' : b.source === 'phone' ? '📞 Điện thoại' : '🚶 Trực tiếp'}
-                    </td>
                     <td className="px-6 py-4 text-right">
                       <button
                         type="button"
@@ -388,7 +385,7 @@ const ListView: React.FC<{
               })
             ) : (
               <tr>
-                <td colSpan={10} className="px-6 py-12 text-center text-slate-500">
+                <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
                   Không có lịch đặt nào trong khoảng thời gian này
                 </td>
               </tr>
@@ -396,6 +393,32 @@ const ListView: React.FC<{
           </tbody>
         </table>
       </div>
+      
+      {listTotalPages && listTotalPages > 1 && setListPage && listPage && (
+        <div className="flex items-center justify-between border-t border-white/[0.08] px-6 py-4 bg-[#0A111E]/80">
+          <p className="text-[10px] text-slate-400 font-bold">
+            Trang <span className="text-white">{listPage}</span> / {listTotalPages}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={listPage <= 1}
+              onClick={() => setListPage(prev => prev - 1)}
+              className="flex h-8 items-center justify-center rounded-lg border border-white/[0.08] bg-[#0E1524] px-3 text-[10px] font-bold text-slate-400 hover:text-white hover:border-white/20 transition disabled:opacity-50 disabled:pointer-events-none"
+            >
+              Trang trước
+            </button>
+            <button
+              type="button"
+              disabled={listPage >= listTotalPages}
+              onClick={() => setListPage(prev => prev + 1)}
+              className="flex h-8 items-center justify-center rounded-lg border border-white/[0.08] bg-[#0E1524] px-3 text-[10px] font-bold text-slate-400 hover:text-white hover:border-white/20 transition disabled:opacity-50 disabled:pointer-events-none"
+            >
+              Trang sau
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -412,9 +435,19 @@ export const OwnerBookingScheduleBoard: React.FC<{
   courtsData: OwnerCourt[];
   bookingsData: OwnerBooking[];
   fetchScheduleData: () => Promise<void>;
-}> = ({ viewMode, currentDate, setCurrentDate, courtsData, bookingsData, fetchScheduleData }) => {
+  listPage?: number;
+  setListPage?: React.Dispatch<React.SetStateAction<number>>;
+  listTotalPages?: number;
+}> = ({ viewMode, currentDate, setCurrentDate, courtsData, bookingsData, fetchScheduleData, listPage, setListPage, listTotalPages }) => {
   const [schedule, setSchedule] = useState<ScheduleState>([]);
   const [modal, setModal] = useState<ModalState>(CLOSED);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchScheduleData();
+    setTimeout(() => setIsRefreshing(false), 500);
+  };
 
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -488,8 +521,10 @@ export const OwnerBookingScheduleBoard: React.FC<{
                 endHour: eh + em / 60,
                 tone: b.tone || accent,
                 note: b.note,
-                status: b.status,
+                status: getDisplayStatus(b.status, dateStr, b.end_time),
                 dayIndex: dIdx,
+                totalPrice: b.total_price,
+                date: b.date,
               };
             });
           }
@@ -512,7 +547,9 @@ export const OwnerBookingScheduleBoard: React.FC<{
                 endHour: eh + em / 60,
                 tone: b.tone || accent,
                 note: b.note,
-                status: b.status,
+                status: getDisplayStatus(b.status, currentDate, b.end_time),
+                totalPrice: b.total_price,
+                date: b.date,
               };
             }),
             bookingsByDay
@@ -558,7 +595,8 @@ export const OwnerBookingScheduleBoard: React.FC<{
         tone: b.tone, note: b.note ?? '',
         status: b.status || 'confirmed', 
         source: b.source || 'app',
-        date: currentDate,
+        date: b.date || currentDate,
+        totalPrice: b.totalPrice,
       },
     });
   }, [schedule]);
@@ -583,9 +621,10 @@ export const OwnerBookingScheduleBoard: React.FC<{
         endHour: eh + em / 60,
         tone: b.tone || 'blue',
         note: b.note || '',
-        status: b.status as any,
+        status: getDisplayStatus(b.status, b.date, b.end_time) as any,
         source: b.source as any,
         date: b.date,
+        totalPrice: b.total_price,
       }
     });
   }, [courtsData]);
@@ -721,17 +760,25 @@ export const OwnerBookingScheduleBoard: React.FC<{
           <div className="flex items-center gap-2">
             <button
               type="button"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="flex h-9 items-center gap-1.5 rounded-xl border border-white/[0.08] bg-[#0E1524] hover:border-white/20 hover:text-white px-3 text-xs font-bold text-slate-400 transition disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} /> Tải lại
+            </button>
+            <button
+              type="button"
               onClick={() => alert('Xuất dữ liệu Excel thành công')}
               className="flex h-9 items-center gap-1.5 rounded-xl border border-white/[0.08] bg-[#0E1524] hover:border-white/20 hover:text-white px-3 text-xs font-bold text-slate-400 transition"
             >
-              📥 Xuất dữ liệu
+              <Download className="w-3.5 h-3.5" /> Xuất dữ liệu
             </button>
             <button
               type="button"
               onClick={openGlobalAdd}
               className="flex h-9 items-center gap-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 px-3.5 text-xs font-extrabold text-[#07162f] transition shadow-[0_4px_12px_rgba(6,182,212,0.3)]"
             >
-              ＋ Tạo đơn mới
+              <Plus className="w-3.5 h-3.5" /> Tạo đơn mới
             </button>
           </div>
         </div>
@@ -781,6 +828,9 @@ export const OwnerBookingScheduleBoard: React.FC<{
               bookingsData={bookingsData}
               courtsData={courtsData}
               onDetailClick={openListDetail}
+              listPage={listPage}
+              setListPage={setListPage}
+              listTotalPages={listTotalPages}
             />
           </div>
         )}
@@ -795,7 +845,7 @@ export const OwnerBookingScheduleBoard: React.FC<{
           style={{ cursor: 'pointer' }}
           title="Thêm lịch đặt nhanh"
         >
-          ＋
+          <Plus className="w-6 h-6" />
         </button>
       )}
 

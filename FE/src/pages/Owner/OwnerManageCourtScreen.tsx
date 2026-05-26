@@ -77,7 +77,7 @@ const statusBadgeClass: Record<OwnerCourtStatus, string> = {
   available: 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/35',
   closed: 'bg-slate-500/20 text-slate-300 ring-1 ring-slate-300/25',
   open: 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/35',
-  pending: 'bg-amber-500/20 text-amber-200 ring-1 ring-amber-400/35',
+  pending: 'bg-amber-500/20 text-amber-300 ring-1 ring-amber-400/35',
 };
 
 const statusOptions: Array<{ value: OwnerCourtStatus; label: string }> = [

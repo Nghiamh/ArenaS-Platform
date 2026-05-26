@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { OwnerSidebar } from './OwnerSidebar';
 import { OwnerBookingScheduleBoard } from './OwnerBookingScheduleBoard';
-import { getOwnerCourts, getOwnerBookings, type OwnerCourt, type OwnerBooking } from '../../Axios/Axios';
+import { getOwnerCourts, getOwnerBookings, getOwnerListBookings, getOwnerRevenue, type OwnerCourt, type OwnerBooking, type OwnerRevenueResponse } from '../../Axios/Axios';
 
 type BookingViewMode = 'day' | 'week' | 'list';
 
@@ -24,7 +24,11 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
 
   const [courtsData, setCourtsData] = useState<OwnerCourt[]>([]);
   const [bookingsData, setBookingsData] = useState<OwnerBooking[]>([]);
+  const [listBookingsData, setListBookingsData] = useState<OwnerBooking[]>([]);
+  const [listPage, setListPage] = useState(1);
+  const [listTotalPages, setListTotalPages] = useState(1);
   const [filteredBookings, setFilteredBookings] = useState<OwnerBooking[]>([]);
+  const [revenueData, setRevenueData] = useState<OwnerRevenueResponse | null>(null);
   
   const [selectedFacility, setSelectedFacility] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -62,25 +66,33 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
         end = next.toISOString().split('T')[0];
       }
 
-      const [courts, bks] = await Promise.all([
+      const [courts, bks, revenue] = await Promise.all([
         getOwnerCourts(),
-        getOwnerBookings({ startDate: start, endDate: end })
+        getOwnerBookings({ startDate: start, endDate: end }),
+        getOwnerRevenue()
       ]);
 
       setCourtsData(courts);
       setBookingsData(bks);
+      setRevenueData(revenue);
+
+      if (viewMode === 'list') {
+        const listRes = await getOwnerListBookings({ page: listPage, limit: 10 });
+        setListBookingsData(listRes.bookings);
+        setListTotalPages(listRes.pagination.totalPages);
+      }
     } catch (err) {
       console.error('Lỗi khi tải dữ liệu booking:', err);
     }
-  }, [currentDate, viewMode]);
+  }, [currentDate, viewMode, listPage]);
 
   useEffect(() => {
     fetchScheduleData();
-  }, [fetchScheduleData]);
+  }, [fetchScheduleData, listPage]);
 
   // Apply filters and search
   useEffect(() => {
-    let filtered = bookingsData;
+    let filtered = viewMode === 'list' ? listBookingsData : bookingsData;
     if (selectedFacility !== 'all') {
       filtered = filtered.filter(b => b.court_id === selectedFacility);
     }
@@ -96,7 +108,7 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
       );
     }
     setFilteredBookings(filtered);
-  }, [bookingsData, selectedFacility, selectedStatus, searchQuery]);
+  }, [bookingsData, listBookingsData, viewMode, selectedFacility, selectedStatus, searchQuery]);
   const filteredCourts = useMemo(() => {
     if (selectedFacility === 'all') return courtsData;
     return courtsData.filter(c => c.id === selectedFacility);
@@ -117,7 +129,7 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
     return b.status === 'confirmed' && currentMinutes >= startMins && currentMinutes <= endMins;
   }).length;
 
-  const todayRevenue = todayBookings.reduce((sum, b) => sum + (b.total_price || 0), 0);
+  const todayRevenue = revenueData?.today || 0;
 
   // Format dynamic dates in Vietnamese
   const getVNDateLabel = (dateStr: string) => {
@@ -404,6 +416,9 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
                 courtsData={filteredCourts}
                 bookingsData={filteredBookings}
                 fetchScheduleData={fetchScheduleData}
+                listPage={listPage}
+                setListPage={setListPage}
+                listTotalPages={listTotalPages}
               />
             </div>
 

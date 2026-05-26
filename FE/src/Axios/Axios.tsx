@@ -603,8 +603,28 @@ export async function deleteOwnerCourt(courtId: string): Promise<BasicMessageRes
 }
 
 // ---------------------------------------------------------------------------
-// COURT DASHBOARD / STATS
+// COURT DASHBOARD / STATS / REVENUE
 // ---------------------------------------------------------------------------
+
+export type OwnerRevenueResponse = {
+	today: number;
+	todayTrend: number;
+	week: number;
+	weekTrend: number;
+	month: number;
+	monthTrend: number;
+};
+
+export async function getOwnerRevenue(): Promise<OwnerRevenueResponse> {
+	try {
+		const { data } = await axiosClient.get<OwnerRevenueResponse>('/wallet/revenue', {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
 
 export type CourtDashboard = {
 	_id: string;
@@ -696,6 +716,29 @@ export async function getOwnerBookings(params?: { startDate?: string; endDate?: 
 			params,
 		});
 		return data.bookings;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export type OwnerListBookingsResponse = {
+	message: string;
+	bookings: OwnerBooking[];
+	pagination: {
+		page: number;
+		limit: number;
+		total: number;
+		totalPages: number;
+	};
+};
+
+export async function getOwnerListBookings(params?: { startDate?: string; endDate?: string; page?: number; limit?: number }): Promise<OwnerListBookingsResponse> {
+	try {
+		const { data } = await axiosClient.get<OwnerListBookingsResponse>('/bookings/owner-list-bookings', {
+			headers: withAuthHeaders(),
+			params,
+		});
+		return data;
 	} catch (error: unknown) {
 		throw new Error(toErrorMessage(error));
 	}
@@ -981,6 +1024,7 @@ export type UserBookingPayload = {
 	date: string;
 	start_time: string;
 	end_time: string;
+	match_id?: string;
 };
 
 export type UserBookingResponse = {
@@ -1018,6 +1062,15 @@ export type UserBooking = {
 	tone?: string;
 	court_name: string;
 	sub_court_name: string;
+	match_id?: {
+		_id: string;
+		participants: {
+			_id: string;
+			name: string;
+			userName: string;
+			avatarUrl?: string;
+		}[];
+	};
 	createdAt: string;
 	updatedAt?: string;
 };
@@ -1044,6 +1097,28 @@ export async function userBookCourt(payload: UserBookingPayload): Promise<UserBo
 	}
 }
 
+export async function lockSlots(payload: Omit<UserBookingPayload, 'match_id'>): Promise<{ message: string }> {
+	try {
+		const { data } = await axiosClient.post<{ message: string }>('/bookings/lock-slots', payload, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function unlockSlots(payload: { court_id: string; sub_court_id: string; date: string }): Promise<{ message: string }> {
+	try {
+		const { data } = await axiosClient.post<{ message: string }>('/bookings/unlock-slots', payload, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
 export async function getMyBookings(params?: { status?: string; page?: number; limit?: number }): Promise<MyBookingsResponse> {
 	try {
 		const { data } = await axiosClient.get<MyBookingsResponse>('/bookings/my-bookings', {
@@ -1059,6 +1134,26 @@ export async function getMyBookings(params?: { status?: string; page?: number; l
 export async function cancelBooking(bookingId: string): Promise<{ message: string; refundAmount: number; refundPercentage: number }> {
 	try {
 		const { data } = await axiosClient.post(`/bookings/${bookingId}/cancel`, {}, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function opponentPayBooking(bookingId: string): Promise<{
+	message: string;
+	booking: {
+		_id: string;
+		status: string;
+		total_price: number;
+		opponent_amount: number;
+		wallet_balance: number;
+	};
+}> {
+	try {
+		const { data } = await axiosClient.post(`/bookings/${bookingId}/opponent-pay`, {}, {
 			headers: withAuthHeaders(),
 		});
 		return data;
@@ -1167,3 +1262,69 @@ export async function getMyCourtReview(courtId: string): Promise<CourtReview | n
 		return null;
 	}
 }
+
+export type FEReportChatMessage = {
+	sender_id: string;
+	sender_name: string;
+	message: string;
+	createdAt: string;
+};
+
+export type FEReport = {
+	_id: string;
+	reporter_id: {
+		_id: string;
+		name?: string;
+		userName: string;
+		avatarUrl?: string;
+	};
+	target_id: string;
+	target_type: 'user' | 'court';
+	reason: string;
+	description: string;
+	status: 'pending' | 'resolved' | 'dismissed';
+	chat_logs: FEReportChatMessage[];
+	appeal_description?: string;
+	appeal_created_at?: string;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export type GetReportsResponse = {
+	message: string;
+	reports: FEReport[];
+};
+
+export type AppealReportResponse = {
+	message: string;
+	report: FEReport;
+};
+
+export async function getMyReports(): Promise<GetReportsResponse> {
+	try {
+		const accessToken = requireAccessToken();
+		const { data } = await axiosClient.get<GetReportsResponse>('/profile/me/reports', {
+			headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function appealReport(reportId: string, appealDescription: string): Promise<AppealReportResponse> {
+	try {
+		const accessToken = requireAccessToken();
+		const { data } = await axiosClient.post<AppealReportResponse>(
+			`/profile/me/reports/${reportId}/appeal`,
+			{ appealDescription },
+			{
+				headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+			}
+		);
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+

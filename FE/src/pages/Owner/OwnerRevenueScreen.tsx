@@ -1,19 +1,41 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { OwnerSidebar } from './OwnerSidebar';
-
-const cards = [
-  { label: 'Doanh thu hôm nay', value: '2.450Kđ', trend: '+12%' },
-  { label: 'Doanh thu tuần', value: '14.200Kđ', trend: '+8%' },
-  { label: 'Doanh thu tháng', value: '56.300Kđ', trend: '+15%' },
-];
+import { getOwnerRevenue, type OwnerRevenueResponse } from '../../Axios/Axios';
 
 export const OwnerRevenueScreen: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => localStorage.getItem('ownerSidebarCollapsed') === '1');
+  const [revenueData, setRevenueData] = useState<OwnerRevenueResponse | null>(null);
 
   useEffect(() => {
     localStorage.setItem('ownerSidebarCollapsed', sidebarCollapsed ? '1' : '0');
   }, [sidebarCollapsed]);
+
+  useEffect(() => {
+    const fetchRevenue = async () => {
+      try {
+        const data = await getOwnerRevenue();
+        setRevenueData(data);
+      } catch (error) {
+        console.error("Lỗi khi lấy doanh thu:", error);
+      }
+    };
+    fetchRevenue();
+  }, []);
+
+  const formatCurrency = (amount: number) => {
+    return amount.toLocaleString('vi-VN');
+  };
+
+  const cards = revenueData ? [
+    { label: 'Doanh thu hôm nay', value: formatCurrency(revenueData.today), trend: `${revenueData.todayTrend >= 0 ? '+' : ''}${revenueData.todayTrend}%` },
+    { label: 'Doanh thu tuần', value: formatCurrency(revenueData.week), trend: `${revenueData.weekTrend >= 0 ? '+' : ''}${revenueData.weekTrend}%` },
+    { label: 'Doanh thu tháng', value: formatCurrency(revenueData.month), trend: `${revenueData.monthTrend >= 0 ? '+' : ''}${revenueData.monthTrend}%` },
+  ] : [
+    { label: 'Doanh thu hôm nay', value: '...', trend: '...' },
+    { label: 'Doanh thu tuần', value: '...', trend: '...', },
+    { label: 'Doanh thu tháng', value: '...', trend: '...' },
+  ];
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-[#020B1F] text-slate-100">

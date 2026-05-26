@@ -6,11 +6,13 @@ import Court from '../models/courtModel.js';
 import { BookingModel } from '../models/bookingModel.js';
 import Wallet from '../models/walletModel.js';
 import WalletTransaction from '../models/walletTransactionModel.js';
+import Match from '../models/matchModel.js';
+import ChatMessage from '../models/chatMessageModel.js';
 
 // Helper: Khởi tạo các mốc thời gian 30 phút
 function generateTimeSlots(openTime: string, closeTime: string): ISlot[] {
 	const slots: ISlot[] = [];
-	
+
 	const [startHour, startMin] = openTime.split(':').map(Number);
 	const [endHour, endMin] = closeTime.split(':').map(Number);
 
@@ -69,7 +71,7 @@ export async function generateCourtSlots(req: Request, res: Response) {
 		// Đồng bộ thông số Dashboard ban đầu (Tạo ra số available_slots)
 		const targetDate = new Date(date);
 		targetDate.setHours(0, 0, 0, 0);
-		
+
 		await CourtDashboardModel.findOneAndUpdate(
 			{ court_id, sub_court_id, date: targetDate },
 			{
@@ -119,7 +121,7 @@ export async function getOwnerBookings(req: Request, res: Response) {
 
 		// 2. Query bookings thuộc các court_id đó
 		let query: any = { court_id: { $in: courtIds } };
-		
+
 		if (startDate && endDate) {
 			query.date = { $gte: startDate as string, $lte: endDate as string };
 		} else if (startDate) {
@@ -127,13 +129,57 @@ export async function getOwnerBookings(req: Request, res: Response) {
 		}
 
 		const bookings = await BookingModel.find(query);
-		
+
 		return res.status(200).json({
 			message: 'Lấy danh sách booking thành công',
 			bookings
 		});
 	} catch (error) {
 		console.error('Lỗi khi lấy owner bookings:', error);
+		return res.status(500).json({ error: 'internal_server_error' });
+	}
+}
+
+// 5b. API: Lấy danh sách Booking của Owner có phân trang (cho List View)
+export async function getOwnerListBookings(req: Request, res: Response) {
+	try {
+		const ownerId = (req as any).user._id;
+		const { page = '1', limit = '10', startDate, endDate } = req.query;
+
+		const ownerCourts = await Court.find({ owner_id: ownerId }).select('_id');
+		const courtIds = ownerCourts.map(c => c._id);
+
+		let query: any = { court_id: { $in: courtIds } };
+		if (startDate && endDate) {
+			query.date = { $gte: startDate as string, $lte: endDate as string };
+		} else if (startDate) {
+			query.date = startDate as string;
+		}
+
+		const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
+		const limitNum = Math.max(1, parseInt(limit as string, 10) || 10);
+
+		const [bookings, total] = await Promise.all([
+			BookingModel.find(query)
+				.sort({ createdAt: -1 })
+				.skip((pageNum - 1) * limitNum)
+				.limit(limitNum)
+				.lean(),
+			BookingModel.countDocuments(query),
+		]);
+
+		return res.status(200).json({
+			message: 'Lấy danh sách booking phân trang thành công',
+			bookings,
+			pagination: {
+				page: pageNum,
+				limit: limitNum,
+				total,
+				totalPages: Math.ceil(total / limitNum),
+			},
+		});
+	} catch (error) {
+		console.error('Lỗi khi lấy owner list bookings:', error);
 		return res.status(500).json({ error: 'internal_server_error' });
 	}
 }
@@ -157,7 +203,7 @@ export async function ownerCreateBooking(req: Request, res: Response) {
 		// Tính price (cơ bản: mỗi 30p = price/2)
 		const start = start_time.split(':').map(Number);
 		const end = end_time.split(':').map(Number);
-		const diffHours = (end[0] + end[1]/60) - (start[0] + start[1]/60);
+		const diffHours = (end[0] + end[1] / 60) - (start[0] + start[1] / 60);
 		const total_price = pricePerHour * diffHours;
 
 		// Tạo Booking document
@@ -197,7 +243,7 @@ export async function ownerCreateBooking(req: Request, res: Response) {
 					courtSlot.slots[i].booking_id = newBooking._id as any;
 				}
 				await courtSlot.save({ session });
-				
+
 				// Cập nhật Dashboard
 				const targetDate = new Date(date);
 				targetDate.setHours(0, 0, 0, 0);
@@ -205,8 +251,8 @@ export async function ownerCreateBooking(req: Request, res: Response) {
 				await CourtDashboardModel.findOneAndUpdate(
 					{ court_id, sub_court_id, date: targetDate },
 					{
-						$inc: { 
-							booked_slots: numberOfSlotsBooked, 
+						$inc: {
+							booked_slots: numberOfSlotsBooked,
 							available_slots: -numberOfSlotsBooked,
 							total_bookings: 1,
 							revenue: total_price
@@ -235,7 +281,126 @@ export async function ownerCreateBooking(req: Request, res: Response) {
 	}
 }
 
-// 7. API: User đặt sân (tích hợp wallet, auto-generate slots, tạo Booking thật)
+// 6b. API: Lock Slots
+export async function lockSlots(req: Request, res: Response) {
+	const session = await mongoose.startSession();
+	session.startTransaction();
+
+	try {
+		const userId = req.user!._id;
+		const { court_id, sub_court_id, date, start_time, end_time } = req.body;
+
+		if (!court_id || !sub_court_id || !date || !start_time || !end_time) {
+			throw new Error('missing_fields');
+		}
+
+		const court = await Court.findById(court_id).session(session);
+		if (!court) throw new Error('court_not_found');
+
+		let courtSlot = await CourtSlotModel.findOne({ court_id, sub_court_id, date }).session(session);
+		if (!courtSlot) {
+			const openTime = court.open_time || '06:00';
+			const closeTime = court.close_time || '22:00';
+			const slots = generateTimeSlots(openTime, closeTime);
+			courtSlot = new CourtSlotModel({
+				court_id,
+				sub_court_id,
+				date,
+				slots,
+			});
+			await courtSlot.save({ session });
+
+			const targetDate = new Date(date);
+			targetDate.setHours(0, 0, 0, 0);
+			await CourtDashboardModel.findOneAndUpdate(
+				{ court_id, sub_court_id, date: targetDate },
+				{ $inc: { total_slots: slots.length, available_slots: slots.length } },
+				{ upsert: true, new: true, session }
+			);
+		}
+
+		let startIndex = -1;
+		let endIndex = -1;
+
+		for (let i = 0; i < courtSlot.slots.length; i++) {
+			if (courtSlot.slots[i].start === start_time) startIndex = i;
+			if (courtSlot.slots[i].end === end_time) endIndex = i;
+		}
+
+		if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) {
+			throw new Error('invalid_time_range');
+		}
+
+		// Bỏ qua lock cũ của user này trong cùng ngày để tránh kẹt
+		for (const slot of courtSlot.slots) {
+			if (slot.status === 'locked' && slot.locked_by?.toString() === userId.toString()) {
+				slot.status = 'available';
+				slot.locked_by = undefined;
+				slot.locked_at = undefined;
+			}
+		}
+
+		const targetSlots = courtSlot.slots.slice(startIndex, endIndex + 1);
+		const hasUnavailable = targetSlots.some(slot => slot.status !== 'available');
+		if (hasUnavailable) {
+			throw new Error('slot_already_booked');
+		}
+
+		for (let i = startIndex; i <= endIndex; i++) {
+			courtSlot.slots[i].status = 'locked';
+			courtSlot.slots[i].locked_by = userId as any;
+			courtSlot.slots[i].locked_at = new Date();
+		}
+
+		await courtSlot.save({ session });
+		await session.commitTransaction();
+		session.endSession();
+
+		return res.status(200).json({ message: 'Khóa slot thành công' });
+	} catch (error: any) {
+		await session.abortTransaction();
+		session.endSession();
+		const errorMap: Record<string, { status: number; message: string }> = {
+			missing_fields: { status: 400, message: 'Thiếu thông tin' },
+			court_not_found: { status: 404, message: 'Không tìm thấy sân' },
+			invalid_time_range: { status: 400, message: 'Khung thời gian không hợp lệ' },
+			slot_already_booked: { status: 400, message: 'Khung giờ này được chọn' }
+		};
+		const mapped = errorMap[error.message];
+		if (mapped) {
+			return res.status(mapped.status).json({ error: mapped.message, code: error.message });
+		}
+		console.error('Lỗi lockSlots:', error);
+		return res.status(500).json({ error: 'internal_server_error' });
+	}
+}
+
+// 6c. API: Unlock Slots (Hủy chọn)
+export async function unlockSlots(req: Request, res: Response) {
+	try {
+		const userId = req.user!._id;
+		const { court_id, sub_court_id, date } = req.body;
+
+		const courtSlot = await CourtSlotModel.findOne({ court_id, sub_court_id, date });
+		if (courtSlot) {
+			let changed = false;
+			for (const slot of courtSlot.slots) {
+				if (slot.status === 'locked' && slot.locked_by?.toString() === userId.toString()) {
+					slot.status = 'available';
+					slot.locked_by = undefined;
+					slot.locked_at = undefined;
+					changed = true;
+				}
+			}
+			if (changed) await courtSlot.save();
+		}
+		return res.status(200).json({ message: 'Mở khóa thành công' });
+	} catch (error) {
+		console.error('Lỗi unlockSlots:', error);
+		return res.status(500).json({ error: 'internal_server_error' });
+	}
+}
+
 export async function userBookCourt(req: Request, res: Response) {
 	const session = await mongoose.startSession();
 	session.startTransaction();
@@ -243,7 +408,7 @@ export async function userBookCourt(req: Request, res: Response) {
 	try {
 		const user = req.user!;
 		const userId = user._id;
-		const { court_id, sub_court_id, date, start_time, end_time } = req.body;
+		const { court_id, sub_court_id, date, start_time, end_time, match_id } = req.body;
 
 		// --- Validate input ---
 		if (!court_id || !mongoose.Types.ObjectId.isValid(court_id)) {
@@ -265,10 +430,13 @@ export async function userBookCourt(req: Request, res: Response) {
 			throw new Error('cannot_book_past_date');
 		}
 
-		// --- Bước 1: Tìm Court + Sub-court ---
 		const court = await Court.findById(court_id).session(session);
 		if (!court) {
 			throw new Error('court_not_found');
+		}
+
+		if (court.owner_id.toString() === userId.toString()) {
+			throw new Error('owner_cannot_book_own_court');
 		}
 
 		const subCourt = court.sub_courts?.find(
@@ -317,7 +485,11 @@ export async function userBookCourt(req: Request, res: Response) {
 		}
 
 		const targetSlots = courtSlot.slots.slice(startIndex, endIndex + 1);
-		const hasUnavailable = targetSlots.some(slot => slot.status !== 'available');
+		const hasUnavailable = targetSlots.some(slot => {
+			if (slot.status === 'available') return false;
+			if (slot.status === 'locked' && slot.locked_by?.toString() === userId.toString()) return false;
+			return true;
+		});
 		if (hasUnavailable) {
 			throw new Error('slot_already_booked');
 		}
@@ -328,6 +500,10 @@ export async function userBookCourt(req: Request, res: Response) {
 		// 1 slot = 30 phút = nửa giá/h
 		const total_price = (pricePerHour / 2) * numberOfSlotsBooked;
 
+		// Determine if this is a matchmaking booking (split 50/50)
+		const isMatchBooking = !!(match_id && mongoose.Types.ObjectId.isValid(match_id));
+		const chargeAmount = isMatchBooking ? Math.ceil(total_price / 2) : total_price;
+
 		// --- Bước 5: Kiểm tra và trừ tiền ví ---
 		const wallet = await Wallet.findOne({ userId }).session(session);
 		if (!wallet) {
@@ -336,14 +512,27 @@ export async function userBookCourt(req: Request, res: Response) {
 		if (wallet.status === 'frozen') {
 			throw new Error('wallet_frozen');
 		}
-		if (wallet.balance < total_price) {
+		if (wallet.balance < chargeAmount) {
 			throw new Error('insufficient_balance');
 		}
 
-		wallet.balance -= total_price;
+		wallet.balance -= chargeAmount;
 		await wallet.save({ session });
 
+		// --- Bước 5b: Xác định đối thủ nếu là matchmaking ---
+		let opponentId: string | null = null;
+		if (isMatchBooking) {
+			const match = await Match.findById(match_id).session(session);
+			if (match) {
+				const opp = match.participants.find((p: any) => p.toString() !== userId.toString());
+				if (opp) opponentId = opp.toString();
+			}
+		}
+
 		// --- Bước 6: Tạo Booking document ---
+		const bookingStatus = isMatchBooking ? 'waiting_opponent' : 'confirmed';
+		const opponentDeadline = isMatchBooking ? new Date(Date.now() + 30 * 60 * 1000) : undefined;
+
 		const newBooking = new BookingModel({
 			user_id: userId,
 			court_id,
@@ -354,11 +543,27 @@ export async function userBookCourt(req: Request, res: Response) {
 			customer_name: user.name || user.userName || 'Khách hàng',
 			customer_phone: user.phone,
 			total_price,
-			status: 'confirmed',
+			status: bookingStatus,
 			source: 'app',
 			tone: 'blue',
+			match_id: match_id || undefined,
+			participants: isMatchBooking ? [
+				{ userId: new mongoose.Types.ObjectId(userId), amount: chargeAmount, status: 'paid' },
+				...(opponentId ? [{ userId: new mongoose.Types.ObjectId(opponentId), amount: total_price - chargeAmount, status: 'unpaid' as const }] : []),
+			] : undefined,
+			opponent_deadline: opponentDeadline,
 		});
 		await newBooking.save({ session });
+
+		// Cập nhật giờ hẹn của Trận đấu — CHỈ khi booking thường (matchmaking chờ đối thủ thanh toán)
+		if (!isMatchBooking && match_id && mongoose.Types.ObjectId.isValid(match_id)) {
+			const match = await Match.findById(match_id).session(session);
+			if (match) {
+				const dateStr = typeof date === 'string' ? date.split('T')[0] : new Date(date).toISOString().split('T')[0];
+				match.scheduled_at = new Date(`${dateStr}T${start_time}:00`);
+				await match.save({ session });
+			}
+		}
 
 		// --- Bước 7: Cập nhật slot status ---
 		for (let i = startIndex; i <= endIndex; i++) {
@@ -368,16 +573,36 @@ export async function userBookCourt(req: Request, res: Response) {
 		await courtSlot.save({ session });
 
 		// --- Bước 8: Tạo WalletTransaction ---
-		await WalletTransaction.create(
-			[{
+		const transactionsToCreate: any[] = [
+			{
 				walletId: wallet._id,
 				bookingId: newBooking._id,
-				amount: total_price,
+				amount: chargeAmount,
 				type: 'payment',
 				status: 'completed',
-			}],
-			{ session }
-		);
+			}
+		];
+
+		// Tạo ví chủ sân nếu chưa có (số dư không cộng ngay)
+		let ownerWallet = await Wallet.findOne({ userId: court.owner_id }).session(session);
+		if (!ownerWallet) {
+			ownerWallet = new Wallet({
+				userId: court.owner_id,
+				balance: 0,
+				status: 'active',
+			});
+			await ownerWallet.save({ session });
+		}
+
+		transactionsToCreate.push({
+			walletId: ownerWallet._id,
+			bookingId: newBooking._id,
+			amount: total_price,
+			type: 'deposit',
+			status: 'pending', // Tiền được giữ ở trạng thái chờ (hold) cho đến khi trận đấu kết thúc
+		});
+
+		await WalletTransaction.insertMany(transactionsToCreate, { session });
 
 		// --- Bước 9: Cập nhật Dashboard ---
 		const dashDate = new Date(date);
@@ -400,8 +625,108 @@ export async function userBookCourt(req: Request, res: Response) {
 		await session.commitTransaction();
 		session.endSession();
 
+		// --- Bước 10: Notify qua Socket ---
+		if (isMatchBooking) {
+			try {
+				const match = await Match.findById(match_id);
+				if (match) {
+					const io = req.app.get('io');
+					const courtDisplayName = subCourt?.name ? `${court.name} - ${subCourt.name}` : court.name;
+					const formattedPrice = new Intl.NumberFormat('vi-VN').format(chargeAmount);
+					const formattedTotal = new Intl.NumberFormat('vi-VN').format(total_price);
+
+					// Chat message: Player A đã đặt cọc 50%
+					const msgContent = `Tôi đã đặt cọc 50% cho sân!\nTên sân: ${courtDisplayName}\nNgày giờ: ${date} ${start_time} - ${end_time}\nSố tiền cọc: ${formattedPrice} đ / Tổng: ${formattedTotal} đ\nĐợi bạn thanh toán 50% còn lại trong 30 phút.`;
+					const newMsg = new ChatMessage({
+						match_id,
+						sender_id: userId,
+						message: msgContent,
+					});
+					await newMsg.save();
+
+					io.to(`match:${match_id}`).emit('receive_message', {
+						_id: newMsg._id,
+						match_id,
+						sender_id: userId.toString(),
+						message: newMsg.message,
+						createdAt: newMsg.createdAt,
+					});
+
+					// Emit opponent_deposit_required to the opponent
+					if (opponentId) {
+						io.to(`user:${opponentId}`).emit('opponent_deposit_required', {
+							matchId: match_id,
+							bookingId: (newBooking._id as any).toString(),
+							bookedByUserId: userId.toString(),
+							courtName: courtDisplayName,
+							date,
+							start_time,
+							end_time,
+							total_price,
+							opponent_amount: total_price - chargeAmount,
+							deadline: opponentDeadline?.toISOString(),
+						});
+					}
+
+					// Also notify booker
+					io.to(`user:${userId.toString()}`).emit('court_booked', {
+						matchId: match_id,
+						bookedByUserId: userId.toString(),
+						courtName: courtDisplayName,
+						date,
+						start_time,
+						end_time,
+						status: 'waiting_opponent',
+					});
+				}
+			} catch (socketErr) {
+				console.error('Socket notify matchmaking booking error:', socketErr);
+			}
+		} else {
+			// Normal booking: emit court_booked as before
+			if (match_id && mongoose.Types.ObjectId.isValid(match_id)) {
+				try {
+					const match = await Match.findById(match_id);
+					if (match) {
+						const io = req.app.get('io');
+						const payload = {
+							matchId: match_id,
+							bookedByUserId: userId.toString(),
+							courtName: court.name,
+							date,
+							start_time,
+							end_time,
+						};
+						for (const p of match.participants) {
+							io.to(`user:${p.toString()}`).emit('court_booked', payload);
+						}
+
+						const formattedPrice = new Intl.NumberFormat('vi-VN').format(total_price);
+						const courtDisplayName = subCourt?.name ? `${court.name} - ${subCourt.name}` : court.name;
+						const msgContent = `Tôi đã đặt sân thành công!\nTên sân: ${courtDisplayName}\nNgày giờ: ${date} ${start_time} - ${end_time}\nGiá: ${formattedPrice} đ`;
+						const newMsg = new ChatMessage({
+							match_id,
+							sender_id: userId,
+							message: msgContent,
+						});
+						await newMsg.save();
+
+						io.to(`match:${match_id}`).emit('receive_message', {
+							_id: newMsg._id,
+							match_id,
+							sender_id: userId.toString(),
+							message: newMsg.message,
+							createdAt: newMsg.createdAt,
+						});
+					}
+				} catch (socketErr) {
+					console.error('Socket notify court_booked error:', socketErr);
+				}
+			}
+		}
+
 		return res.status(201).json({
-			message: 'Đặt sân thành công!',
+			message: isMatchBooking ? 'Đặt cọc 50% thành công! Đợi đối thủ thanh toán.' : 'Đặt sân thành công!',
 			booking: {
 				_id: newBooking._id,
 				court_id,
@@ -412,9 +737,10 @@ export async function userBookCourt(req: Request, res: Response) {
 				start_time,
 				end_time,
 				total_price,
-				status: 'confirmed',
+				status: bookingStatus,
 				slots_booked: numberOfSlotsBooked,
 				wallet_balance: wallet.balance,
+				opponent_deadline: opponentDeadline?.toISOString(),
 			},
 		});
 	} catch (error: any) {
@@ -427,6 +753,7 @@ export async function userBookCourt(req: Request, res: Response) {
 			missing_fields: { status: 400, message: 'Thiếu thông tin đặt sân' },
 			cannot_book_past_date: { status: 400, message: 'Không thể đặt sân cho ngày đã qua' },
 			court_not_found: { status: 404, message: 'Không tìm thấy sân' },
+			owner_cannot_book_own_court: { status: 403, message: 'Bạn không thể tự đặt lịch cho sân của chính mình' },
 			invalid_time_range: { status: 400, message: 'Khung thời gian không hợp lệ' },
 			slot_already_booked: { status: 400, message: 'Khung giờ này đã có người đặt. Vui lòng chọn giờ khác.' },
 			wallet_not_found: { status: 404, message: 'Chưa có ví. Vui lòng tạo ví trước.' },
@@ -448,13 +775,179 @@ export async function userBookCourt(req: Request, res: Response) {
 	}
 }
 
+// 7b. API: Đối thủ thanh toán 50% còn lại cho matchmaking booking
+export async function opponentPayBooking(req: Request, res: Response) {
+	const session = await mongoose.startSession();
+	session.startTransaction();
+
+	try {
+		const userId = req.user!._id;
+		const { id } = req.params;
+
+		if (!mongoose.Types.ObjectId.isValid(id)) {
+			throw new Error('invalid_booking_id');
+		}
+
+		const booking = await BookingModel.findById(id).session(session);
+		if (!booking) {
+			throw new Error('booking_not_found');
+		}
+
+		if (booking.status !== 'waiting_opponent') {
+			throw new Error('booking_not_waiting');
+		}
+
+		// Check deadline
+		if (booking.opponent_deadline && new Date() > booking.opponent_deadline) {
+			throw new Error('opponent_deadline_expired');
+		}
+
+		// Find the opponent participant entry
+		const participantEntry = booking.participants?.find(
+			(p) => p.userId.toString() === userId.toString() && p.status === 'unpaid'
+		);
+		if (!participantEntry) {
+			throw new Error('not_the_opponent');
+		}
+
+		const opponentAmount = participantEntry.amount;
+
+		// Check wallet
+		const wallet = await Wallet.findOne({ userId }).session(session);
+		if (!wallet) {
+			throw new Error('wallet_not_found');
+		}
+		if (wallet.status === 'frozen') {
+			throw new Error('wallet_frozen');
+		}
+		if (wallet.balance < opponentAmount) {
+			throw new Error('insufficient_balance');
+		}
+
+		// Deduct from opponent wallet
+		wallet.balance -= opponentAmount;
+		await wallet.save({ session });
+
+		// Update participant status
+		participantEntry.status = 'paid';
+		booking.status = 'confirmed';
+		booking.opponent_deadline = undefined;
+		booking.markModified('participants');
+		await booking.save({ session });
+
+		// Set match.scheduled_at now that both have paid
+		if (booking.match_id && mongoose.Types.ObjectId.isValid(booking.match_id)) {
+			const match = await Match.findById(booking.match_id).session(session);
+			if (match) {
+				const dateStr = typeof booking.date === 'string' ? booking.date.split('T')[0] : new Date(booking.date as any).toISOString().split('T')[0];
+				match.scheduled_at = new Date(`${dateStr}T${booking.start_time}:00`);
+				await match.save({ session });
+			}
+		}
+
+		// Create wallet transaction for opponent payment
+		const tx = new WalletTransaction({
+			walletId: wallet._id,
+			bookingId: booking._id,
+			amount: opponentAmount,
+			type: 'payment',
+			status: 'completed',
+		});
+		await tx.save({ session });
+
+		await session.commitTransaction();
+
+		// --- Socket notifications ---
+		if (booking.match_id) {
+			try {
+				const match = await Match.findById(booking.match_id);
+				const court = await Court.findById(booking.court_id);
+				if (match && court) {
+					const io = req.app.get('io');
+					const courtDisplayName = court.name;
+
+					// Notify all participants that booking is confirmed
+					const payload = {
+						matchId: booking.match_id.toString(),
+						bookedByUserId: booking.user_id?.toString(),
+						courtName: courtDisplayName,
+						date: booking.date,
+						start_time: booking.start_time,
+						end_time: booking.end_time,
+						status: 'confirmed',
+					};
+					for (const p of match.participants) {
+						io.to(`user:${p.toString()}`).emit('court_booked', payload);
+					}
+
+					// Chat message
+					const formattedPrice = new Intl.NumberFormat('vi-VN').format(opponentAmount);
+					const msgContent = `Tôi đã thanh toán 50% còn lại (${formattedPrice} đ).\nĐặt sân đã được xác nhận! `;
+					const newMsg = new ChatMessage({
+						match_id: booking.match_id,
+						sender_id: userId,
+						message: msgContent,
+					});
+					await newMsg.save();
+
+					io.to(`match:${booking.match_id}`).emit('receive_message', {
+						_id: newMsg._id,
+						match_id: booking.match_id.toString(),
+						sender_id: userId.toString(),
+						message: newMsg.message,
+						createdAt: newMsg.createdAt,
+					});
+				}
+			} catch (socketErr) {
+				console.error('Socket notify opponent_paid error:', socketErr);
+			}
+		}
+
+		return res.status(200).json({
+			message: 'Thanh toán thành công! Đặt sân đã được xác nhận.',
+			booking: {
+				_id: booking._id,
+				status: 'confirmed',
+				total_price: booking.total_price,
+				opponent_amount: opponentAmount,
+				wallet_balance: wallet.balance,
+			},
+		});
+	} catch (error: any) {
+		await session.abortTransaction();
+		const errorMap: Record<string, any> = {
+			invalid_booking_id: { status: 400, message: 'Mã đặt sân không hợp lệ' },
+			booking_not_found: { status: 404, message: 'Không tìm thấy booking' },
+			booking_not_waiting: { status: 400, message: 'Booking này không ở trạng thái chờ thanh toán' },
+			opponent_deadline_expired: { status: 400, message: 'Đã hết thời hạn thanh toán (30 phút)' },
+			not_the_opponent: { status: 403, message: 'Bạn không phải đối thủ cần thanh toán' },
+			wallet_not_found: { status: 404, message: 'Chưa có ví. Vui lòng tạo ví trước.' },
+			wallet_frozen: { status: 403, message: 'Ví đã bị khóa' },
+			insufficient_balance: { status: 400, message: 'Số dư ví không đủ. Vui lòng nạp thêm tiền.' },
+		};
+		const mapped = errorMap[error.message];
+		if (mapped) {
+			return res.status(mapped.status).json({ error: mapped.message, code: error.message });
+		}
+		console.error('Lỗi opponentPayBooking:', error);
+		return res.status(500).json({ error: 'internal_server_error' });
+	} finally {
+		await session.endSession();
+	}
+}
+
 // 8. API: Lấy lịch sử booking của user
 export async function getMyBookings(req: Request, res: Response) {
 	try {
 		const userId = req.user!._id;
 		const { status, page = '1', limit = '20' } = req.query;
 
-		const query: any = { user_id: userId };
+		const query: any = {
+			$or: [
+				{ user_id: userId },
+				{ 'participants.userId': userId }
+			]
+		};
 		if (status && typeof status === 'string') {
 			query.status = status;
 		}
@@ -467,6 +960,13 @@ export async function getMyBookings(req: Request, res: Response) {
 				.sort({ date: -1, start_time: -1 })
 				.skip((pageNum - 1) * limitNum)
 				.limit(limitNum)
+				.populate({
+					path: 'match_id',
+					populate: {
+						path: 'participants',
+						select: 'name userName avatarUrl',
+					},
+				})
 				.lean(),
 			BookingModel.countDocuments(query),
 		]);
@@ -517,12 +1017,23 @@ export async function cancelBooking(req: Request, res: Response) {
 			throw new Error('invalid_booking_id');
 		}
 
-		const booking = await BookingModel.findOne({ _id: id, user_id: userId }).session(session);
+		// For matchmaking bookings, any participant can cancel
+		const booking = await BookingModel.findById(id).session(session);
 		if (!booking) {
 			throw new Error('booking_not_found');
 		}
 
-		if (booking.status !== 'confirmed') {
+		const isBooker = booking.user_id?.toString() === userId.toString();
+		const isMatchParticipant = booking.participants?.some(
+			(p) => p.userId.toString() === userId.toString()
+		);
+		const isMatchBooking = !!(booking.match_id && booking.participants && booking.participants.length > 0);
+
+		if (!isBooker && !isMatchParticipant) {
+			throw new Error('booking_not_found');
+		}
+
+		if (booking.status !== 'confirmed' && booking.status !== 'waiting_opponent') {
 			throw new Error('booking_cannot_be_cancelled');
 		}
 
@@ -535,83 +1046,241 @@ export async function cancelBooking(req: Request, res: Response) {
 			const vnTime = new Date(d.getTime() + 7 * 60 * 60 * 1000);
 			bookingDateStr = vnTime.toISOString().split('T')[0];
 		}
-		
-		// Parse in Vietnam Time (+07:00) explicitly
+
 		const startTimeDate = new Date(`${bookingDateStr}T${booking.start_time}:00+07:00`);
-		
 		const now = new Date();
 		const hoursDifference = (startTimeDate.getTime() - now.getTime()) / (1000 * 60 * 60);
 
-		if (hoursDifference < 1) {
-			throw new Error('too_late_to_cancel');
-		}
+		let finalRefundPercentage = 0;
+		let finalRefundAmount = 0;
 
-		// Calculate refund percentage
-		let refundPercentage = 0;
-		if (hoursDifference >= 3) {
-			refundPercentage = 1; // 100%
+		// --- MATCHMAKING BOOKING CANCELLATION ---
+		if (isMatchBooking) {
+			if (booking.status === 'waiting_opponent') {
+				// Cancel freely with 100% refund to booker
+				booking.status = 'cancelled';
+				await booking.save({ session });
+
+				finalRefundPercentage = 100;
+
+				const bookerParticipant = booking.participants?.find(p => p.status === 'paid');
+				if (bookerParticipant) {
+					finalRefundAmount = bookerParticipant.amount;
+					const wallet = await Wallet.findOne({ userId: bookerParticipant.userId }).session(session);
+					if (wallet) {
+						wallet.balance += bookerParticipant.amount;
+						await wallet.save({ session });
+						await new WalletTransaction({
+							walletId: wallet._id, bookingId: booking._id,
+							type: 'refund', amount: bookerParticipant.amount, status: 'completed',
+						}).save({ session });
+					}
+					bookerParticipant.status = 'refunded';
+					booking.markModified('participants');
+					await booking.save({ session });
+				}
+
+				const pendingOwnerTx = await WalletTransaction.findOne({
+					bookingId: booking._id, type: 'deposit', status: 'pending'
+				}).session(session);
+				if (pendingOwnerTx) {
+					pendingOwnerTx.status = 'failed';
+					await pendingOwnerTx.save({ session });
+				}
+			} else {
+				// CONFIRMED matchmaking booking — apply 3-tier rules
+				const cancellerEntry = booking.participants?.find(p => p.userId.toString() === userId.toString());
+				const otherEntry = booking.participants?.find(p => p.userId.toString() !== userId.toString());
+
+				if (!cancellerEntry || !otherEntry) {
+					throw new Error('booking_not_found');
+				}
+
+				let cancellerRefundPct = 0;
+				let ownerPenaltyPct = 0;
+
+				if (hoursDifference >= 3) {
+					cancellerRefundPct = 1; ownerPenaltyPct = 0;
+				} else if (hoursDifference >= 1) {
+					cancellerRefundPct = 0.5; ownerPenaltyPct = 0.5;
+				} else {
+					cancellerRefundPct = 0; ownerPenaltyPct = 1;
+				}
+
+				const cancellerRefund = Math.floor(cancellerEntry.amount * cancellerRefundPct);
+				const otherRefund = otherEntry.amount;
+				const ownerPenalty = Math.floor(cancellerEntry.amount * ownerPenaltyPct);
+
+				finalRefundPercentage = cancellerRefundPct * 100;
+				finalRefundAmount = cancellerRefund;
+
+				booking.status = 'cancelled';
+				await booking.save({ session });
+
+				// Refund canceller
+				if (cancellerRefund > 0) {
+					const cancellerWallet = await Wallet.findOne({ userId: cancellerEntry.userId }).session(session);
+					if (cancellerWallet) {
+						cancellerWallet.balance += cancellerRefund;
+						await cancellerWallet.save({ session });
+						await new WalletTransaction({
+							walletId: cancellerWallet._id, bookingId: booking._id,
+							type: 'refund', amount: cancellerRefund, status: 'completed',
+						}).save({ session });
+					}
+				}
+				cancellerEntry.status = 'refunded';
+
+				// Refund other player 100%
+				if (otherRefund > 0 && otherEntry.status === 'paid') {
+					const otherWallet = await Wallet.findOne({ userId: otherEntry.userId }).session(session);
+					if (otherWallet) {
+						otherWallet.balance += otherRefund;
+						await otherWallet.save({ session });
+						await new WalletTransaction({
+							walletId: otherWallet._id, bookingId: booking._id,
+							type: 'refund', amount: otherRefund, status: 'completed',
+						}).save({ session });
+					}
+				}
+				otherEntry.status = 'refunded';
+				booking.markModified('participants');
+				await booking.save({ session });
+
+				// Handle owner deposit tx
+				const pendingOwnerTx = await WalletTransaction.findOne({
+					bookingId: booking._id, type: 'deposit', status: 'pending'
+				}).session(session);
+				if (pendingOwnerTx) {
+					if (ownerPenalty > 0) {
+						pendingOwnerTx.amount = ownerPenalty;
+						await pendingOwnerTx.save({ session });
+					} else {
+						pendingOwnerTx.status = 'failed';
+						await pendingOwnerTx.save({ session });
+					}
+				}
+			}
 		} else {
-			refundPercentage = 0.5; // 50%
-		}
+			// --- NORMAL BOOKING CANCELLATION (giữ nguyên logic cũ) ---
+			if (hoursDifference < 1) {
+				throw new Error('too_late_to_cancel');
+			}
+			let refundPercentage = hoursDifference >= 3 ? 1 : 0.5;
+			const refundAmount = Math.floor(booking.total_price * refundPercentage);
 
-		const refundAmount = Math.floor(booking.total_price * refundPercentage);
+			finalRefundPercentage = refundPercentage * 100;
+			finalRefundAmount = refundAmount;
 
-		// Update booking status
-		booking.status = 'cancelled';
-		await booking.save({ session });
+			booking.status = 'cancelled';
+			await booking.save({ session });
 
-		// Refund to wallet if amount > 0
-		if (refundAmount > 0) {
-			const wallet = await Wallet.findOne({ userId: userId }).session(session);
-			if (wallet) {
-				wallet.balance += refundAmount;
-				await wallet.save({ session });
+			if (refundAmount > 0) {
+				const wallet = await Wallet.findOne({ userId }).session(session);
+				if (wallet) {
+					wallet.balance += refundAmount;
+					await wallet.save({ session });
+					await new WalletTransaction({
+						walletId: wallet._id, bookingId: booking._id,
+						type: 'refund', amount: refundAmount, status: 'completed',
+					}).save({ session });
+				}
 
-				const tx = new WalletTransaction({
-					walletId: wallet._id,
-					bookingId: booking._id,
-					type: 'refund',
-					amount: refundAmount,
-					status: 'completed',
-				});
-				await tx.save({ session });
+				const ownerPortion = booking.total_price - refundAmount;
+				const pendingOwnerTx = await WalletTransaction.findOne({
+					bookingId: booking._id, type: 'deposit', status: 'pending'
+				}).session(session);
+				if (pendingOwnerTx) {
+					if (ownerPortion > 0) {
+						pendingOwnerTx.amount = ownerPortion;
+						await pendingOwnerTx.save({ session });
+					} else {
+						pendingOwnerTx.status = 'failed';
+						await pendingOwnerTx.save({ session });
+					}
+				} else {
+					const completedOwnerTx = await WalletTransaction.findOne({
+						bookingId: booking._id, type: 'deposit', status: 'completed'
+					}).session(session);
+					if (completedOwnerTx) {
+						const court = await Court.findById(booking.court_id).session(session);
+						if (court) {
+							const ownerWallet = await Wallet.findOne({ userId: court.owner_id }).session(session);
+							if (ownerWallet) {
+								ownerWallet.balance -= refundAmount;
+								await ownerWallet.save({ session });
+								await new WalletTransaction({
+									walletId: ownerWallet._id, bookingId: booking._id,
+									type: 'payment', amount: refundAmount, status: 'completed',
+								}).save({ session });
+							}
+						}
+					}
+				}
 			}
 		}
 
 		// Free up the court slots
 		const courtSlot = await CourtSlotModel.findOne({
-			court_id: booking.court_id,
-			sub_court_id: booking.sub_court_id,
-			date: booking.date
+			court_id: booking.court_id, sub_court_id: booking.sub_court_id, date: booking.date
 		}).session(session);
-
 		if (courtSlot) {
 			let slotsFreed = 0;
 			courtSlot.slots.forEach((s: any) => {
 				if (s.start >= booking.start_time && s.end <= booking.end_time && s.status === 'booked') {
-					s.status = 'available';
-					slotsFreed++;
+					s.status = 'available'; slotsFreed++;
 				}
 			});
 			courtSlot.markModified('slots');
 			await courtSlot.save({ session });
-
 			if (slotsFreed > 0) {
 				const targetDate = new Date(booking.date as any);
 				targetDate.setHours(0, 0, 0, 0);
 				await CourtDashboardModel.updateOne(
 					{ court_id: booking.court_id, sub_court_id: booking.sub_court_id, date: targetDate },
-					{ $inc: { available_slots: slotsFreed } },
-					{ session }
+					{ $inc: { available_slots: slotsFreed } }, { session }
 				);
 			}
 		}
 
+		// Notify via Chat if match_id exists
+		if (booking.match_id && mongoose.Types.ObjectId.isValid(booking.match_id)) {
+			try {
+				const match = await Match.findById(booking.match_id).session(session);
+				if (match) {
+					const court = await Court.findById(booking.court_id).session(session);
+					const courtDisplayName = court ? court.name : 'Sân';
+					const msgContent = `Tôi đã huỷ đặt sân!\nTên sân: ${courtDisplayName}\nNgày giờ: ${bookingDateStr} ${booking.start_time} - ${booking.end_time}`;
+					const newMsg = new ChatMessage({ match_id: booking.match_id, sender_id: userId, message: msgContent });
+					await newMsg.save({ session });
+					match.scheduled_at = undefined;
+					await match.save({ session });
+
+					const io = req.app.get('io');
+					if (io) {
+						io.to(`match:${booking.match_id}`).emit('receive_message', {
+							_id: newMsg._id, match_id: booking.match_id,
+							sender_id: userId.toString(), message: newMsg.message, createdAt: newMsg.createdAt,
+						});
+						for (const p of match.participants) {
+							io.to(`user:${p.toString()}`).emit('court_cancelled', {
+								matchId: booking.match_id, cancelledByUserId: userId.toString(),
+								courtName: courtDisplayName, date: bookingDateStr,
+								start_time: booking.start_time, end_time: booking.end_time,
+							});
+						}
+					}
+				}
+			} catch (socketErr) {
+				console.error('Socket notify court_cancelled error:', socketErr);
+			}
+		}
+
 		await session.commitTransaction();
-		return res.status(200).json({ 
-			message: 'Hủy sân thành công', 
-			refundAmount, 
-			refundPercentage: refundPercentage * 100 
+		return res.status(200).json({
+			message: 'Hủy sân thành công',
+			refundPercentage: finalRefundPercentage,
+			refundAmount: finalRefundAmount,
 		});
 	} catch (error: any) {
 		await session.abortTransaction();
@@ -621,15 +1290,12 @@ export async function cancelBooking(req: Request, res: Response) {
 			booking_cannot_be_cancelled: { status: 400, message: 'Chỉ có thể hủy sân đã được xác nhận' },
 			too_late_to_cancel: { status: 400, message: 'Không thể hủy sân khi thời gian bắt đầu còn dưới 1 tiếng' },
 		};
-
 		const mapped = errorMap[error.message];
-		if (mapped) {
-			return res.status(mapped.status).json({ error: mapped.message });
-		}
-
+		if (mapped) return res.status(mapped.status).json({ error: mapped.message });
 		console.error('Lỗi cancelBooking:', error);
 		return res.status(500).json({ error: 'internal_server_error' });
 	} finally {
 		await session.endSession();
 	}
 }
+

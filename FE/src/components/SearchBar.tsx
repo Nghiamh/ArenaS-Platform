@@ -11,27 +11,14 @@ type MapBounds = {
 type SearchBarProps = {
 	mapRef: React.RefObject<MapRef>;
 	mapboxToken?: string;
-	activeSport?: string;
 	courtCount: number;
 	loading: boolean;
 	isLocating?: boolean;
 	onUseMyLocation: () => void;
 	onLocationResolved: (latitude: number, longitude: number) => void;
 	onBoundsSelected: (bounds: MapBounds) => void;
-	onSportSelected: (sport?: string) => void;
 };
 
-type SportOption = {
-	label: string;
-	value?: string;
-};
-
-const sportOptions: SportOption[] = [
-	{ label: 'Tất cả' },
-	{ label: 'Bóng đá', value: 'football' },
-	{ label: 'Cầu lông', value: 'badminton' },
-	{ label: 'Tennis', value: 'tennis' },
-];
 
 const buildBoundsFromCenter = (lng: number, lat: number) => ({
 	minLng: lng - 0.04,
@@ -43,14 +30,12 @@ const buildBoundsFromCenter = (lng: number, lat: number) => ({
 export const SearchBar: React.FC<SearchBarProps> = ({
 	mapRef,
 	mapboxToken,
-	activeSport,
 	courtCount,
 	loading,
 	isLocating,
 	onUseMyLocation,
 	onLocationResolved,
 	onBoundsSelected,
-	onSportSelected,
 }) => {
 	const [query, setQuery] = useState('');
 	const [error, setError] = useState('');
@@ -178,29 +163,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 			</div>
 
 			{error && <p className="mt-2 text-xs font-semibold text-rose-500">{error}</p>}
-
-			<div className="mt-4">
-				<p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Môn thể thao</p>
-				<div className="mt-2 flex flex-wrap gap-2">
-					{sportOptions.map((option) => {
-						const isActive = option.value === activeSport || (!option.value && !activeSport);
-
-						return (
-							<button
-								key={option.label}
-								type="button"
-								onClick={() => onSportSelected(option.value)}
-								className={`rounded-full px-3 py-1 text-xs font-semibold transition ${isActive
-										? 'bg-emerald-500 text-white'
-										: 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-									}`}
-							>
-								{option.label}
-							</button>
-						);
-					})}
-				</div>
-			</div>
 
 			{loading && <p className="mt-3 text-xs font-semibold text-slate-500">Đang tải danh sách sân...</p>}
 		</div>

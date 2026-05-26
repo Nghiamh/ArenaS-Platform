@@ -36,12 +36,13 @@ export type TargetCourt = Court | { id: string; name: string; coordinates: { lat
 
 export const CourtMap: React.FC<{
 	targetCourt?: TargetCourt;
-}> = ({ targetCourt }) => {
+	activeSportProp?: string;
+}> = ({ targetCourt, activeSportProp }) => {
 	const mapRef = useRef<MapRef | null>(null);
 	const hasCenteredRef = useRef(false);
 	const lastBoundsRef = useRef<MapBounds | null>(null);
 
-	const [activeSport, setActiveSport] = useState<string | undefined>(undefined);
+	const activeSport = activeSportProp;
 	const [routeFeature, setRouteFeature] = useState<RouteFeature | null>(null);
 	const [directionsCourt, setDirectionsCourt] = useState<Court | null>(null);
 	const [isDirectionsOpen, setIsDirectionsOpen] = useState(false);
@@ -66,6 +67,17 @@ export const CourtMap: React.FC<{
 	useEffect(() => {
 		initLocation();
 	}, [initLocation]);
+
+	// Re-fetch when sport filter changes from parent
+	useEffect(() => {
+		if (lastBoundsRef.current) {
+			const bounds = lastBoundsRef.current;
+			void fetchCourtsByArea(bounds.minLng, bounds.minLat, bounds.maxLng, bounds.maxLat, activeSportProp);
+		} else if (userLocation) {
+			void fetchNearbyCourts(userLocation.latitude, userLocation.longitude, undefined, activeSportProp);
+		}
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [activeSportProp]);
 
 	useEffect(() => {
 		if (userLocation) {
@@ -173,28 +185,7 @@ export const CourtMap: React.FC<{
 		[activeSport, fetchCourtsByArea],
 	);
 
-	const handleSportSelected = useCallback(
-		(nextSport?: string) => {
-			setActiveSport(nextSport);
 
-			if (lastBoundsRef.current) {
-				const bounds = lastBoundsRef.current;
-				void fetchCourtsByArea(
-					bounds.minLng,
-					bounds.minLat,
-					bounds.maxLng,
-					bounds.maxLat,
-					nextSport,
-				);
-				return;
-			}
-
-			if (userLocation) {
-				void fetchNearbyCourts(userLocation.latitude, userLocation.longitude, undefined, nextSport);
-			}
-		},
-		[fetchCourtsByArea, fetchNearbyCourts, userLocation],
-	);
 
 	const handleDirections = useCallback((court: Court) => {
 		setDirectionsCourt(court);
@@ -261,14 +252,12 @@ export const CourtMap: React.FC<{
 			<SearchBar
 				mapRef={mapRef}
 				mapboxToken={mapboxToken}
-				activeSport={activeSport}
 				courtCount={courts.length}
 				loading={loading}
 				isLocating={isLocating}
 				onUseMyLocation={handleUseMyLocation}
 				onLocationResolved={handleLocationResolved}
 				onBoundsSelected={handleBoundsSelected}
-				onSportSelected={handleSportSelected}
 			/>
 
 			{selectedCourt && (

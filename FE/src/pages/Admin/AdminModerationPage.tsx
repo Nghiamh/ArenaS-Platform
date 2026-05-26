@@ -79,7 +79,7 @@ const statusClass: Record<ItemStatus, string> = {
   approved:  'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/35',
   removed:   'bg-rose-500/20 text-rose-200 ring-1 ring-rose-400/35',
   dismissed: 'bg-slate-500/20 text-slate-400 ring-1 ring-slate-500/25',
-  resolved:  'bg-cyan-500/20 text-cyan-200 ring-1 ring-cyan-400/30',
+  resolved:  'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/35',
 };
 
 const formatDate = (iso: string) => {

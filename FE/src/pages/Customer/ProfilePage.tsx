@@ -9,9 +9,12 @@ import {
   updateCurrentUserSkill,
   getMyBookings,
   cancelBooking,
+  getMyReports,
+  appealReport,
   type AuthUser,
   type UserSkill,
   type UserBooking,
+  type FEReport,
 } from "../../Axios/Axios";
 import { useWallet } from "../../hooks/useWallet";
 import { DepositModal } from "../WalletPage/DepositModal";
@@ -140,6 +143,27 @@ const MedalIcon = () => (
   >
     <circle cx="12" cy="8" r="7" />
     <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
+  </svg>
+);
+
+const SwordsIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
+  <svg
+    viewBox="0 0 24 24"
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="m2 22 4-4" />
+    <path d="m14 10-4-4" />
+    <path d="M8.5 15.5 19 5a2.12 2.12 0 1 1 3 3L11.5 18.5Z" />
+    <path d="m6 14 4 4" />
+    <path d="m22 22-4-4" />
+    <path d="m10 10 4-4" />
+    <path d="M15.5 15.5 5 5a2.12 2.12 0 1 0-3 3l10.5 10.5Z" />
+    <path d="m18 14-4 4" />
   </svg>
 );
 
@@ -390,6 +414,50 @@ export const ProfilePage: React.FC = () => {
   const [cancellingBookingId, setCancellingBookingId] = useState<string | null>(null);
   const [bookingToCancel, setBookingToCancel] = useState<UserBooking | null>(null);
   const [showAllBookingsModal, setShowAllBookingsModal] = useState(false);
+  const [bookingsCurrentPage, setBookingsCurrentPage] = useState(1);
+
+  // Reports state & handlers
+  const [reports, setReports] = useState<FEReport[]>([]);
+  const [reportsLoading, setReportsLoading] = useState(true);
+  const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
+  const [selectedReportForAppeal, setSelectedReportForAppeal] = useState<FEReport | null>(null);
+  const [appealText, setAppealText] = useState("");
+  const [isAppealing, setIsAppealing] = useState(false);
+  const [showReportsModal, setShowReportsModal] = useState(false);
+
+  const fetchReports = async () => {
+    try {
+      setReportsLoading(true);
+      const res = await getMyReports();
+      setReports(res.reports);
+    } catch (e) {
+      console.error("Failed to fetch reports", e);
+    } finally {
+      setReportsLoading(false);
+    }
+  };
+
+  const handleConfirmAppeal = async () => {
+    if (!selectedReportForAppeal) return;
+    if (!appealText.trim()) {
+      showErrorPopup("Vui lòng nhập nội dung kháng cáo");
+      return;
+    }
+    try {
+      setIsAppealing(true);
+      await appealReport(selectedReportForAppeal._id, appealText);
+      setSuccessMessage("Gửi kháng cáo đến Admin thành công!");
+      setSelectedReportForAppeal(null);
+      setAppealText("");
+      // Refresh reports list
+      await fetchReports();
+      setTimeout(() => setSuccessMessage(""), 5000);
+    } catch (e: any) {
+      showErrorPopup(e.message || "Không thể gửi kháng cáo");
+    } finally {
+      setIsAppealing(false);
+    }
+  };
 
   const confirmCancelBooking = async () => {
     if (!bookingToCancel) return;
@@ -435,6 +503,36 @@ export const ProfilePage: React.FC = () => {
         return bookingDate >= thirtyDaysAgo;
       });
 
+      recentBookings.sort((a, b) => {
+        const aSuccess = a.status === 'confirmed' || a.status === 'completed';
+        const aEnd = new Date(`${a.date.split('T')[0]}T${a.end_time}:00`);
+        const aPlayed = aSuccess && aEnd < new Date();
+        let aScore = 3; // Đã hủy
+        if (a.status === 'waiting_opponent') aScore = 0; // Chờ thanh toán
+        else if (aSuccess && !aPlayed) aScore = 1; // Thành công
+        else if (aSuccess && aPlayed) aScore = 2; // Đã chơi
+
+        const bSuccess = b.status === 'confirmed' || b.status === 'completed';
+        const bEnd = new Date(`${b.date.split('T')[0]}T${b.end_time}:00`);
+        const bPlayed = bSuccess && bEnd < new Date();
+        let bScore = 3; // Đã hủy
+        if (b.status === 'waiting_opponent') bScore = 0; // Chờ thanh toán
+        else if (bSuccess && !bPlayed) bScore = 1; // Thành công
+        else if (bSuccess && bPlayed) bScore = 2; // Đã chơi
+
+        if (aScore !== bScore) {
+          return aScore - bScore;
+        }
+
+        const aTime = new Date(`${a.date.split('T')[0]}T${a.start_time}:00`).getTime();
+        const bTime = new Date(`${b.date.split('T')[0]}T${b.start_time}:00`).getTime();
+
+        if (aScore === 1) {
+          return aTime - bTime; // Sắp tới: gần nhất xếp trước
+        }
+        return bTime - aTime; // Đã qua/Đã hủy: mới nhất xếp trước
+      });
+
       setMyBookings(recentBookings);
     } catch (e) {
       console.error("Failed to fetch bookings", e);
@@ -445,6 +543,7 @@ export const ProfilePage: React.FC = () => {
 
   useEffect(() => {
     fetchBookings();
+    fetchReports();
   }, []);
 
   const handleDepositSuccess = () => {
@@ -962,6 +1061,53 @@ export const ProfilePage: React.FC = () => {
 
               </div>
 
+              {/* Reports Status Widget */}
+              {reportsLoading ? (
+                <div className="bg-[#10111a] border border-white/[0.05] rounded-3xl p-4 flex items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.15)] min-h-[74px]">
+                  <div className="w-4 h-4 rounded-full border-2 border-slate-500 border-t-transparent animate-spin" />
+                </div>
+              ) : reports.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setShowReportsModal(true)}
+                  className="w-full bg-gradient-to-br from-[#10111a] to-[#1a1216] border border-rose-500/30 rounded-3xl p-4 flex items-center justify-between cursor-pointer hover:border-rose-500/55 transition-all shadow-[0_8px_30px_rgba(244,63,94,0.1)] group relative overflow-hidden text-left"
+                >
+                  <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-rose-500/50 to-transparent" />
+                  <div className="absolute -right-4 -top-4 w-16 h-16 rounded-full bg-rose-500/10 blur-xl pointer-events-none group-hover:scale-150 transition-all duration-500" />
+                  <div className="flex items-center gap-3 relative z-10">
+                    <div className="h-10 w-10 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 group-hover:bg-rose-500/20 transition-colors shrink-0">
+                      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-rose-400 tracking-wider uppercase mb-0.5">Bị Tố Cáo</p>
+                      <p className="text-sm font-semibold text-white">Bạn có <span className="text-rose-400 font-bold">{reports.length}</span> đơn</p>
+                    </div>
+                  </div>
+                  <div className="text-rose-400 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all relative z-10">
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </div>
+                </button>
+              ) : (
+                <div className="bg-[#10111a] border border-emerald-500/20 rounded-3xl p-4 flex items-center gap-3 relative overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.15)]">
+                  <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
+                  <div className="h-10 w-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                      <polyline points="9 12 11 14 15 10" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-emerald-400 tracking-wider uppercase mb-0.5">Hồ sơ sạch sẽ</p>
+                    <p className="text-sm font-semibold text-slate-300">Không có tố cáo</p>
+                  </div>
+                </div>
+              )}
 
             </aside>
 
@@ -1455,7 +1601,7 @@ export const ProfilePage: React.FC = () => {
                   </div>
 
                   <button
-                    onClick={() => setShowAllBookingsModal(true)}
+                    onClick={() => { setShowAllBookingsModal(true); setBookingsCurrentPage(1); }}
                     className="text-xs font-bold text-blue-400 hover:text-blue-300 transition"
                   >
                     Xem tất cả
@@ -1504,7 +1650,7 @@ export const ProfilePage: React.FC = () => {
                           </td>
                         </tr>
                       ) : (
-                        myBookings.map((booking) => {
+                        myBookings.slice(0, 5).map((booking) => {
                           const isSuccess = booking.status === 'confirmed' || booking.status === 'completed';
                           const isCancelled = booking.status === 'cancelled';
 
@@ -1514,7 +1660,10 @@ export const ProfilePage: React.FC = () => {
 
                           let statusClass = "bg-slate-500/10 text-slate-400 border-white/[0.05]";
                           let statusLabel = booking.status;
-                          if (isPlayed) {
+                          if (booking.status === 'waiting_opponent') {
+                            statusClass = "bg-amber-500/10 text-amber-400 border-amber-500/20";
+                            statusLabel = "Chờ thanh toán";
+                          } else if (isPlayed) {
                             statusClass = "bg-[#1D9E75]/10 text-[#1D9E75] border-[#1D9E75]/20";
                             statusLabel = "Đã chơi";
                           } else if (isSuccess) {
@@ -1537,16 +1686,21 @@ export const ProfilePage: React.FC = () => {
                               <td className="py-4 text-sm font-mono text-slate-400">
                                 {booking.start_time} - {booking.end_time}
                               </td>
-                              <td className="py-4">
+                              <td className="py-4 flex items-center gap-2">
                                 <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusClass}`}>
                                   {statusLabel}
                                 </span>
+                                {booking.match_id && (
+                                  <div className="flex items-center justify-center h-6 w-6 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400" title="Lịch đặt từ ghép cặp">
+                                    <SwordsIcon className="h-3.5 w-3.5" />
+                                  </div>
+                                )}
                               </td>
                               <td className="py-4 text-sm font-bold text-right text-emerald-400">
                                 {new Intl.NumberFormat('vi-VN').format(booking.total_price)} đ
                               </td>
                               <td className="py-4 text-center">
-                                {!isPlayed && isSuccess ? (
+                                {!isPlayed && (isSuccess || booking.status === 'waiting_opponent') ? (
                                   <button
                                     onClick={() => setBookingToCancel(booking)}
                                     disabled={cancellingBookingId === booking._id}
@@ -1566,10 +1720,119 @@ export const ProfilePage: React.FC = () => {
                   </table>
                 </div>
               </div>
+
             </main>
           </div>
         )}
 
+        {/* Reports Modal */}
+        {showReportsModal && (
+          <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm">
+            <div className="w-full max-w-2xl rounded-3xl border border-rose-500/20 bg-[#10111a] p-6 shadow-[0_28px_70px_-35px_rgba(225,29,72,0.4)] relative overflow-hidden">
+              <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-rose-500/40 to-transparent" />
+              <div className="flex items-center justify-between border-b border-white/[0.05] pb-4 mb-5">
+                <div className="flex items-center gap-2.5">
+                  <svg viewBox="0 0 24 24" className="h-5 w-5 text-rose-400" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  </svg>
+                  <h3 className="text-base font-bold text-white tracking-wide">Đơn bị tố cáo</h3>
+                  <span className="ml-1 inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-rose-500/15 text-rose-400 text-[10px] font-bold">{reports.length}</span>
+                </div>
+                <button type="button" onClick={() => setShowReportsModal(false)} className="h-8 w-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition text-lg font-bold">✕</button>
+              </div>
+              <div className="overflow-y-auto max-h-[60vh] space-y-0 pr-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full">
+                <div className="space-y-4">
+                  {reportsLoading ? (
+                    <div className="text-center py-8 text-sm text-slate-400 animate-pulse">Đang tải...</div>
+                  ) : reports.length === 0 ? (
+                    <div className="text-center py-10 rounded-2xl bg-slate-950/20 border border-dashed border-white/10">
+                      <p className="text-xs font-bold uppercase tracking-[0.25em] text-slate-500">Hồ sơ sạch sẽ</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-white/[0.04]">
+                      {reports.map((rep) => {
+                        const isExpanded = expandedReportId === rep._id;
+                        const hasAppealed = !!rep.appeal_description;
+                        const reporterName = rep.reporter_id?.name || rep.reporter_id?.userName || "Người chơi";
+                        const reporterAvatar = rep.reporter_id?.avatarUrl;
+                        let statusBadgeClass = "bg-amber-500/10 text-amber-400 border-amber-500/20";
+                        let statusBadgeText = "Đang chờ duyệt";
+                        if (hasAppealed) { statusBadgeClass = "bg-blue-500/10 text-blue-400 border-blue-500/20"; statusBadgeText = "Đã gửi kháng cáo"; }
+                        else if (rep.status === "resolved") { statusBadgeClass = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"; statusBadgeText = "Đã xử lý"; }
+                        else if (rep.status === "dismissed") { statusBadgeClass = "bg-slate-500/10 text-slate-400 border-white/[0.05]"; statusBadgeText = "Bác bỏ"; }
+                        return (
+                          <div key={rep._id} className="py-4 first:pt-0">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                              <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-rose-500 to-amber-500 flex items-center justify-center text-sm font-bold text-white overflow-hidden border border-white/10 shrink-0">
+                                  {reporterAvatar ? <img src={reporterAvatar} alt="avatar" className="h-full w-full object-cover" /> : reporterName.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-200">Tố cáo bởi: <span className="text-white">{reporterName}</span></p>
+                                  <p className="text-xs text-slate-500 mt-0.5">Ngày: {new Date(rep.createdAt).toLocaleDateString("vi-VN")} {new Date(rep.createdAt).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' })}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3 self-end sm:self-auto">
+                                <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusBadgeClass}`}>{statusBadgeText}</span>
+                                <button type="button" onClick={() => setExpandedReportId(isExpanded ? null : rep._id)} className="px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-xs font-bold text-slate-300 hover:bg-white/10 transition">
+                                  {isExpanded ? "Thu gọn ▲" : "Chi tiết ▼"}
+                                </button>
+                              </div>
+                            </div>
+                            {isExpanded && (
+                              <div className="mt-4 bg-slate-950/35 border border-white/[0.04] rounded-2xl p-4 space-y-4 shadow-inner">
+                                <div>
+                                  <p className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">LÝ DO BÁO CÁO</p>
+                                  <p className="mt-1 text-sm font-semibold text-rose-400">{rep.reason}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">MÔ TẢ CHI TIẾT</p>
+                                  <p className="mt-1 text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{rep.description}</p>
+                                </div>
+                                {rep.chat_logs && rep.chat_logs.length > 0 && (
+                                  <div>
+                                    <p className="text-[10px] font-bold text-slate-500 tracking-wider uppercase mb-2">ẢNH CHỤP ĐOẠN CHAT</p>
+                                    <div className="rounded-xl border border-white/[0.04] bg-slate-900/50 p-3 max-h-40 overflow-y-auto space-y-2.5">
+                                      {rep.chat_logs.map((chat, idx) => (
+                                        <div key={idx} className="text-xs">
+                                          <span className="font-bold text-blue-400">{chat.sender_name}:</span>{" "}
+                                          <span className="text-slate-300">{chat.message}</span>
+                                          <span className="block text-[9px] text-slate-600 font-mono mt-0.5">{new Date(chat.createdAt).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' })}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {hasAppealed ? (
+                                  <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3.5">
+                                    <p className="text-xs font-bold text-blue-400 uppercase tracking-wider">Thông tin kháng cáo đã gửi:</p>
+                                    <p className="mt-1.5 text-sm text-slate-200 leading-relaxed whitespace-pre-wrap">"{rep.appeal_description}"</p>
+                                    <p className="mt-2 text-[10px] text-slate-500 font-mono">Gửi ngày: {rep.appeal_created_at ? new Date(rep.appeal_created_at).toLocaleDateString("vi-VN") : ""} {rep.appeal_created_at ? new Date(rep.appeal_created_at).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' }) : ""}</p>
+                                  </div>
+                                ) : (
+                                  <div className="flex justify-end pt-2 border-t border-white/[0.04]">
+                                    <button type="button" onClick={() => { setSelectedReportForAppeal(rep); setAppealText(""); setShowReportsModal(false); }} className="px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-400 text-xs font-bold text-white transition shadow-md uppercase tracking-wider">
+                                      Kháng cáo đơn này
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="mt-4 pt-4 border-t border-white/[0.05] flex justify-end">
+                <button type="button" onClick={() => setShowReportsModal(false)} className="px-5 py-2 rounded-xl bg-white/[0.02] border border-white/10 hover:bg-white/[0.05] text-slate-200 text-xs font-bold uppercase transition">
+                  Đóng
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
 
         {/* Cancel Confirmation Modal */}
@@ -1625,6 +1888,73 @@ export const ProfilePage: React.FC = () => {
           </div>
         )}
 
+        {/* Appeal Input Modal */}
+        {selectedReportForAppeal && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm transition duration-200">
+            <div className="w-full max-w-lg rounded-2xl border border-white/[0.05] bg-[#121320] p-6 shadow-[0_28px_70px_-35px_rgba(0,0,0,0.9)] relative overflow-hidden">
+              <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500/40 to-transparent" />
+
+              <div className="flex items-center gap-3 mb-4">
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-5 w-5 text-blue-400"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                >
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                <h3 className="text-lg font-bold text-white">Kháng cáo đơn tố cáo</h3>
+              </div>
+
+              <div className="space-y-4 mb-6">
+                <div className="rounded-xl border border-white/[0.04] bg-slate-900/30 p-3 text-xs text-slate-400 space-y-1">
+                  <p><strong className="text-slate-300">Lý do bị tố cáo:</strong> <span className="text-rose-400 font-semibold">{selectedReportForAppeal.reason}</span></p>
+                  <p><strong className="text-slate-300">Chi tiết tố cáo:</strong> {selectedReportForAppeal.description}</p>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase block mb-1.5">
+                    NỘI DUNG KHÁNG CÁO GỬI ADMIN
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={appealText}
+                    onChange={(e) => setAppealText(e.target.value)}
+                    placeholder="Nhập lý do, bằng chứng hoặc lời giải thích của bạn để gửi lên Admin xem xét..."
+                    className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm font-semibold text-white outline-none focus:border-blue-500/50 placeholder:text-slate-600 resize-none"
+                  />
+                </div>
+                <p className="text-xs text-slate-500 italic">Lưu ý: Bạn chỉ được kháng cáo duy nhất 1 lần cho mỗi đơn tố cáo. Vui lòng nhập thông tin chính xác.</p>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSelectedReportForAppeal(null)}
+                  disabled={isAppealing}
+                  className="px-5 py-2.5 rounded-xl border border-white/10 bg-transparent hover:bg-white/5 text-slate-300 text-sm font-semibold transition disabled:opacity-50"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmAppeal}
+                  disabled={isAppealing}
+                  className="px-5 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-sm font-bold shadow-lg shadow-blue-500/20 transition disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isAppealing ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+                      Đang gửi...
+                    </>
+                  ) : "Gửi kháng cáo"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Error Modal Popup */}
         {popupErrorMessage ? (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm transition duration-200">
@@ -1674,14 +2004,15 @@ export const ProfilePage: React.FC = () => {
                   <tbody>
                     {myBookings.length === 0 ? (
                       <tr><td colSpan={6} className="text-center py-10 text-xs text-slate-500 italic">Chưa có lịch đặt sân</td></tr>
-                    ) : myBookings.map((booking) => {
+                    ) : myBookings.slice((bookingsCurrentPage - 1) * 10, bookingsCurrentPage * 10).map((booking) => {
                       const isSuccess = booking.status === 'confirmed' || booking.status === 'completed';
                       const isCancelled = booking.status === 'cancelled';
                       const bookingEndTime = new Date(`${booking.date.split('T')[0]}T${booking.end_time}:00`);
                       const isPlayed = isSuccess && bookingEndTime < new Date();
                       let statusClass = "bg-slate-500/10 text-slate-400 border-white/[0.05]";
                       let statusLabel = booking.status;
-                      if (isPlayed) { statusClass = "bg-[#1D9E75]/10 text-[#1D9E75] border-[#1D9E75]/20"; statusLabel = "Đã chơi"; }
+                      if (booking.status === 'waiting_opponent') { statusClass = "bg-amber-500/10 text-amber-400 border-amber-500/20"; statusLabel = "Chờ thanh toán"; }
+                      else if (isPlayed) { statusClass = "bg-[#1D9E75]/10 text-[#1D9E75] border-[#1D9E75]/20"; statusLabel = "Đã chơi"; }
                       else if (isSuccess) { statusClass = "bg-blue-500/10 text-blue-400 border-blue-500/20"; statusLabel = "Thành công"; }
                       else if (isCancelled) { statusClass = "bg-rose-500/10 text-rose-400 border-rose-500/20"; statusLabel = "Đã hủy"; }
                       return (
@@ -1692,14 +2023,52 @@ export const ProfilePage: React.FC = () => {
                           </td>
                           <td className="py-3.5 text-sm text-slate-300">{new Date(booking.date).toLocaleDateString('vi-VN')}</td>
                           <td className="py-3.5 text-sm font-mono text-slate-400">{booking.start_time} - {booking.end_time}</td>
-                          <td className="py-3.5">
+                          <td className="py-3.5 flex items-center gap-2">
                             <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusClass}`}>{statusLabel}</span>
+                            {booking.match_id && (
+                              <div className="relative group inline-block z-10">
+                                <button type="button" className="flex items-center justify-center h-6 w-6 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 hover:scale-105 transition-all duration-300">
+                                  <SwordsIcon className="h-3.5 w-3.5" />
+                                </button>
+                                
+                                {/* Tooltip profile card */}
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-4 rounded-2xl bg-[#0F172A]/95 border border-cyan-500/25 backdrop-blur-md shadow-2xl shadow-cyan-950/50 scale-95 opacity-0 pointer-events-none group-hover:scale-100 group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-50">
+                                  <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-[#0F172A]/95" />
+                                  <p className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider mb-2.5">Đối thủ ghép trận</p>
+                                  {(() => {
+                                    const opponent = booking.match_id?.participants?.find(
+                                      (p) => p._id !== currentUser?.id
+                                    );
+                                    if (!opponent) {
+                                      return <span className="text-slate-400 text-xs italic">Đang chờ đối thủ...</span>;
+                                    }
+                                    return (
+                                      <div className="flex items-center gap-3">
+                                        <div className="h-10 w-10 rounded-full overflow-hidden border border-cyan-500/25 bg-slate-800 flex items-center justify-center shrink-0">
+                                          {opponent.avatarUrl ? (
+                                            <img src={opponent.avatarUrl} alt={opponent.name} className="h-full w-full object-cover" />
+                                          ) : (
+                                            <span className="text-sm font-black text-cyan-400">
+                                              {(opponent.name || opponent.userName || "U").charAt(0).toUpperCase()}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="min-w-0 text-left">
+                                          <h4 className="text-xs font-bold text-white truncate">{opponent.name || opponent.userName}</h4>
+                                          <p className="text-[10px] text-slate-400 truncate">@{opponent.userName}</p>
+                                        </div>
+                                      </div>
+                                    );
+                                  })()}
+                                </div>
+                              </div>
+                            )}
                           </td>
                           <td className="py-3.5 text-sm font-bold text-right text-emerald-400">
                             {new Intl.NumberFormat('vi-VN').format(booking.total_price)} đ
                           </td>
                           <td className="py-3.5 text-center">
-                            {!isPlayed && isSuccess ? (
+                            {!isPlayed && (isSuccess || booking.status === 'waiting_opponent') ? (
                               <button
                                 onClick={() => { setBookingToCancel(booking); setShowAllBookingsModal(false); }}
                                 disabled={cancellingBookingId === booking._id}
@@ -1713,6 +2082,25 @@ export const ProfilePage: React.FC = () => {
                   </tbody>
                 </table>
               </div>
+              {myBookings.length > 10 && (
+                <div className="mt-3 pt-3 border-t border-white/[0.05] flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-400">
+                    Trang {bookingsCurrentPage} / {Math.ceil(myBookings.length / 10)}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setBookingsCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={bookingsCurrentPage === 1}
+                      className="px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/10 text-slate-300 text-xs font-bold transition hover:bg-white/[0.05] disabled:opacity-40"
+                    >Trước</button>
+                    <button
+                      onClick={() => setBookingsCurrentPage(p => Math.min(Math.ceil(myBookings.length / 10), p + 1))}
+                      disabled={bookingsCurrentPage === Math.ceil(myBookings.length / 10)}
+                      className="px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/10 text-slate-300 text-xs font-bold transition hover:bg-white/[0.05] disabled:opacity-40"
+                    >Sau</button>
+                  </div>
+                </div>
+              )}
               <div className="mt-4 pt-4 border-t border-white/[0.05] flex justify-end">
                 <button onClick={() => setShowAllBookingsModal(false)}
                   className="px-5 py-2 rounded-xl bg-white/[0.02] border border-white/10 hover:bg-white/[0.05] text-slate-200 text-xs font-bold uppercase transition">

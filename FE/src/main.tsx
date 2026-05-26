@@ -11,6 +11,8 @@ import { ForgotPasswordPage } from './pages/Customer/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/Customer/ResetPasswordPage';
 import { ProfilePage } from './pages/Customer/ProfilePage';
 import { OwnerDashboardScreen } from './pages/Owner/OwnerDashboardScreen';
+import { OwnerLandingPage } from './pages/Owner/OwnerLandingPage';
+import { OwnerContactPage } from './pages/Owner/OwnerContactPage';
 import { OwnerManageCourtScreen } from './pages/Owner/OwnerManageCourtScreen';
 import { OwnerRevenueScreen } from './pages/Owner/OwnerRevenueScreen';
 import { OwnerBookingScheduleScreen } from './pages/Owner/OwnerBookingScheduleScreen';
@@ -27,6 +29,8 @@ import { WalletPage } from './pages/WalletPage/WalletPage';
 import { CheckoutPage } from './pages/CheckoutPage/CheckoutPage';
 import { PaymentSuccessPage } from './pages/CheckoutPage/PaymentSuccessPage';
 import { VietQRPaymentPage } from './pages/CheckoutPage/VietQRPaymentPage';
+import { MatchmakingPage } from './pages/MatchmakingPage/MatchmakingPage';
+import { ChatPage } from './pages/ChatPage/ChatPage';
 import './index.css';
 
 function App() {
@@ -51,11 +55,54 @@ function App() {
 
         {/* ─── Any logged-in user ────────────────────────────── */}
         <Route
+          path="/for-owners"
+          element={
+            <Layout>
+              <OwnerLandingPage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/cho-chu-san"
+          element={
+            <Layout>
+              <OwnerContactPage />
+            </Layout>
+          }
+        />
+        <Route path="/owner/dashboard" element={<OwnerDashboardScreen />} />
+        <Route path="/owner/manage-courts" element={<OwnerManageCourtScreen />} />
+        <Route path="/owner/revenue" element={<OwnerRevenueScreen />} />
+        <Route path="/owner/bookings" element={<OwnerBookingScheduleScreen />} />
+        <Route path="/owner/settings" element={<OwnerSettingsScreen />} />
+        <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+        <Route path="/admin/manage-stadiums" element={<AdminManageStadiumPage />} />
+        <Route path="/admin/manage-users" element={<AdminManageUsersPage />} />
+        <Route path="/admin/moderation" element={<AdminModerationPage />} />
+        <Route path="/admin/vouchers" element={<AdminVoucherPage />} />
+        <Route path="/admin/income" element={<AdminIncomePage />} />
+        <Route
           path="/profile"
           element={
             <PrivateRoute>
               <Layout><ProfilePage /></Layout>
             </PrivateRoute>
+          }
+        />
+        <Route
+          path="/matchmaking"
+          element={
+            <Layout>
+              <MatchmakingPage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/chat/:matchId"
+          element={
+            <Layout>
+              <ChatPage />
+            </Layout>
           }
         />
         <Route

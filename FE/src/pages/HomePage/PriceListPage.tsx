@@ -82,10 +82,10 @@ const featureVariants: Variants = {
 const iconBaseClass = 'flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl';
 
 const iconToneClass: Record<NonNullable<PricePlan['iconTone']>, string> = {
-  slate: 'bg-slate-700/25 text-slate-200',
-  blue: 'bg-blue-500/15 text-blue-300',
-  gold: 'bg-amber-500/15 text-amber-200',
-  violet: 'bg-violet-500/15 text-violet-300',
+  slate: 'bg-white/5 text-slate-300',
+  blue: 'bg-[#CCFF00]/10 text-[#CCFF00]',
+  gold: 'bg-[#00F5FF]/10 text-[#00F5FF]',
+  violet: 'bg-[#CCFF00]/20 text-[#CCFF00]',
 };
 
 const planIcons: Record<PricePlan['iconName'], React.ReactNode> = {
@@ -139,10 +139,10 @@ const compareRows: CompareRow[] = [
 ];
 
 const stats = [
-  { value: '2.000+', label: 'Cơ sở đang dùng ArenaS', tone: 'from-blue-500 to-cyan-400' },
-  { value: '98%', label: 'Chủ sân hài lòng', tone: 'from-emerald-500 to-teal-400' },
-  { value: '40%', label: 'Tăng doanh thu trung bình', tone: 'from-violet-500 to-fuchsia-400' },
-  { value: '24/7', label: 'Hỗ trợ kỹ thuật', tone: 'from-amber-500 to-orange-400' },
+  { value: '2.000+', label: 'Cơ sở đang dùng ArenaS', tone: 'from-[#00F5FF]/80 to-[#00F5FF]' },
+  { value: '98%', label: 'Chủ sân hài lòng', tone: 'from-[#CCFF00]/80 to-[#CCFF00]' },
+  { value: '40%', label: 'Tăng doanh thu trung bình', tone: 'from-[#00F5FF]/80 to-[#00F5FF]' },
+  { value: '24/7', label: 'Hỗ trợ kỹ thuật', tone: 'from-[#CCFF00]/80 to-[#CCFF00]' },
 ];
 
 const faqs: FaqItem[] = [
@@ -169,9 +169,9 @@ const faqs: FaqItem[] = [
 ];
 
 const planTagClass: Record<NonNullable<PricePlan['tagTone']>, string> = {
-  blue: 'border-blue-400/60 bg-blue-500/20 text-blue-100',
-  violet: 'border-violet-400/60 bg-violet-500/20 text-violet-100',
-  gold: 'border-amber-300/70 bg-amber-400/20 text-amber-100',
+  blue: 'border-[#CCFF00]/30 bg-[#CCFF00]/10 text-[#CCFF00]',
+  violet: 'border-[#CCFF00]/30 bg-[#CCFF00]/10 text-[#CCFF00]',
+  gold: 'border-[#00F5FF]/30 bg-[#00F5FF]/10 text-[#00F5FF]',
 };
 
 export const PriceListPage: React.FC = () => {
@@ -192,7 +192,7 @@ export const PriceListPage: React.FC = () => {
   const [selectedActionType, setSelectedActionType] = useState<'renew' | 'upgrade' | 'downgrade' | null>(null);
 
   const isYearly = billingCycle === 'yearly';
-  const savingsLabelClass = isYearly ? 'text-emerald-200' : 'text-emerald-100';
+
 
   // Current user access level
   const currentPlanSortOrder = currentSubscription?.planId?.sortOrder || 1;
@@ -268,21 +268,21 @@ export const PriceListPage: React.FC = () => {
           if (isStarter) {
             iconName = 'startup';
             iconTone = 'slate';
-            accent = 'from-slate-600 to-slate-800';
+            accent = 'from-white/20 to-white/5';
           } else if (isBasic) {
             iconName = 'basic';
             iconTone = 'blue';
-            accent = 'from-blue-600 to-cyan-500';
+            accent = 'from-[#CCFF00]/50 to-[#CCFF00]';
           } else if (isPro || nameSlug.includes('professional') || nameSlug.includes('pro')) {
             iconName = 'pro';
             iconTone = 'gold';
-            accent = 'from-blue-500 via-blue-600 to-indigo-500';
+            accent = 'from-[#00F5FF]/50 to-[#00F5FF]';
             tag = 'PHỔ BIẾN NHẤT';
             tagTone = 'gold';
           } else if (isEnterprise || plan.isCustom) {
             iconName = 'enterprise';
             iconTone = 'violet';
-            accent = 'from-violet-600 to-fuchsia-500';
+            accent = 'from-[#CCFF00]/80 to-[#CCFF00]';
             tag = 'TÙY CHỈNH';
             tagTone = 'violet';
           }
@@ -435,15 +435,15 @@ export const PriceListPage: React.FC = () => {
   };
 
   return (
-    <div className="relative overflow-hidden bg-[#071024] text-white min-h-screen selection:bg-blue-500/30">
+    <div className="relative overflow-hidden bg-[#0A0A0B] text-white min-h-screen selection:bg-[#CCFF00]/30 font-inter">
       {/* Background radial gradients */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(37,99,235,0.16),transparent_28%),radial-gradient(circle_at_80%_10%,rgba(168,85,247,0.16),transparent_25%),radial-gradient(circle_at_50%_80%,rgba(14,165,233,0.1),transparent_32%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(204,255,0,0.1),transparent_28%),radial-gradient(circle_at_80%_10%,rgba(0,245,255,0.1),transparent_25%),radial-gradient(circle_at_50%_80%,rgba(204,255,0,0.05),transparent_32%)]" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:72px_72px] opacity-[0.08]" />
 
       <section className="relative px-4 pb-8 pt-10 sm:px-6 lg:px-8 lg:pt-14 z-10">
         <div className="mx-auto max-w-7xl">
           <div className="mx-auto max-w-3xl text-center">
-            <span className="inline-flex items-center rounded-full border border-blue-400/30 bg-blue-500/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-blue-200">
+            <span className="inline-flex items-center rounded-full border border-[#CCFF00]/30 bg-[#CCFF00]/10 px-4 py-1 text-xs font-bold uppercase tracking-widest text-[#CCFF00]">
               BẢNG GIÁ DỊCH VỤ - ARENAS
             </span>
             <h1 className="mt-5 text-4xl font-black leading-tight text-white sm:text-5xl lg:text-6xl">
@@ -456,14 +456,14 @@ export const PriceListPage: React.FC = () => {
 
           {/* Billing Cycle Toggle */}
           <div className="mt-10 flex justify-center">
-            <div className="flex items-center gap-4 rounded-full border border-white/10 bg-[#09122b]/90 px-4 py-3 shadow-[0_18px_50px_-24px_rgba(37,99,235,0.45)] backdrop-blur-md sm:px-5">
+            <div className="flex items-center gap-4 rounded-full border border-white/10 bg-[#101011]/90 px-4 py-3 shadow-[0_18px_50px_-24px_rgba(204,255,0,0.15)] backdrop-blur-md sm:px-5">
               <span className={`text-sm font-semibold transition-colors duration-200 ${isYearly ? 'text-slate-400' : 'text-slate-100'}`}>
                 Thanh Toán Tháng
               </span>
               <button
                 type="button"
                 onClick={() => setBillingCycle((current) => (current === 'monthly' ? 'yearly' : 'monthly'))}
-                className={`relative h-11 w-28 shrink-0 overflow-hidden rounded-full border transition-colors duration-300 ${isYearly ? 'border-emerald-500 bg-emerald-500' : 'border-slate-400/50 bg-slate-700/85'
+                className={`relative h-11 w-28 shrink-0 overflow-hidden rounded-full border transition-colors duration-300 ${isYearly ? 'border-[#CCFF00] bg-[#CCFF00]' : 'border-slate-400/50 bg-[#1A1A1C]'
                   }`}
                 aria-label="Chuyển đổi thanh toán"
               >
@@ -475,7 +475,7 @@ export const PriceListPage: React.FC = () => {
               <span className={`text-sm font-semibold transition-colors duration-200 ${isYearly ? 'text-slate-100' : 'text-slate-400'}`}>
                 Thanh Toán Năm
               </span>
-              <span className={`rounded-full border border-emerald-400/20 bg-emerald-500/25 px-3 py-1.5 text-[11px] font-extrabold tracking-wide text-emerald-400 ${savingsLabelClass}`}>
+              <span className={`rounded-full border border-[#00F5FF]/30 bg-[#00F5FF]/10 px-3 py-1.5 text-[11px] font-extrabold tracking-widest uppercase text-[#00F5FF]`}>
                 Tiết kiệm 20%
               </span>
             </div>
@@ -528,7 +528,7 @@ export const PriceListPage: React.FC = () => {
                 let hoverAnimation: any = { y: -8, scale: 1.015 };
 
                 if (isCurrentPlan) {
-                  borderStyle = 'border-emerald-500/80 ring-4 ring-emerald-500/15 bg-[linear-gradient(180deg,rgba(7,28,20,0.96),rgba(4,9,20,0.98))] shadow-[0_0_50px_rgba(16,185,129,0.3)] scale-[1.025] lg:scale-[1.035]';
+                  borderStyle = 'border-[#CCFF00]/80 ring-4 ring-[#CCFF00]/15 bg-[#101011] shadow-[0_0_50px_rgba(204,255,0,0.15)] scale-[1.025] lg:scale-[1.035]';
                   hoverAnimation = { y: -4, scale: 1.028 };
                 } else if (isDowngrade) {
                   opacityStyle = 'opacity-60 hover:opacity-85';
@@ -541,15 +541,15 @@ export const PriceListPage: React.FC = () => {
                     whileHover={hoverAnimation}
                     whileTap={{ scale: 0.992 }}
                     transition={{ type: 'spring', stiffness: 220, damping: 24, mass: 0.9 }}
-                    className={`relative overflow-hidden rounded-[2.5rem] border bg-[linear-gradient(180deg,rgba(8,15,33,0.98),rgba(4,9,20,0.98))] p-5 shadow-[0_22px_70px_-30px_rgba(2,8,23,0.82)] transition-all duration-300 ${borderStyle} ${opacityStyle}`}
+                    className={`relative overflow-hidden rounded-[2.5rem] border bg-[#101011] p-5 shadow-[0_22px_70px_-30px_rgba(0,0,0,0.8)] transition-all duration-300 ${borderStyle} ${opacityStyle}`}
                   >
                     <div className={`absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r ${plan.accent}`} />
 
                     {/* Active State layout flow badge & plan tags with spacer integration to secure equal-height grids */}
                     {isCurrentPlan ? (
                       <div className="mb-5 flex flex-wrap gap-2 items-center justify-between min-h-[26px]">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 px-3.5 py-1 text-[10px] font-black tracking-widest text-emerald-400 uppercase shadow-[0_0_15px_rgba(16,185,129,0.15)]">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#CCFF00]/10 border border-[#CCFF00]/30 px-3.5 py-1 text-[10px] font-black tracking-widest text-[#CCFF00] uppercase shadow-[0_0_15px_rgba(204,255,0,0.15)]">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#CCFF00] animate-pulse" />
                           Đang kích hoạt
                         </span>
                         {plan.tag && (
@@ -636,7 +636,7 @@ export const PriceListPage: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => handlePlanActionClick(plan, 'upgrade')}
-                          className={`w-full rounded-2xl bg-gradient-to-r ${plan.accent} hover:brightness-110 text-white py-3.5 text-xs font-black tracking-[0.16em] uppercase transition-all duration-300 shadow-[0_12px_30px_-6px_rgba(139,92,246,0.4)] hover:shadow-[0_16px_35px_-4px_rgba(139,92,246,0.6)] transform hover:-translate-y-0.5`}
+                          className={`w-full rounded-2xl bg-[#2A3317] border border-[#CCFF00]/30 hover:bg-[#CCFF00] text-[#CCFF00] hover:text-[#0A0A0B] py-3.5 text-xs font-black tracking-[0.16em] uppercase transition-all duration-300 shadow-[0_0_15px_rgba(204,255,0,0.15)] hover:shadow-[0_0_20px_rgba(204,255,0,0.3)] transform hover:-translate-y-0.5`}
                         >
                           Liên Hệ Tư Vấn
                         </button>
@@ -644,7 +644,7 @@ export const PriceListPage: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => handlePlanActionClick(plan, 'upgrade')}
-                          className={`w-full rounded-2xl bg-gradient-to-r ${plan.accent} hover:brightness-110 text-white py-3.5 text-xs font-black tracking-[0.16em] uppercase transition-all duration-300 shadow-[0_12px_30px_-6px_rgba(37,99,235,0.4)] hover:shadow-[0_16px_35px_-4px_rgba(37,99,235,0.6)] transform hover:-translate-y-0.5`}
+                          className={`w-full rounded-2xl bg-[#2A3317] border border-[#CCFF00]/30 hover:bg-[#CCFF00] text-[#CCFF00] hover:text-[#0A0A0B] py-3.5 text-xs font-black tracking-[0.16em] uppercase transition-all duration-300 shadow-[0_0_15px_rgba(204,255,0,0.15)] hover:shadow-[0_0_20px_rgba(204,255,0,0.3)] transform hover:-translate-y-0.5`}
                         >
                           Nâng cấp ngay
                         </button>
@@ -663,7 +663,7 @@ export const PriceListPage: React.FC = () => {
                           className={`flex items-start gap-3 text-[13px] ${feature.included ? 'text-slate-200' : 'text-slate-500'}`}
                         >
                           <span
-                            className={`mt-[2px] flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-black ${feature.included ? 'bg-emerald-400/15 text-emerald-400' : 'bg-white/5 text-slate-600'
+                            className={`mt-[2px] flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-black ${feature.included ? 'bg-[#CCFF00]/15 text-[#CCFF00]' : 'bg-white/5 text-slate-600'
                               }`}
                           >
                             {feature.included ? '✓' : '×'}
@@ -691,10 +691,10 @@ export const PriceListPage: React.FC = () => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
               transition={{ type: 'spring', damping: 25, stiffness: 280 }}
-              className="relative w-full max-w-lg overflow-hidden rounded-[2.5rem] border border-white/10 bg-[#0c1630] p-6 shadow-[0_30px_70px_rgba(0,0,0,0.7)] text-white backdrop-blur-2xl"
+              className="relative w-full max-w-lg overflow-hidden rounded-[2.5rem] border border-white/10 bg-[#101011] p-6 shadow-[0_30px_70px_rgba(0,0,0,0.7)] text-white backdrop-blur-2xl"
             >
               {/* Top decoration glow */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-[2px] bg-gradient-to-r from-transparent via-blue-500 to-transparent" />
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-[2px] bg-gradient-to-r from-transparent via-[#00F5FF] to-transparent" />
 
               <div className="flex items-center justify-between pb-4 border-b border-white/5">
                 <h3 className="text-xl font-extrabold tracking-tight">
@@ -728,7 +728,7 @@ export const PriceListPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => handlePlanActionClick(selectedPlanForValidation, selectedActionType || 'upgrade')}
-                    className="mt-6 rounded-xl bg-blue-600 hover:bg-blue-500 px-5 py-2.5 text-sm font-semibold"
+                    className="mt-6 rounded-xl bg-[#2A3317] border border-[#CCFF00]/30 hover:bg-[#CCFF00] text-[#CCFF00] hover:text-[#0A0A0B] px-5 py-2.5 text-sm font-semibold"
                   >
                     Thử lại
                   </button>
@@ -878,7 +878,7 @@ export const PriceListPage: React.FC = () => {
                         <button
                           type="button"
                           onClick={handleProceedToCheckout}
-                          className="w-full rounded-2xl border border-blue-500/50 bg-blue-600 hover:bg-blue-500 py-3.5 text-sm font-extrabold text-white shadow-[0_12px_25px_rgba(37,99,235,0.4)] transition-all"
+                          className="w-full rounded-2xl border border-[#CCFF00]/30 bg-[#2A3317] hover:bg-[#CCFF00] hover:text-[#0A0A0B] text-[#CCFF00] py-3.5 text-sm font-extrabold shadow-[0_0_15px_rgba(204,255,0,0.15)] transition-all"
                         >
                           Xác Nhận & Thanh Toán
                         </button>
@@ -894,9 +894,9 @@ export const PriceListPage: React.FC = () => {
 
       {/* Plans Comparison section */}
       <section className="relative px-4 py-10 sm:px-6 lg:px-8 lg:py-16">
-        <div className="mx-auto max-w-7xl rounded-[2.5rem] border border-white/8 bg-[linear-gradient(180deg,rgba(6,12,30,0.94),rgba(8,15,34,0.96))] p-4 shadow-[0_30px_90px_-40px_rgba(2,8,23,0.95)] sm:p-6 lg:p-8">
+        <div className="mx-auto max-w-7xl rounded-[2.5rem] border border-white/8 bg-[#101011] p-4 shadow-[0_30px_90px_-40px_rgba(2,8,23,0.95)] sm:p-6 lg:p-8">
           <div className="mb-6 text-center">
-            <span className="text-xs font-semibold uppercase tracking-[0.32em] text-blue-300">So sánh chi tiết</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.32em] text-[#CCFF00]">So sánh chi tiết</span>
             <h2 className="mt-3 text-3xl font-black text-white sm:text-4xl">Đầy đủ tính năng theo gói</h2>
             <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-slate-300">
               Hãy so sánh chi tiết tính năng của từng gói cước để lựa chọn dịch vụ phù hợp nhất cho trung tâm thể thao của bạn.
@@ -908,15 +908,15 @@ export const PriceListPage: React.FC = () => {
               <div>Tính năng</div>
               <div className="text-center text-slate-200">Khởi Nghiệp</div>
               <div className="text-center text-slate-200">Cơ Bản</div>
-              <div className="text-center text-blue-300">Chuyên Nghiệp</div>
-              <div className="text-center text-violet-300">Doanh Nghiệp</div>
+              <div className="text-center text-[#00F5FF]">Chuyên Nghiệp</div>
+              <div className="text-center text-[#CCFF00]">Doanh Nghiệp</div>
             </div>
 
-            <div className="divide-y divide-white/6 bg-[#071129]">
+            <div className="divide-y divide-white/6 bg-white/5">
               {compareRows.map((row) => (
                 <div key={`${row.section}-${row.label}`} className="grid grid-cols-[1.7fr_repeat(4,minmax(110px,1fr))] items-center px-4 py-3 text-sm sm:py-4">
                   <div>
-                    <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-blue-300/85">{row.section}</div>
+                    <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#00F5FF]/85">{row.section}</div>
                     <div className="mt-1 text-slate-200">{row.label}</div>
                   </div>
                   {row.values.map((value, index) => {
@@ -926,10 +926,10 @@ export const PriceListPage: React.FC = () => {
                       <div key={`${row.label}-${index}`} className="flex justify-center text-center text-sm font-semibold">
                         <span
                           className={`inline-flex min-h-8 items-center justify-center rounded-full px-3 py-1 ${positive
-                            ? 'bg-emerald-400/12 text-emerald-300'
+                            ? 'bg-[#CCFF00]/15 text-[#CCFF00]'
                             : negative
                               ? 'bg-white/5 text-slate-500'
-                              : 'bg-blue-500/10 text-slate-200'
+                              : 'bg-[#00F5FF]/10 text-[#00F5FF]'
                             }`}
                         >
                           {value}
@@ -945,7 +945,7 @@ export const PriceListPage: React.FC = () => {
           <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {stats.map((stat) => (
               <div key={stat.label} className="rounded-2xl border border-white/8 bg-white/4 p-4">
-                <div className={`inline-flex rounded-xl bg-gradient-to-r px-3 py-1 text-xs font-black tracking-[0.2em] text-white ${stat.tone}`}>
+                <div className={`inline-flex rounded-xl bg-gradient-to-r px-3 py-1 text-xs font-black tracking-[0.2em] text-[#0A0A0B] ${stat.tone}`}>
                   {stat.value}
                 </div>
                 <p className="mt-3 text-sm text-slate-200">{stat.label}</p>
@@ -958,8 +958,8 @@ export const PriceListPage: React.FC = () => {
       {/* FAQ Accordion Section */}
       <section className="relative px-4 py-10 sm:px-6 lg:px-8 lg:py-16">
         <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[1fr_1fr]">
-          <div className="rounded-[2.5rem] border border-white/8 bg-[linear-gradient(180deg,rgba(7,14,31,0.96),rgba(6,12,28,0.98))] p-6 shadow-[0_30px_90px_-42px_rgba(2,8,23,0.9)] sm:p-8">
-            <span className="text-xs font-semibold uppercase tracking-[0.32em] text-blue-300">FAQ</span>
+          <div className="rounded-[2.5rem] border border-white/8 bg-[#101011] p-6 shadow-[0_30px_90px_-42px_rgba(2,8,23,0.9)] sm:p-8">
+            <span className="text-xs font-semibold uppercase tracking-[0.32em] text-[#00F5FF]">FAQ</span>
             <h2 className="mt-3 text-3xl font-black text-white">Câu Hỏi Thường Gặp</h2>
             <p className="mt-3 text-sm leading-7 text-slate-300">
               Tổng hợp những thắc mắc thường thấy từ các chủ sân khi đăng ký và giao dịch trên nền tảng quản lý ArenaS.
@@ -973,7 +973,7 @@ export const PriceListPage: React.FC = () => {
                     key={faq.question}
                     type="button"
                     onClick={() => setOpenFaqIndex((current) => (current === index ? -1 : index))}
-                    className="w-full rounded-2xl border border-white/8 bg-white/4 px-4 py-4 text-left transition hover:border-white/14 hover:bg-white/6"
+                    className={`w-full rounded-2xl border bg-white/4 px-4 py-4 text-left transition hover:bg-white/6 ${open ? 'border-[#00F5FF]/30 shadow-[0_0_15px_rgba(0,245,255,0.05)]' : 'border-white/8 hover:border-white/14'}`}
                   >
                     <div className="flex items-center justify-between gap-4">
                       <span className="text-sm font-semibold text-white sm:text-base">{faq.question}</span>
@@ -992,32 +992,33 @@ export const PriceListPage: React.FC = () => {
 
           <div className="flex flex-col gap-6">
             <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-              <div className="rounded-[1.5rem] border border-white/8 bg-white/4 p-5">
+              <div className="rounded-[1.5rem] border border-white/8 bg-white/4 p-5 hover:border-[#00F5FF]/30 transition-all hover:bg-white/5 cursor-pointer">
                 <div className="text-xl font-black leading-tight text-white sm:text-2xl">Chat Tự Động</div>
                 <p className="mt-2 text-xs leading-6 text-slate-300">Nhận câu trả lời và tư vấn tức thì 24/7 từ chatbot thông minh.</p>
-                <div className="mt-3 text-xs font-bold text-blue-300 uppercase tracking-widest">Bắt đầu chat →</div>
+                <div className="mt-3 text-xs font-bold text-[#00F5FF] uppercase tracking-widest">Bắt đầu chat →</div>
               </div>
-              <div className="rounded-[1.5rem] border border-white/8 bg-white/4 p-5">
+              <div className="rounded-[1.5rem] border border-white/8 bg-white/4 p-5 hover:border-[#CCFF00]/30 transition-all hover:bg-white/5 cursor-pointer">
                 <div className="text-xl font-black leading-tight text-white sm:text-2xl">Gọi Điện Thoại</div>
                 <p className="mt-2 text-xs leading-6 text-slate-300">Nhận hỗ trợ giải quyết thắc mắc kỹ thuật từ các tổng đài viên trực tiếp.</p>
-                <div className="mt-3 text-xs font-bold text-emerald-300 uppercase tracking-widest">1900 0000 →</div>
+                <div className="mt-3 text-xs font-bold text-[#CCFF00] uppercase tracking-widest">1900 0000 →</div>
               </div>
-              <div className="rounded-[1.5rem] border border-white/8 bg-white/4 p-5">
+              <div className="rounded-[1.5rem] border border-white/8 bg-white/4 p-5 hover:border-[#00F5FF]/30 transition-all hover:bg-white/5 cursor-pointer">
                 <div className="text-xl font-black leading-tight text-white sm:text-2xl">Demo Chi Tiết</div>
                 <p className="mt-2 text-xs leading-6 text-slate-300">Đặt lịch hướng dẫn sử dụng phần mềm và báo cáo doanh thu trực quan.</p>
-                <div className="mt-3 text-xs font-bold text-violet-300 uppercase tracking-widest">Đặt lịch demo →</div>
+                <div className="mt-3 text-xs font-bold text-[#00F5FF] uppercase tracking-widest">Đặt lịch demo →</div>
               </div>
             </div>
 
-            <div className="flex min-h-[280px] flex-col justify-between overflow-hidden rounded-[2.5rem] border border-blue-500/30 bg-[linear-gradient(135deg,#1d4ed8_0%,#2563eb_35%,#4f46e5_100%)] p-6 shadow-[0_30px_90px_-40px_rgba(37,99,235,0.95)] sm:p-8">
-              <div>
-                <span className="inline-flex rounded-full border border-white/20 bg-white/12 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.28em] text-blue-50">
+            <div className="relative flex min-h-[280px] flex-col justify-between overflow-hidden rounded-[2.5rem] border border-[#CCFF00]/30 bg-[#0A0A0B] p-6 shadow-[0_0_50px_rgba(204,255,0,0.2)] sm:p-8">
+              <div className="absolute inset-0 bg-gradient-to-tr from-[#CCFF00]/10 to-transparent pointer-events-none" />
+              <div className="relative z-10">
+                <span className="inline-flex rounded-full border border-[#CCFF00]/30 bg-[#CCFF00]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.28em] text-[#CCFF00]">
                   Gói được yêu thích
                 </span>
                 <h3 className="mt-5 max-w-md text-3xl font-black leading-[1.05] text-white sm:text-5xl">
                   Miễn phí đến khi bạn sẵn sàng mở rộng
                 </h3>
-                <p className="mt-4 max-w-xl text-xs sm:text-sm leading-6 text-blue-50/90">
+                <p className="mt-4 max-w-xl text-xs sm:text-sm leading-6 text-slate-300">
                   Hãy đăng ký sử dụng thử nghiệm miễn phí ngay hôm nay mà không cần liên kết thẻ ngân hàng. Nâng cấp nhanh gọn khi phát triển thêm.
                 </p>
               </div>
@@ -1026,7 +1027,7 @@ export const PriceListPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => navigate('/auth/register')}
-                  className="rounded-2xl bg-white px-5 py-3.5 text-xs font-black text-blue-700 hover:bg-blue-50 transition duration-300 ease-out hover:-translate-y-0.5"
+                  className="rounded-2xl bg-[#CCFF00] px-5 py-3.5 text-xs font-black text-[#0A0A0B] hover:brightness-110 shadow-[0_0_15px_rgba(204,255,0,0.2)] transition duration-300 ease-out hover:-translate-y-0.5"
                 >
                   ĐĂNG KÝ MIỄN PHÍ →
                 </button>

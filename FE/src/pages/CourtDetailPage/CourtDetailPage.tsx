@@ -3,11 +3,12 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   getPublicCourtById, getCourtSlots,
   getCourtReviews, getCanReview, createReview, updateReview, deleteReview, getMyCourtReview,
+  lockSlots, unlockSlots,
   type PublicCourt, type CourtSlotData, type CourtReview,
 } from '../../Axios/Axios';
 import { BookingModal } from '../../components/BookingModal';
 
-type LocationState = { court?: PublicCourt };
+type LocationState = { court?: PublicCourt; fromMatch?: string };
 
 const DEFAULT_IMG =
   'https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=1600&auto=format&fit=crop';
@@ -118,6 +119,12 @@ const CourtDetailPage: React.FC = () => {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewError, setReviewError] = useState('');
   const [canReview, setCanReview] = useState(false);
+
+  const [toastMessage, setToastMessage] = useState('');
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 4000);
+  };
 
   const isLoggedIn = !!localStorage.getItem('accessToken');
 
@@ -263,6 +270,53 @@ const CourtDetailPage: React.FC = () => {
   const price = court?.price_per_hour ?? 0;
   // avg_rating only shown if > 0 (real reviews exist)
   const rating = (court?.avg_rating ?? 0) > 0 ? court!.avg_rating : 0;
+
+  const handleOpenBookingModal = async () => {
+    if (!selectedSlot || !courtId) return;
+    if (!isLoggedIn) {
+      navigate('/login', { state: { from: location.pathname } });
+      return;
+    }
+    
+    try {
+      await lockSlots({
+        court_id: courtId,
+        sub_court_id: selectedSlot.subCourtId,
+        date: selectedDateStr,
+        start_time: selectedSlot.startTime,
+        end_time: selectedSlot.endTime,
+      });
+      setBookingModalOpen(true);
+    } catch (e: any) {
+      showToast(e.message || 'Không thể khóa slot. Vui lòng thử lại sau.');
+      // Refresh slots
+      getCourtSlots(courtId, selectedDateStr).then(data => {
+        const map: Record<string, CourtSlotData> = {};
+        data.forEach(d => { map[d.sub_court_id] = d; });
+        setSlotData(map);
+      }).catch(console.error);
+    }
+  };
+
+  const handleCloseBookingModal = async () => {
+    setBookingModalOpen(false);
+    if (selectedSlot && courtId) {
+      try {
+        await unlockSlots({
+          court_id: courtId,
+          sub_court_id: selectedSlot.subCourtId,
+          date: selectedDateStr,
+        });
+        const data = await getCourtSlots(courtId, selectedDateStr);
+        const map: Record<string, CourtSlotData> = {};
+        data.forEach(d => { map[d.sub_court_id] = d; });
+        setSlotData(map);
+      } catch (e) {
+        console.error('Failed to unlock', e);
+      }
+    }
+    setSelectedSlot(null);
+  };
 
   // ── Loading / Error ─────────────────────────────────────────────────────────
   if (loading) return (
@@ -797,6 +851,7 @@ const CourtDetailPage: React.FC = () => {
               </button>
               <button
                 onClick={handleBookingNow}
+                onClick={handleOpenBookingModal}
                 className="rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-300"
               >
                 Đặt sân ngay
@@ -810,10 +865,7 @@ const CourtDetailPage: React.FC = () => {
       {selectedSlot && court && (
         <BookingModal
           isOpen={bookingModalOpen}
-          onClose={() => {
-            setBookingModalOpen(false);
-            setSelectedSlot(null);
-          }}
+          onClose={handleCloseBookingModal}
           courtName={court.name}
           subCourtName={selectedSlot.subCourtName}
           payload={{
@@ -822,6 +874,7 @@ const CourtDetailPage: React.FC = () => {
             date: selectedDateStr,
             start_time: selectedSlot.startTime,
             end_time: selectedSlot.endTime,
+            match_id: new URLSearchParams(location.search).get('matchId') || state?.fromMatch || undefined,
           }}
           pricePerHour={court.price_per_hour || 0}
           onSuccess={() => {
@@ -835,6 +888,13 @@ const CourtDetailPage: React.FC = () => {
               .catch(console.error);
           }}
         />
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed right-4 top-24 z-[9999] rounded-2xl border border-rose-500/40 bg-rose-500/20 px-5 py-3 text-sm font-semibold text-rose-400 shadow-[0_16px_42px_-20px_rgba(244,63,94,0.9)] backdrop-blur md:right-8 transition-all duration-300">
+          {toastMessage}
+        </div>
       )}
     </div>
   );
