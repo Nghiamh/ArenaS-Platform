@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -191,6 +191,9 @@ export const HomePage: React.FC = () => {
   const [sportCounts, setSportCounts] = useState<Record<string, number>>({});
   const [isFeaturedLoading, setIsFeaturedLoading] = useState(true);
   const [featuredError, setFeaturedError] = useState<string | null>(null);
+  const [ownerForm, setOwnerForm] = useState({ name: '', phone: '', email: '', venueName: '' });
+  const [ownerFormSent, setOwnerFormSent] = useState(false);
+  const [ownerFormSubmitting, setOwnerFormSubmitting] = useState(false);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -274,6 +277,15 @@ export const HomePage: React.FC = () => {
 
     return () => window.clearTimeout(timeout);
   }, [toastMessage]);
+
+  const handleOwnerFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setOwnerFormSubmitting(true);
+    setTimeout(() => {
+      setOwnerFormSubmitting(false);
+      setOwnerFormSent(true);
+    }, 1200);
+  };
 
   return (
     <div className="relative overflow-x-clip bg-[#0A0A0B] text-slate-100 font-inter">
@@ -491,6 +503,215 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
+      {/* ── Owner Contact Section ─────────────────────────────────────── */}
+      <section className="relative px-4 py-16 md:px-8 md:py-24 border-t border-white/5 bg-[#0C0C0E] overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:linear-gradient(rgba(0,245,255,0.2)_1px,transparent_1px),linear-gradient(90deg,rgba(0,245,255,0.2)_1px,transparent_1px)] [background-size:56px_56px]" />
+        <div className="pointer-events-none absolute -top-40 right-0 h-96 w-96 rounded-full bg-[#00F5FF]/6 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-20 left-0 h-72 w-72 rounded-full bg-[#CCFF00]/4 blur-3xl" />
+
+        <div className="relative z-10 mx-auto max-w-7xl">
+          <div className="grid items-start gap-12 lg:grid-cols-[1fr_1.1fr]">
+
+            {/* ── Left: Benefits ─────────────────────────────────────────── */}
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: '-60px' }}
+              variants={container}
+              className="space-y-8 lg:pt-4"
+            >
+              <motion.span variants={itemUp} className="inline-flex items-center gap-2 rounded-full border border-[#00F5FF]/30 bg-[#00F5FF]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#00F5FF]">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#00F5FF]" />
+                Dành cho Chủ Sân
+              </motion.span>
+
+              <motion.h2 variants={itemUp} className="text-4xl font-black leading-tight tracking-tight text-white md:text-5xl font-montserrat">
+                Bạn có sân thể thao?<br />
+                <span className="text-[#00F5FF]">Hợp tác cùng ArenaS</span>
+              </motion.h2>
+
+              <motion.p variants={itemUp} className="text-base leading-relaxed text-slate-400">
+                Tiếp cận hàng nghìn người chơi, quản lý lịch đặt tự động và tăng doanh thu — hoàn toàn miễn phí để bắt đầu.
+              </motion.p>
+
+              <motion.ul variants={container} className="space-y-4">
+                {[
+                  { icon: '📅', text: 'Nhận đặt sân online 24/7, không cần trực điện thoại' },
+                  { icon: '📊', text: 'Dashboard doanh thu, tỷ lệ lấp đầy theo thời gian thực' },
+                  { icon: '👥', text: 'Hàng nghìn người chơi tìm kiếm sân trong khu vực của bạn' },
+                  { icon: '🛡️', text: 'Hỗ trợ kỹ thuật tận tâm, thiết lập chỉ trong 5 phút' },
+                ].map((item) => (
+                  <motion.li key={item.text} variants={itemUp} className="flex items-start gap-3">
+                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-base">
+                      {item.icon}
+                    </span>
+                    <span className="text-sm leading-relaxed text-slate-300">{item.text}</span>
+                  </motion.li>
+                ))}
+              </motion.ul>
+
+              <motion.div variants={itemUp} className="flex items-center gap-4 pt-2">
+                <a
+                  href="tel:+84123456789"
+                  className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-slate-200 transition hover:border-[#00F5FF]/40 hover:bg-[#00F5FF]/5 hover:text-[#00F5FF]"
+                >
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.36 2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.6a16 16 0 0 0 5.49 5.49l.96-.96a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                  </svg>
+                  Gọi ngay
+                </a>
+                <a
+                  href="mailto:contact@arenas.vn"
+                  className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-slate-200 transition hover:border-[#CCFF00]/40 hover:bg-[#CCFF00]/5 hover:text-[#CCFF00]"
+                >
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="2" y="4" width="20" height="16" rx="2" />
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                  </svg>
+                  Gửi email
+                </a>
+              </motion.div>
+            </motion.div>
+
+            {/* ── Right: Contact Form ─────────────────────────────────────── */}
+            <motion.div
+              initial={{ opacity: 0, y: 28 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-60px' }}
+              transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#101011] shadow-[0_30px_60px_-20px_rgba(0,0,0,0.8)]">
+                <div className="border-b border-white/5 px-7 py-5">
+                  <p className="text-lg font-black tracking-tight text-white">Đăng ký hợp tác</p>
+                  <p className="mt-1 text-sm text-slate-400">Điền thông tin — chúng tôi liên hệ trong 24 giờ</p>
+                </div>
+
+                <div className="px-7 py-7">
+                  <AnimatePresence mode="wait">
+                    {ownerFormSent ? (
+                      <motion.div
+                        key="success"
+                        initial={{ opacity: 0, scale: 0.94 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.35 }}
+                        className="flex flex-col items-center py-8 text-center"
+                      >
+                        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-[#CCFF00]/30 bg-[#CCFF00]/10">
+                          <svg viewBox="0 0 24 24" className="h-8 w-8 text-[#CCFF00]" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path d="m5 12 5 5L20 7" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </div>
+                        <p className="text-xl font-black text-white">Đã nhận thông tin!</p>
+                        <p className="mt-2 max-w-xs text-sm text-slate-400">
+                          Cảm ơn <span className="font-semibold text-white">{ownerForm.name || 'bạn'}</span>! Đội ngũ ArenaS sẽ liên hệ trong vòng 24 giờ để hướng dẫn thiết lập sân.
+                        </p>
+                        <button
+                          onClick={() => navigate('/register')}
+                          className="mt-7 rounded-2xl bg-[#CCFF00] px-7 py-3 text-sm font-bold text-[#0A0A0B] transition hover:bg-[#d4ff1a]"
+                        >
+                          Tạo tài khoản ngay →
+                        </button>
+                      </motion.div>
+                    ) : (
+                      <motion.form
+                        key="form"
+                        onSubmit={handleOwnerFormSubmit}
+                        className="space-y-4"
+                      >
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div>
+                            <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-400">
+                              Họ và tên <span className="text-red-400">*</span>
+                            </label>
+                            <input
+                              required
+                              type="text"
+                              placeholder="Nguyễn Văn A"
+                              value={ownerForm.name}
+                              onChange={(e) => setOwnerForm((f) => ({ ...f, name: e.target.value }))}
+                              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition focus:border-[#00F5FF]/50 focus:bg-white/8 focus:ring-1 focus:ring-[#00F5FF]/30"
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-400">
+                              Số điện thoại <span className="text-red-400">*</span>
+                            </label>
+                            <input
+                              required
+                              type="tel"
+                              placeholder="0901 234 567"
+                              value={ownerForm.phone}
+                              onChange={(e) => setOwnerForm((f) => ({ ...f, phone: e.target.value }))}
+                              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition focus:border-[#00F5FF]/50 focus:bg-white/8 focus:ring-1 focus:ring-[#00F5FF]/30"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-400">Email</label>
+                          <input
+                            type="email"
+                            placeholder="email@example.com"
+                            value={ownerForm.email}
+                            onChange={(e) => setOwnerForm((f) => ({ ...f, email: e.target.value }))}
+                            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition focus:border-[#00F5FF]/50 focus:bg-white/8 focus:ring-1 focus:ring-[#00F5FF]/30"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-400">
+                            Tên sân / cơ sở thể thao
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Sân Bóng Đá Tân Bình, Cụm Cầu Lông..."
+                            value={ownerForm.venueName}
+                            onChange={(e) => setOwnerForm((f) => ({ ...f, venueName: e.target.value }))}
+                            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition focus:border-[#00F5FF]/50 focus:bg-white/8 focus:ring-1 focus:ring-[#00F5FF]/30"
+                          />
+                        </div>
+
+                        <motion.button
+                          type="submit"
+                          disabled={ownerFormSubmitting}
+                          whileHover={{ scale: ownerFormSubmitting ? 1 : 1.02 }}
+                          whileTap={{ scale: ownerFormSubmitting ? 1 : 0.97 }}
+                          className="relative w-full overflow-hidden rounded-2xl bg-[#CCFF00] py-4 text-sm font-black uppercase tracking-[0.06em] text-[#0A0A0B] shadow-[0_0_20px_rgba(204,255,0,0.15)] transition hover:bg-[#d4ff1a] hover:shadow-[0_0_28px_rgba(204,255,0,0.3)] disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {ownerFormSubmitting ? (
+                            <span className="flex items-center justify-center gap-2">
+                              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" strokeLinecap="round" />
+                              </svg>
+                              Đang gửi...
+                            </span>
+                          ) : (
+                            'Gửi thông tin đăng ký →'
+                          )}
+                        </motion.button>
+
+                        <p className="text-center text-xs text-slate-500">
+                          Hoặc{' '}
+                          <button
+                            type="button"
+                            onClick={() => navigate('/register')}
+                            className="font-semibold text-[#00F5FF] transition hover:text-white"
+                          >
+                            tự tạo tài khoản ngay
+                          </button>
+                        </p>
+                      </motion.form>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+            </motion.div>
+
+          </div>
+        </div>
+      </section>
+
       <section className="relative px-4 py-16 md:px-8 md:py-24">
         <div className="mx-auto max-w-7xl">
           <div className="mb-12 text-center">
@@ -595,6 +816,7 @@ export const HomePage: React.FC = () => {
           </motion.div>
         </div>
       </section>
+
 
       <motion.section
         initial={{ opacity: 0, y: 18 }}
