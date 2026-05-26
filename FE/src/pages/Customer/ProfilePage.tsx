@@ -143,6 +143,27 @@ const MedalIcon = () => (
   </svg>
 );
 
+const SwordsIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
+  <svg
+    viewBox="0 0 24 24"
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="m2 22 4-4" />
+    <path d="m14 10-4-4" />
+    <path d="M8.5 15.5 19 5a2.12 2.12 0 1 1 3 3L11.5 18.5Z" />
+    <path d="m6 14 4 4" />
+    <path d="m22 22-4-4" />
+    <path d="m10 10 4-4" />
+    <path d="M15.5 15.5 5 5a2.12 2.12 0 1 0-3 3l10.5 10.5Z" />
+    <path d="m18 14-4 4" />
+  </svg>
+);
+
 const CheckedVerifiedIcon = () => (
   <svg
     viewBox="0 0 24 24"
@@ -1565,10 +1586,48 @@ export const ProfilePage: React.FC = () => {
                               <td className="py-4 text-sm font-mono text-slate-400">
                                 {booking.start_time} - {booking.end_time}
                               </td>
-                              <td className="py-4">
+                              <td className="py-4 flex items-center gap-2">
                                 <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusClass}`}>
                                   {statusLabel}
                                 </span>
+                                {booking.match_id && (
+                                  <div className="relative group inline-block z-10">
+                                    <button type="button" className="flex items-center justify-center h-6 w-6 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 hover:scale-105 transition-all duration-300">
+                                      <SwordsIcon className="h-3.5 w-3.5" />
+                                    </button>
+                                    
+                                    {/* Tooltip profile card */}
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-4 rounded-2xl bg-[#0F172A]/95 border border-cyan-500/25 backdrop-blur-md shadow-2xl shadow-cyan-950/50 scale-95 opacity-0 pointer-events-none group-hover:scale-100 group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-50">
+                                      <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-[#0F172A]/95" />
+                                      <p className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider mb-2.5">Đối thủ ghép trận</p>
+                                      {(() => {
+                                        const opponent = booking.match_id?.participants?.find(
+                                          (p) => p._id !== currentUser?.id
+                                        );
+                                        if (!opponent) {
+                                          return <span className="text-slate-400 text-xs italic">Đang chờ đối thủ...</span>;
+                                        }
+                                        return (
+                                          <div className="flex items-center gap-3">
+                                            <div className="h-10 w-10 rounded-full overflow-hidden border border-cyan-500/25 bg-slate-800 flex items-center justify-center shrink-0">
+                                              {opponent.avatarUrl ? (
+                                                <img src={opponent.avatarUrl} alt={opponent.name} className="h-full w-full object-cover" />
+                                              ) : (
+                                                <span className="text-sm font-black text-cyan-400">
+                                                  {(opponent.name || opponent.userName || "U").charAt(0).toUpperCase()}
+                                                </span>
+                                              )}
+                                            </div>
+                                            <div className="min-w-0 text-left">
+                                              <h4 className="text-xs font-bold text-white truncate">{opponent.name || opponent.userName}</h4>
+                                              <p className="text-[10px] text-slate-400 truncate">@{opponent.userName}</p>
+                                            </div>
+                                          </div>
+                                        );
+                                      })()}
+                                    </div>
+                                  </div>
+                                )}
                               </td>
                               <td className="py-4 text-sm font-bold text-right text-emerald-400">
                                 {new Intl.NumberFormat('vi-VN').format(booking.total_price)} đ
@@ -1720,8 +1779,46 @@ export const ProfilePage: React.FC = () => {
                           </td>
                           <td className="py-3.5 text-sm text-slate-300">{new Date(booking.date).toLocaleDateString('vi-VN')}</td>
                           <td className="py-3.5 text-sm font-mono text-slate-400">{booking.start_time} - {booking.end_time}</td>
-                          <td className="py-3.5">
+                          <td className="py-3.5 flex items-center gap-2">
                             <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusClass}`}>{statusLabel}</span>
+                            {booking.match_id && (
+                              <div className="relative group inline-block z-10">
+                                <button type="button" className="flex items-center justify-center h-6 w-6 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 hover:scale-105 transition-all duration-300">
+                                  <SwordsIcon className="h-3.5 w-3.5" />
+                                </button>
+                                
+                                {/* Tooltip profile card */}
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-4 rounded-2xl bg-[#0F172A]/95 border border-cyan-500/25 backdrop-blur-md shadow-2xl shadow-cyan-950/50 scale-95 opacity-0 pointer-events-none group-hover:scale-100 group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-50">
+                                  <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-[#0F172A]/95" />
+                                  <p className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider mb-2.5">Đối thủ ghép trận</p>
+                                  {(() => {
+                                    const opponent = booking.match_id?.participants?.find(
+                                      (p) => p._id !== currentUser?.id
+                                    );
+                                    if (!opponent) {
+                                      return <span className="text-slate-400 text-xs italic">Đang chờ đối thủ...</span>;
+                                    }
+                                    return (
+                                      <div className="flex items-center gap-3">
+                                        <div className="h-10 w-10 rounded-full overflow-hidden border border-cyan-500/25 bg-slate-800 flex items-center justify-center shrink-0">
+                                          {opponent.avatarUrl ? (
+                                            <img src={opponent.avatarUrl} alt={opponent.name} className="h-full w-full object-cover" />
+                                          ) : (
+                                            <span className="text-sm font-black text-cyan-400">
+                                              {(opponent.name || opponent.userName || "U").charAt(0).toUpperCase()}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="min-w-0 text-left">
+                                          <h4 className="text-xs font-bold text-white truncate">{opponent.name || opponent.userName}</h4>
+                                          <p className="text-[10px] text-slate-400 truncate">@{opponent.userName}</p>
+                                        </div>
+                                      </div>
+                                    );
+                                  })()}
+                                </div>
+                              </div>
+                            )}
                           </td>
                           <td className="py-3.5 text-sm font-bold text-right text-emerald-400">
                             {new Intl.NumberFormat('vi-VN').format(booking.total_price)} đ

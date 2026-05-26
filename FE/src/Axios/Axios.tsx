@@ -1051,6 +1051,15 @@ export type UserBooking = {
 	tone?: string;
 	court_name: string;
 	sub_court_name: string;
+	match_id?: {
+		_id: string;
+		participants: {
+			_id: string;
+			name: string;
+			userName: string;
+			avatarUrl?: string;
+		}[];
+	};
 	createdAt: string;
 	updatedAt?: string;
 };

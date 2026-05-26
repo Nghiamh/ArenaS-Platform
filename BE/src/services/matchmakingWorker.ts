@@ -310,7 +310,7 @@ async function createMatch(
 	// Populate match for socket emission
 	const populatedMatch = await Match.findById(match._id)
 		.populate("participants", "name userName avatarUrl")
-		.populate("court_id", "name location sports price_per_hour")
+		.populate("court_id", "name location sports price_per_hour coordinates")
 		.populate("owner_id", "name userName");
 
 	// Emit match_found to both players via Socket.IO

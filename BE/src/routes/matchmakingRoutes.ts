@@ -8,6 +8,7 @@ import {
 	checkInMatch,
 	completeMatch,
 	submitMatchFeedback,
+	reportOpponent,
 } from "../controllers/matchmakingController.js";
 import { requireAuth } from "../middleware/auth.js";
 
@@ -21,5 +22,6 @@ matchmakingRoutes.post("/match/:matchId/decline", requireAuth, declineMatch);
 matchmakingRoutes.post("/match/:matchId/check-in", requireAuth, checkInMatch);
 matchmakingRoutes.post("/match/:matchId/complete", requireAuth, completeMatch);
 matchmakingRoutes.post("/match/:matchId/feedback", requireAuth, submitMatchFeedback);
+matchmakingRoutes.post("/match/:matchId/report", requireAuth, reportOpponent);
 
 export default matchmakingRoutes;

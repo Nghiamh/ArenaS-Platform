@@ -34,6 +34,10 @@ export type MatchCourt = {
 	location: string;
 	sports: string[];
 	price_per_hour?: number;
+	coordinates?: {
+		type: 'Point';
+		coordinates: [number, number]; // [lng, lat]
+	};
 };
 
 export type MatchData = {
@@ -275,6 +279,22 @@ export async function submitMatchFeedback(matchId: string, payload: SubmitFeedba
 	try {
 		const { data } = await axiosClient.post<SubmitFeedbackResponse>(
 			`/matchmaking/match/${matchId}/feedback`,
+			payload,
+			{ headers: withAuthHeaders() }
+		);
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function reportOpponent(
+	matchId: string,
+	payload: { reason: string; description: string; simulatedTimeOffset?: number }
+): Promise<{ success: boolean; message: string; report: any }> {
+	try {
+		const { data } = await axiosClient.post<{ success: boolean; message: string; report: any }>(
+			`/matchmaking/match/${matchId}/report`,
 			payload,
 			{ headers: withAuthHeaders() }
 		);

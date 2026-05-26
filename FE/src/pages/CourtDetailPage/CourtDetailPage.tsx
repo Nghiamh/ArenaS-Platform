@@ -809,7 +809,7 @@ const CourtDetailPage: React.FC = () => {
             date: selectedDateStr,
             start_time: selectedSlot.startTime,
             end_time: selectedSlot.endTime,
-            ...(state?.fromMatch ? { match_id: state.fromMatch } : {}),
+            match_id: new URLSearchParams(location.search).get('matchId') || state?.fromMatch || undefined,
           }}
           pricePerHour={court.price_per_hour || 0}
           onSuccess={() => {

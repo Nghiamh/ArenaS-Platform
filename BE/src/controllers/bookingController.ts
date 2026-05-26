@@ -362,6 +362,7 @@ export async function userBookCourt(req: Request, res: Response) {
 			status: 'confirmed',
 			source: 'app',
 			tone: 'blue',
+			match_id: match_id || undefined,
 		});
 		await newBooking.save({ session });
 
@@ -537,6 +538,13 @@ export async function getMyBookings(req: Request, res: Response) {
 				.sort({ date: -1, start_time: -1 })
 				.skip((pageNum - 1) * limitNum)
 				.limit(limitNum)
+				.populate({
+					path: 'match_id',
+					populate: {
+						path: 'participants',
+						select: 'name userName avatarUrl',
+					},
+				})
 				.lean(),
 			BookingModel.countDocuments(query),
 		]);
