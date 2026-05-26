@@ -33,6 +33,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [errorMsg, setErrorMsg] = useState('');
   const [showDeposit, setShowDeposit] = useState(false);
   const [timeLeft, setTimeLeft] = useState(5);
+  const [lockTimeLeft, setLockTimeLeft] = useState(600);
 
   // Calculate estimated price
   // Formula: pricePerHour × durationHours (same as backend: (price/2) × numberOfSlots where 1 slot = 30 min)
@@ -89,9 +90,35 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     };
   }, [step]);
 
+  useEffect(() => {
+    let lockInterval: ReturnType<typeof setInterval>;
+    if (isOpen && step === 'confirm') {
+      setLockTimeLeft(600);
+      lockInterval = setInterval(() => {
+        setLockTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(lockInterval);
+            handleClose();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (lockInterval) clearInterval(lockInterval);
+    };
+  }, [isOpen, step, handleClose]);
+
   if (!isOpen) return null;
 
   const balanceSufficient = (wallet?.balance ?? 0) >= estimatedPrice;
+
+  const formatLockTime = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
 
   return (
     <>
@@ -122,7 +149,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     <p className="text-[11px] text-slate-400 mt-0.5">Kiểm tra thông tin trước khi đặt</p>
                   </div>
                 </div>
-                <div className="text-sm font-bold text-white hidden sm:block">
+                <div className="hidden sm:flex items-center text-sm font-bold text-white">
+                  {step === 'confirm' && (
+                    <div className="flex items-center gap-1.5 bg-rose-500/10 text-rose-400 px-3 py-1.5 rounded-lg border border-rose-500/20 mr-4">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      {formatLockTime(lockTimeLeft)}
+                    </div>
+                  )}
                   {courtName}
                 </div>
               </div>
@@ -219,9 +252,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                         <button
                           onClick={handleConfirm}
                           disabled={!wallet}
-                          className="w-2/3 rounded-xl bg-[#c7f200] py-3.5 text-[13px] font-bold text-[#0B1221] shadow-[0_4px_20px_rgba(199,242,0,0.2)] hover:shadow-[0_4px_25px_rgba(199,242,0,0.4)] transition disabled:opacity-50 disabled:shadow-none"
+                          className="w-2/3 flex flex-col items-center justify-center rounded-xl bg-[#c7f200] py-2 text-[13px] font-bold text-[#0B1221] shadow-[0_4px_20px_rgba(199,242,0,0.2)] hover:shadow-[0_4px_25px_rgba(199,242,0,0.4)] transition disabled:opacity-50 disabled:shadow-none leading-none"
                         >
-                          Xác nhận đặt sân
+                          <span>Xác nhận đặt sân</span>
+                          <span className="text-[10px] font-bold opacity-70 mt-1 block sm:hidden">Còn lại: {formatLockTime(lockTimeLeft)}</span>
                         </button>
                       )}
                     </div>

@@ -26,6 +26,8 @@ import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 import planRoutes from "./routes/planRoutes.js";
 import { startSubscriptionCron } from "./cron/subscriptionCron.js";
 import { startPayoutCron } from "./cron/payoutCron.js";
+import { startMatchBookingTimeoutCron } from "./cron/matchBookingTimeoutCron.js";
+import { startSlotLockTimeoutCron } from "./cron/slotLockTimeoutCron.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 
@@ -103,6 +105,8 @@ async function startServer(): Promise<void> {
 	// Initialize background jobs
 	startSubscriptionCron();
 	startPayoutCron();
+	startMatchBookingTimeoutCron(io);
+	startSlotLockTimeoutCron();
 
 	await new Promise<void>((resolve, reject) => {
 		const server = httpServer.listen(PORT, () => {

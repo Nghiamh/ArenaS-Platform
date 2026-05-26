@@ -7,6 +7,8 @@ export interface ISlot {
   end: string;   // Ví dụ: '06:30'
   status: SlotStatus;
   booking_id?: mongoose.Types.ObjectId;
+  locked_by?: mongoose.Types.ObjectId;
+  locked_at?: Date;
 }
 
 export interface ICourtSlot extends Document {
@@ -21,6 +23,8 @@ const slotSchema = new Schema<ISlot>({
   end: { type: String, required: true },
   status: { type: String, enum: ['available', 'booked', 'locked'], default: 'available' },
   booking_id: { type: Schema.Types.ObjectId, ref: 'Booking' }, // Có thể ref tới model Booking sau này
+  locked_by: { type: Schema.Types.ObjectId, ref: 'User' },
+  locked_at: { type: Date },
 }, { _id: false });
 
 const courtSlotSchema = new Schema<ICourtSlot>({
