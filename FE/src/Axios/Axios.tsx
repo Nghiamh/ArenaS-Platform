@@ -1109,6 +1109,28 @@ export async function userBookCourt(payload: UserBookingPayload): Promise<UserBo
 	}
 }
 
+export async function lockSlots(payload: Omit<UserBookingPayload, 'match_id'>): Promise<{ message: string }> {
+	try {
+		const { data } = await axiosClient.post<{ message: string }>('/bookings/lock-slots', payload, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function unlockSlots(payload: { court_id: string; sub_court_id: string; date: string }): Promise<{ message: string }> {
+	try {
+		const { data } = await axiosClient.post<{ message: string }>('/bookings/unlock-slots', payload, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
 export async function getMyBookings(params?: { status?: string; page?: number; limit?: number }): Promise<MyBookingsResponse> {
 	try {
 		const { data } = await axiosClient.get<MyBookingsResponse>('/bookings/my-bookings', {
@@ -1124,6 +1146,26 @@ export async function getMyBookings(params?: { status?: string; page?: number; l
 export async function cancelBooking(bookingId: string): Promise<{ message: string; refundAmount: number; refundPercentage: number }> {
 	try {
 		const { data } = await axiosClient.post(`/bookings/${bookingId}/cancel`, {}, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function opponentPayBooking(bookingId: string): Promise<{
+	message: string;
+	booking: {
+		_id: string;
+		status: string;
+		total_price: number;
+		opponent_amount: number;
+		wallet_balance: number;
+	};
+}> {
+	try {
+		const { data } = await axiosClient.post(`/bookings/${bookingId}/opponent-pay`, {}, {
 			headers: withAuthHeaders(),
 		});
 		return data;

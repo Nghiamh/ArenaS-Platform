@@ -25,6 +25,7 @@ export interface IBooking extends Document {
   tone?: 'blue' | 'violet' | 'emerald' | 'slate';
   match_id?: Types.ObjectId;
   participants?: IBookingParticipant[];
+  opponent_deadline?: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -50,6 +51,7 @@ const bookingSchema = new Schema<IBooking>(
       amount: { type: Number, required: true },
       status: { type: String, enum: ['paid', 'unpaid', 'refunded'], default: 'unpaid' }
     }],
+    opponent_deadline: { type: Date, required: false },
   },
   { timestamps: true }
 );
