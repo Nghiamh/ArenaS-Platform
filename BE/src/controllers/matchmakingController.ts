@@ -398,11 +398,19 @@ export async function declineMatch(req: Request, res: Response): Promise<void> {
 			return;
 		}
 
-		// Verify match is PENDING
-		if (match.status !== "PENDING") {
+		// Verify match is PENDING or CONFIRMED (but not scheduled)
+		if (match.status !== "PENDING" && match.status !== "CONFIRMED") {
 			res.status(400).json({
 				message: "invalid_match_status",
 				error: `Match is already in ${match.status} status`,
+			});
+			return;
+		}
+
+		if (match.status === "CONFIRMED" && match.scheduled_at) {
+			res.status(400).json({
+				message: "match_already_scheduled",
+				error: `Cannot decline a match that already has a court booked. Please cancel the booking first.`,
 			});
 			return;
 		}

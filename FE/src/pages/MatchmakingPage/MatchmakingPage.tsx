@@ -38,7 +38,7 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
 
 export const MatchmakingPage: React.FC = () => {
 	const navigate = useNavigate();
-	const { onMatchFound, onPlayerAccepted, onMatchConfirmed, onMatchCancelled, onPlayerCheckedIn, onMatchCompleted, onPlayerReported } = useSocket();
+	const { onMatchFound, onPlayerAccepted, onMatchConfirmed, onMatchCancelled, onPlayerCheckedIn, onMatchCompleted, onPlayerReported, onCourtBooked, onCourtCancelled } = useSocket();
 	const mapRef = useRef<MapRef | null>(null);
 
 	const [currentUser, setCurrentUser] = useState<{ id: string; name?: string } | null>(null);
@@ -423,6 +423,40 @@ export const MatchmakingPage: React.FC = () => {
 			setReportNotification(payload);
 		});
 	}, [onPlayerReported]);
+
+	// Listen for court_booked
+	useEffect(() => {
+		onCourtBooked((payload) => {
+			if (String(payload.matchId) === resolvedMatchId) {
+				setMatchData((prev) => {
+					if (!prev) return null;
+					// Parse the date to set scheduled_at correctly
+					const d = new Date(`${payload.date}T${payload.start_time}:00`);
+					return {
+						...prev,
+						scheduled_at: d.toISOString(),
+					};
+				});
+				showToast('Đối thủ đã đặt sân thành công!');
+			}
+		});
+	}, [onCourtBooked, resolvedMatchId, showToast]);
+
+	// Listen for court_cancelled
+	useEffect(() => {
+		onCourtCancelled((payload) => {
+			if (String(payload.matchId) === resolvedMatchId) {
+				setMatchData((prev) => {
+					if (!prev) return null;
+					return {
+						...prev,
+						scheduled_at: undefined,
+					};
+				});
+				showToast('Sân đấu đã bị huỷ!');
+			}
+		});
+	}, [onCourtCancelled, resolvedMatchId, showToast]);
 
 	// Courts with coordinates for map
 	const courtsOnMap = useMemo(() =>
@@ -985,39 +1019,49 @@ export const MatchmakingPage: React.FC = () => {
 											</div>
 										)}
 										<button type="button" onClick={handleDecline} disabled={loading}
-											className="w-full flex items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-6 py-3.5 text-sm font-bold text-red-300 transition hover:bg-red-500/20 hover:border-red-500/50 disabled:opacity-50">
+											className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-700/60 bg-slate-800/30 text-slate-400 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 px-6 py-3.5 text-sm font-bold transition disabled:opacity-50 mt-1">
 											{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
 											Từ Chối Thi Đấu
 										</button>
 									</>
 								) : (
 									<>
-										<button type="button" onClick={handleCompleteMatch} disabled={completeLoading || !completeUnlockInfo.canComplete}
-											className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-emerald-500/25 transition hover:shadow-emerald-500/40 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed">
-											{completeLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Swords className="w-5 h-5" />}
-											{completeUnlockInfo.canComplete
-												? ' Hoàn thành Trận Đấu'
-												: ` Còn ${String(completeUnlockInfo.remainingMin).padStart(2, '0')}:${String(completeUnlockInfo.remainingSec).padStart(2, '0')} để hoàn thành`}
-										</button>
+										{matchData.scheduled_at && (
+											<button type="button" onClick={handleCompleteMatch} disabled={completeLoading || !completeUnlockInfo.canComplete}
+												className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-emerald-500/25 transition hover:shadow-emerald-500/40 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed">
+												{completeLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Swords className="w-5 h-5" />}
+												{completeUnlockInfo.canComplete
+													? ' Hoàn thành Trận Đấu'
+													: ` Còn ${String(completeUnlockInfo.remainingMin).padStart(2, '0')}:${String(completeUnlockInfo.remainingSec).padStart(2, '0')} để hoàn thành`}
+											</button>
+										)}
 
 										<button type="button" onClick={handleGoToChat}
 											className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-blue-500/25 transition hover:shadow-blue-500/40 hover:brightness-110">
 											<MessageCircle className="w-5 h-5" /> Vào Chat
 										</button>
 
+										<div className="flex gap-3 mt-2">
+											<button
+												type="button"
+												onClick={() => {
+													setReportReason("Không điểm danh / Bỏ trận (AFK)");
+													setIsReportModalOpen(true);
+												}}
+												className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-slate-700/60 bg-slate-800/30 text-slate-400 hover:bg-slate-700/50 hover:text-red-400 px-4 py-3 text-sm font-bold transition"
+											>
+												⚠️ Tố cáo
+											</button>
 
-										<button
-											type="button"
-											onClick={() => {
-												setReportReason("Không điểm danh / Bỏ trận (AFK)");
-												setIsReportModalOpen(true);
-											}}
-											className="w-full flex flex-col items-center justify-center gap-1 rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 cursor-pointer px-6 py-3 transition"
-										>
-											<div className="flex items-center gap-2 text-sm font-bold">
-												<span>⚠️ Tố cáo đối thủ không đến</span>
-											</div>
-										</button>
+											{!matchData.scheduled_at && (
+												<button type="button" onClick={handleDecline} disabled={loading}
+													className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-slate-700/60 bg-slate-800/30 text-slate-400 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 px-4 py-3 text-sm font-bold transition disabled:opacity-50"
+												>
+													{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+													Từ Chối
+												</button>
+											)}
+										</div>
 									</>
 								)}
 							</div>
