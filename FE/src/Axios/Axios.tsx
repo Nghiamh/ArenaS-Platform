@@ -1232,3 +1232,69 @@ export async function getMyCourtReview(courtId: string): Promise<CourtReview | n
 		return null;
 	}
 }
+
+export type FEReportChatMessage = {
+	sender_id: string;
+	sender_name: string;
+	message: string;
+	createdAt: string;
+};
+
+export type FEReport = {
+	_id: string;
+	reporter_id: {
+		_id: string;
+		name?: string;
+		userName: string;
+		avatarUrl?: string;
+	};
+	target_id: string;
+	target_type: 'user' | 'court';
+	reason: string;
+	description: string;
+	status: 'pending' | 'resolved' | 'dismissed';
+	chat_logs: FEReportChatMessage[];
+	appeal_description?: string;
+	appeal_created_at?: string;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export type GetReportsResponse = {
+	message: string;
+	reports: FEReport[];
+};
+
+export type AppealReportResponse = {
+	message: string;
+	report: FEReport;
+};
+
+export async function getMyReports(): Promise<GetReportsResponse> {
+	try {
+		const accessToken = requireAccessToken();
+		const { data } = await axiosClient.get<GetReportsResponse>('/profile/me/reports', {
+			headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function appealReport(reportId: string, appealDescription: string): Promise<AppealReportResponse> {
+	try {
+		const accessToken = requireAccessToken();
+		const { data } = await axiosClient.post<AppealReportResponse>(
+			`/profile/me/reports/${reportId}/appeal`,
+			{ appealDescription },
+			{
+				headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+			}
+		);
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+

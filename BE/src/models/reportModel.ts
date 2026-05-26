@@ -15,6 +15,8 @@ export interface IReport extends Document {
 	description: string;
 	status: "pending" | "resolved" | "dismissed";
 	chat_logs: IReportChatMessage[];
+	appeal_description?: string;
+	appeal_created_at?: Date;
 	createdAt: Date;
 	updatedAt: Date;
 }
@@ -75,6 +77,14 @@ const reportSchema = new Schema<IReport>(
 			enum: ["pending", "resolved", "dismissed"],
 			default: "pending",
 			required: true,
+		},
+		appeal_description: {
+			type: String,
+			default: null,
+		},
+		appeal_created_at: {
+			type: Date,
+			default: null,
 		},
 		chat_logs: {
 			type: [reportChatMessageSchema],

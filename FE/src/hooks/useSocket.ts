@@ -51,6 +51,15 @@ type MatchCompletedPayload = {
 	match: unknown;
 };
 
+type PlayerReportedPayload = {
+	matchId: string;
+	reportId: string;
+	reporterName: string;
+	reason: string;
+	description: string;
+	createdAt: string;
+};
+
 type CourtBookedPayload = {
 	matchId: string;
 	bookedByUserId: string;
@@ -75,6 +84,7 @@ type UseSocketReturn = {
 	onPlayerCheckedIn: (callback: (payload: PlayerCheckedInPayload) => void) => void;
 	onMatchCompleted: (callback: (payload: MatchCompletedPayload) => void) => void;
 	onCourtBooked: (callback: (payload: CourtBookedPayload) => void) => void;
+	onPlayerReported: (callback: (payload: PlayerReportedPayload) => void) => void;
 };
 
 export function useSocket(): UseSocketReturn {
@@ -91,6 +101,7 @@ export function useSocket(): UseSocketReturn {
 	const playerCheckedInCb = useRef<((payload: PlayerCheckedInPayload) => void) | null>(null);
 	const matchCompletedCb = useRef<((payload: MatchCompletedPayload) => void) | null>(null);
 	const courtBookedCb = useRef<((payload: CourtBookedPayload) => void) | null>(null);
+	const playerReportedCb = useRef<((payload: PlayerReportedPayload) => void) | null>(null);
 
 	useEffect(() => {
 		const token = localStorage.getItem('accessToken')?.trim();
@@ -167,6 +178,11 @@ export function useSocket(): UseSocketReturn {
 			courtBookedCb.current?.(payload);
 		});
 
+		socket.on('player_reported', (payload: PlayerReportedPayload) => {
+			console.log('[Socket] player_reported:', payload);
+			playerReportedCb.current?.(payload);
+		});
+
 		socket.on('error', (err: { message: string }) => {
 			console.error('[Socket] Server error:', err.message);
 		});
@@ -227,6 +243,10 @@ export function useSocket(): UseSocketReturn {
 		courtBookedCb.current = callback;
 	}, []);
 
+	const onPlayerReported = useCallback((callback: (payload: PlayerReportedPayload) => void) => {
+		playerReportedCb.current = callback;
+	}, []);
+
 	return {
 		socket: socketRef.current,
 		isConnected,
@@ -242,5 +262,6 @@ export function useSocket(): UseSocketReturn {
 		onPlayerCheckedIn,
 		onMatchCompleted,
 		onCourtBooked,
+		onPlayerReported,
 	};
 }

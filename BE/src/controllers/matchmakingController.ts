@@ -1003,6 +1003,8 @@ export async function reportOpponent(req: Request, res: Response): Promise<void>
 
 		// If match is not COMPLETED yet, it must be CONFIRMED or PENDING, check AFK rules
 		if (match.status !== "COMPLETED") {
+			// [REMOVED AS REQUESTED] Bỏ các điều kiện kiểm tra điểm danh và thời gian chờ khi tố cáo
+			/*
 			// 1. Verify reporter has checked in
 			const isReporterCheckedIn = match.checked_in_players.some(
 				(id: any) => id.toString() === userId
@@ -1041,6 +1043,7 @@ export async function reportOpponent(req: Request, res: Response): Promise<void>
 				});
 				return;
 			}
+			*/
 
 			// Cancel the match and notify players
 			match.status = "CANCELLED";
@@ -1095,6 +1098,19 @@ export async function reportOpponent(req: Request, res: Response): Promise<void>
 			{ user_id: user._id, match_id: match._id, status: "MATCHED" },
 			{ status: "CANCELLED" }
 		);
+
+		// Notify the reported player via socket so they can see and appeal
+		const ioReport = req.app.get("io");
+		if (ioReport) {
+			ioReport.to(`user:${targetId}`).emit("player_reported", {
+				matchId: match._id.toString(),
+				reportId: report._id.toString(),
+				reporterName: user.name || user.userName || "Người chơi",
+				reason,
+				description,
+				createdAt: new Date().toISOString(),
+			});
+		}
 
 		res.status(201).json({
 			success: true,

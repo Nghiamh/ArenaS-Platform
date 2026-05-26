@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import {
 	joinMatchmaking, cancelMatchmaking, getMatchmakingStatus,
-	acceptMatch, declineMatch, checkInMatch, completeMatch, submitMatchFeedback, reportOpponent,
+	acceptMatch, declineMatch, completeMatch, submitMatchFeedback, reportOpponent,
 	type MatchData, type MatchmakingTicket,
 } from '../../Axios/matchmakingApi';
 import { getPublicCourts, type PublicCourt } from '../../Axios/Axios';
@@ -32,26 +32,13 @@ function formatTime(seconds: number): string {
 	return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
-function getDistanceInMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
-	const R = 6371e3; // metres
-	const phi1 = lat1 * Math.PI / 180;
-	const phi2 = lat2 * Math.PI / 180;
-	const deltaPhi = (lat2 - lat1) * Math.PI / 180;
-	const deltaLambda = (lon2 - lon1) * Math.PI / 180;
 
-	const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
-		Math.cos(phi1) * Math.cos(phi2) *
-		Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
-	const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-	return R * c; // in metres
-}
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
 
 export const MatchmakingPage: React.FC = () => {
 	const navigate = useNavigate();
-	const { onMatchFound, onPlayerAccepted, onMatchConfirmed, onMatchCancelled, onPlayerCheckedIn, onMatchCompleted, isConnected } = useSocket();
+	const { onMatchFound, onPlayerAccepted, onMatchConfirmed, onMatchCancelled, onPlayerCheckedIn, onMatchCompleted, onPlayerReported } = useSocket();
 	const mapRef = useRef<MapRef | null>(null);
 
 	const [currentUser, setCurrentUser] = useState<{ id: string; name?: string } | null>(null);
@@ -75,7 +62,6 @@ export const MatchmakingPage: React.FC = () => {
 	const [opponentAccepted, setOpponentAccepted] = useState(false);
 	const [confirmCountdown, setConfirmCountdown] = useState(300);
 
-	const [checkInLoading, setCheckInLoading] = useState(false);
 	const [completeLoading, setCompleteLoading] = useState(false);
 
 	// Survey Modal States
@@ -96,6 +82,16 @@ export const MatchmakingPage: React.FC = () => {
 	const [reportDescription, setReportDescription] = useState('');
 	const [reportLoading, setReportLoading] = useState(false);
 
+	// Received Report Notification State
+	const [reportNotification, setReportNotification] = useState<{
+		matchId: string;
+		reportId: string;
+		reporterName: string;
+		reason: string;
+		description: string;
+		createdAt: string;
+	} | null>(null);
+
 	// Toast Notification State
 	const [toastMessage, setToastMessage] = useState('');
 	const showToast = useCallback((msg: string) => {
@@ -103,43 +99,37 @@ export const MatchmakingPage: React.FC = () => {
 		setTimeout(() => setToastMessage(''), 4000);
 	}, []);
 
-	// GPS and simulated time states
-	const [simulatedTimeOffset, setSimulatedTimeOffset] = useState(0);
+
 
 	// GPS and scheduled time verification logic
-	const distance = useMemo(() => {
-		if (!userLocation || !matchData?.court_id?.coordinates?.coordinates) return null;
-		const [courtLng, courtLat] = matchData.court_id.coordinates.coordinates;
-		return getDistanceInMeters(userLocation.lat, userLocation.lng, courtLat, courtLng);
-	}, [userLocation, matchData]);
 
-	const isWithinRange = useMemo(() => {
-		if (distance === null) return false;
-		return distance <= 100; // strictly 100 meters
-	}, [distance]);
 
-	const isCheckInAllowed = useMemo(() => {
-		// Fallback: If no coordinates are defined for the court, allow check-in anyway
-		if (!matchData?.court_id?.coordinates?.coordinates) return true;
-		return isWithinRange;
-	}, [matchData, isWithinRange]);
 
-	const reportCooldownMinutes = useMemo(() => {
-		if (!matchData) return 0;
-		const targetTime = matchData.scheduled_at
+
+
+
+	// Real-time tick for complete-match countdown
+	const [nowTick, setNowTick] = useState(Date.now());
+
+	useEffect(() => {
+		if (mmState !== 'MATCHED' || matchData?.status !== 'CONFIRMED') return;
+		const timer = setInterval(() => setNowTick(Date.now()), 1000);
+		return () => clearInterval(timer);
+	}, [mmState, matchData?.status]);
+
+	const completeUnlockInfo = useMemo(() => {
+		if (!matchData) return { canComplete: false, remainingMin: 0, remainingSec: 0 };
+		const scheduledTime = matchData.scheduled_at
 			? new Date(matchData.scheduled_at).getTime()
-			: new Date(matchData.createdAt || Date.now()).getTime() + 15 * 60 * 1000;
-		const diff = targetTime - (Date.now() + simulatedTimeOffset);
-		return Math.max(0, Math.ceil(diff / 60000));
-	}, [matchData, simulatedTimeOffset]);
-
-	const isMatchTimePassed = useMemo(() => {
-		if (!matchData) return false;
-		const targetTime = matchData.scheduled_at
-			? new Date(matchData.scheduled_at).getTime()
-			: new Date(matchData.createdAt || Date.now()).getTime() + 15 * 60 * 1000;
-		return (Date.now() + simulatedTimeOffset) > targetTime;
-	}, [matchData, simulatedTimeOffset]);
+			: new Date(matchData.createdAt || Date.now()).getTime();
+		const unlockTime = scheduledTime + 15 * 60 * 1000;
+		const diff = unlockTime - nowTick;
+		return {
+			canComplete: diff <= 0,
+			remainingMin: Math.max(0, Math.floor(diff / 60000)),
+			remainingSec: Math.max(0, Math.floor((diff % 60000) / 1000)),
+		};
+	}, [matchData, nowTick]);
 
 	const waitTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 	const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -427,6 +417,13 @@ export const MatchmakingPage: React.FC = () => {
 		});
 	}, [onMatchCompleted, resolvedMatchId]);
 
+	// Listen for player_reported (when opponent reports you)
+	useEffect(() => {
+		onPlayerReported((payload) => {
+			setReportNotification(payload);
+		});
+	}, [onPlayerReported]);
+
 	// Courts with coordinates for map
 	const courtsOnMap = useMemo(() =>
 		courts.filter((c) =>
@@ -518,19 +515,7 @@ export const MatchmakingPage: React.FC = () => {
 		}
 	}, [resolvedMatchId]);
 
-	const handleCheckIn = useCallback(async () => {
-		if (!resolvedMatchId) return;
-		setCheckInLoading(true);
-		setError('');
-		try {
-			const res = await checkInMatch(resolvedMatchId);
-			setMatchData(res.match);
-		} catch (err: unknown) {
-			setError(err instanceof Error ? err.message : 'Không thể check-in');
-		} finally {
-			setCheckInLoading(false);
-		}
-	}, [resolvedMatchId]);
+
 
 	const handleCompleteMatch = useCallback(async () => {
 		if (!resolvedMatchId) return;
@@ -612,7 +597,6 @@ export const MatchmakingPage: React.FC = () => {
 			await reportOpponent(resolvedMatchId, {
 				reason: reportReason,
 				description: reportDescription,
-				simulatedTimeOffset,
 			});
 			showToast('Đã gửi báo cáo cho Admin kiểm duyệt! 🛡️');
 			setIsReportModalOpen(false);
@@ -624,7 +608,7 @@ export const MatchmakingPage: React.FC = () => {
 		} finally {
 			setReportLoading(false);
 		}
-	}, [resolvedMatchId, reportReason, reportDescription, simulatedTimeOffset, handleReset, showToast]);
+	}, [resolvedMatchId, reportReason, reportDescription, handleReset, showToast]);
 
 	const opponent = useMemo(() => {
 		return matchData?.participants?.find((p) => {
@@ -633,17 +617,7 @@ export const MatchmakingPage: React.FC = () => {
 		});
 	}, [matchData, currentUser]);
 
-	const isMeCheckedIn = useMemo(() => {
-		if (!matchData || !currentUser?.id) return false;
-		return matchData.checked_in_players?.some((id: any) => String(id) === String(currentUser.id)) ?? false;
-	}, [matchData, currentUser]);
 
-	const isOpponentCheckedIn = useMemo(() => {
-		if (!matchData || !opponent) return false;
-		const oppId = typeof opponent === 'object' && opponent ? (opponent._id || (opponent as any).id) : opponent;
-		if (!oppId) return false;
-		return matchData.checked_in_players?.some((id: any) => String(id) === String(oppId)) ?? false;
-	}, [matchData, opponent]);
 
 	const handleFlyToMe = useCallback(() => {
 		if (userLocation && mapRef.current) {
@@ -680,12 +654,6 @@ export const MatchmakingPage: React.FC = () => {
 
 					{/* Socket + Location status bar */}
 					<div className="flex items-center justify-between mb-5 text-xs">
-						<div className="flex items-center gap-2">
-							<span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-red-400'}`} />
-							<span className={isConnected ? 'text-emerald-400' : 'text-red-400'}>
-								{isConnected ? 'Real-time' : 'Đang kết nối...'}
-							</span>
-						</div>
 						<div className="flex items-center gap-1.5">
 							<MapPin className="w-3 h-3 text-slate-500" />
 							{locationStatus === 'loading' && <span className="text-slate-500">Đang lấy GPS...</span>}
@@ -976,24 +944,7 @@ export const MatchmakingPage: React.FC = () => {
 								</div>
 							)}
 
-							{matchData.status === 'CONFIRMED' && (
-								<div className="relative z-10 rounded-xl border border-slate-700/60 bg-slate-800/30 p-4 mb-6">
-									<div className="flex flex-col gap-2 text-sm">
-										<div className="flex items-center justify-between">
-											<span className="text-slate-400">Trạng thái điểm danh của bạn:</span>
-											<span className={isMeCheckedIn ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"}>
-												{isMeCheckedIn ? "Đã điểm danh" : "Chưa điểm danh 📍"}
-											</span>
-										</div>
-										<div className="flex items-center justify-between">
-											<span className="text-slate-400">Trạng thái đối thủ:</span>
-											<span className={isOpponentCheckedIn ? "text-emerald-400 font-bold" : "text-slate-500 font-normal"}>
-												{isOpponentCheckedIn ? "Đã điểm danh" : "Chưa điểm danh 📍"}
-											</span>
-										</div>
-									</div>
-								</div>
-							)}
+
 
 							{matchData.status === 'PENDING' && (
 								<div className="relative z-10 rounded-xl border border-slate-700/60 bg-slate-800/30 p-4 mb-6">
@@ -1041,29 +992,13 @@ export const MatchmakingPage: React.FC = () => {
 									</>
 								) : (
 									<>
-										{!isMeCheckedIn ? (
-											<button
-												type="button"
-												onClick={handleCheckIn}
-												disabled={checkInLoading || !isCheckInAllowed}
-												className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-amber-600 to-yellow-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-amber-500/25 transition hover:shadow-amber-500/40 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
-											>
-												{checkInLoading ? (
-													<Loader2 className="w-5 h-5 animate-spin" />
-												) : (
-													<MapPin className="w-5 h-5 animate-bounce" />
-												)}
-												{!isCheckInAllowed && distance !== null
-													? `📍 Cách sân ${Math.round(distance)}m - Lại gần < 100m để điểm danh`
-													: 'Điểm Danh'}
-											</button>
-										) : (
-											<button type="button" onClick={handleCompleteMatch} disabled={completeLoading}
-												className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-emerald-500/25 transition hover:shadow-emerald-500/40 hover:brightness-110 disabled:opacity-50">
-												{completeLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Swords className="w-5 h-5" />}
-												🏁 Hoàn thành Trận Đấu
-											</button>
-										)}
+										<button type="button" onClick={handleCompleteMatch} disabled={completeLoading || !completeUnlockInfo.canComplete}
+											className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-emerald-500/25 transition hover:shadow-emerald-500/40 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed">
+											{completeLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Swords className="w-5 h-5" />}
+											{completeUnlockInfo.canComplete
+												? '🏁 Hoàn thành Trận Đấu'
+												: `⏳ Còn ${String(completeUnlockInfo.remainingMin).padStart(2, '0')}:${String(completeUnlockInfo.remainingSec).padStart(2, '0')} để hoàn thành`}
+										</button>
 
 										<button type="button" onClick={handleGoToChat}
 											className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-blue-500/25 transition hover:shadow-blue-500/40 hover:brightness-110">
@@ -1073,86 +1008,16 @@ export const MatchmakingPage: React.FC = () => {
 
 										<button
 											type="button"
-											disabled={!isMeCheckedIn || isOpponentCheckedIn || !isMatchTimePassed}
 											onClick={() => {
 												setReportReason("Không điểm danh / Bỏ trận (AFK)");
 												setIsReportModalOpen(true);
 											}}
-											className={`w-full flex flex-col items-center justify-center gap-1 rounded-xl border px-6 py-3 transition ${isMeCheckedIn && !isOpponentCheckedIn && isMatchTimePassed
-												? 'border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 cursor-pointer'
-												: 'border-slate-800 bg-slate-900/30 text-slate-500 cursor-not-allowed'
-												}`}
+											className="w-full flex flex-col items-center justify-center gap-1 rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 cursor-pointer px-6 py-3 transition"
 										>
 											<div className="flex items-center gap-2 text-sm font-bold">
 												<span>⚠️ Tố cáo đối thủ không đến</span>
 											</div>
-											{!isMeCheckedIn && (
-												<span className="text-[10px] text-slate-500">Bạn cần điểm danh trước khi tố cáo vắng mặt 🔒</span>
-											)}
-											{isMeCheckedIn && isOpponentCheckedIn && (
-												<span className="text-[10px] text-slate-500">Đối thủ đã điểm danh, không thể tố cáo 🔒</span>
-											)}
-											{isMeCheckedIn && !isOpponentCheckedIn && !isMatchTimePassed && (
-												<span className="text-[10px] text-slate-500">
-													Đợi thêm {reportCooldownMinutes} phút nữa để báo cáo vắng mặt 🔒
-												</span>
-											)}
 										</button>
-
-										{matchData?.court_id?.coordinates?.coordinates && (
-											<div className="mt-2 p-3.5 rounded-xl border border-dashed border-amber-500/30 bg-amber-500/5 text-center">
-												<p className="text-[11px] font-bold text-amber-400 mb-2.5">(DEV ONLY)</p>
-												<div className="flex flex-col gap-2.5 items-center justify-center">
-													<div className="flex gap-2">
-														<button
-															type="button"
-															onClick={() => {
-																const [courtLng, courtLat] = matchData.court_id.coordinates!.coordinates;
-																setUserLocation({ lng: courtLng, lat: courtLat });
-																showToast("Giả lập GPS: Bạn đang đứng tại Sân (0m)");
-															}}
-															className="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-[10px] font-bold hover:bg-emerald-500/30 transition cursor-pointer"
-														>
-															Đứng tại Sân (0m)
-														</button>
-														<button
-															type="button"
-															onClick={() => {
-																const [courtLng, courtLat] = matchData.court_id.coordinates!.coordinates;
-																setUserLocation({ lng: courtLng + 0.015, lat: courtLat + 0.01 });
-																showToast("Giả lập GPS: Bạn ở cách xa sân (~1.8km)");
-															}}
-															className="px-2.5 py-1.5 rounded-lg bg-red-500/20 border border-red-500/40 text-red-400 text-[10px] font-bold hover:bg-red-500/30 transition cursor-pointer"
-														>
-															Ở xa sân (~1.8km)
-														</button>
-													</div>
-													<div className="flex gap-2 items-center">
-														<button
-															type="button"
-															onClick={() => {
-																setSimulatedTimeOffset(15 * 60 * 1000 + 1000);
-																showToast("Giả lập: Đã tua nhanh qua 15 phút thời gian chờ!");
-															}}
-															className="px-2.5 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-400 text-[10px] font-bold hover:bg-amber-500/30 transition cursor-pointer"
-														>
-															Tua nhanh 15 phút
-														</button>
-														<button
-															type="button"
-															onClick={() => {
-																setSimulatedTimeOffset(0);
-																setUserLocation({ lng: 106.6297, lat: 10.8231 }); // default GPS
-																showToast("Đã reset tất cả giả lập về mặc định!");
-															}}
-															className="px-2 py-1 rounded bg-slate-700/60 border border-slate-600/40 text-slate-400 text-[9px] font-bold hover:bg-slate-700/80 transition cursor-pointer"
-														>
-															Reset
-														</button>
-													</div>
-												</div>
-											</div>
-										)}
 									</>
 								)}
 							</div>
@@ -1447,6 +1312,70 @@ export const MatchmakingPage: React.FC = () => {
 					</div>
 				</div>
 			)}
+
+			{/* ── REPORT NOTIFICATION MODAL (for the reported player) ── */}
+			{reportNotification && (
+				<div className="mm-modal-overlay" style={{ zIndex: 1200 }}>
+					<div className="mm-modal-content glass-panel" style={{ maxWidth: '440px', animation: 'mm-slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+						<div className="text-center mb-4">
+							<div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 mb-3 shadow-lg shadow-amber-500/20">
+								<span className="text-2xl">🛡️</span>
+							</div>
+							<h2 className="text-xl font-bold text-white mb-1">Bạn đã bị tố cáo</h2>
+							<p className="text-slate-400 text-xs">Đối thủ đã gửi báo cáo về bạn. Bạn có thể kháng cáo bằng cách liên hệ Admin.</p>
+						</div>
+
+						<div className="flex flex-col gap-3 mb-5">
+							<div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3.5">
+								<div className="flex flex-col gap-2 text-sm">
+									<div className="flex items-start gap-2">
+										<span className="text-slate-500 shrink-0 text-xs font-bold mt-0.5">Người tố cáo:</span>
+										<span className="text-amber-300 font-semibold text-xs">{reportNotification.reporterName}</span>
+									</div>
+									<div className="flex items-start gap-2">
+										<span className="text-slate-500 shrink-0 text-xs font-bold mt-0.5">Lý do:</span>
+										<span className="text-white text-xs">{reportNotification.reason}</span>
+									</div>
+									<div className="flex items-start gap-2">
+										<span className="text-slate-500 shrink-0 text-xs font-bold mt-0.5">Mô tả:</span>
+										<span className="text-slate-300 text-xs">{reportNotification.description}</span>
+									</div>
+								</div>
+							</div>
+
+							<div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3">
+								<p className="text-[11px] text-blue-300">
+									💡 <strong>Kháng cáo:</strong> Nếu bạn cho rằng báo cáo này không chính xác, vui lòng vào <strong>Trang cá nhân</strong> của bạn để gửi kháng cáo chi tiết cho Admin. Mã báo cáo: <span className="font-mono text-cyan-400">#{reportNotification.reportId.slice(-6)}</span>
+								</p>
+							</div>
+						</div>
+
+						<div className="flex gap-3">
+							<button
+								type="button"
+								onClick={() => {
+									setReportNotification(null);
+									handleReset();
+								}}
+								className="flex-1 py-3 rounded-xl border border-slate-700 bg-slate-800/20 text-slate-400 text-xs font-semibold transition hover:bg-slate-700/30 hover:text-slate-300"
+							>
+								Đã hiểu
+							</button>
+							<button
+								type="button"
+								onClick={() => {
+									setReportNotification(null);
+									navigate('/profile');
+								}}
+								className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 py-3 text-xs font-bold text-white shadow-lg shadow-blue-500/25 transition hover:shadow-blue-500/40 hover:brightness-110"
+							>
+								Kháng cáo ngay ⚖️
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
 
 			{toastMessage && (
 				<div className="fixed bottom-6 right-6 z-[9999] flex items-center gap-2.5 rounded-2xl border border-emerald-500/30 bg-[#06152d]/95 px-5 py-4 text-sm font-semibold text-emerald-400 shadow-2xl shadow-emerald-950/40 backdrop-blur animate-fade-in">

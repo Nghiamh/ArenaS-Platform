@@ -9,9 +9,12 @@ import {
   updateCurrentUserSkill,
   getMyBookings,
   cancelBooking,
+  getMyReports,
+  appealReport,
   type AuthUser,
   type UserSkill,
   type UserBooking,
+  type FEReport,
 } from "../../Axios/Axios";
 import { useWallet } from "../../hooks/useWallet";
 import { DepositModal } from "../WalletPage/DepositModal";
@@ -412,6 +415,48 @@ export const ProfilePage: React.FC = () => {
   const [bookingToCancel, setBookingToCancel] = useState<UserBooking | null>(null);
   const [showAllBookingsModal, setShowAllBookingsModal] = useState(false);
 
+  // Reports state & handlers
+  const [reports, setReports] = useState<FEReport[]>([]);
+  const [reportsLoading, setReportsLoading] = useState(true);
+  const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
+  const [selectedReportForAppeal, setSelectedReportForAppeal] = useState<FEReport | null>(null);
+  const [appealText, setAppealText] = useState("");
+  const [isAppealing, setIsAppealing] = useState(false);
+
+  const fetchReports = async () => {
+    try {
+      setReportsLoading(true);
+      const res = await getMyReports();
+      setReports(res.reports);
+    } catch (e) {
+      console.error("Failed to fetch reports", e);
+    } finally {
+      setReportsLoading(false);
+    }
+  };
+
+  const handleConfirmAppeal = async () => {
+    if (!selectedReportForAppeal) return;
+    if (!appealText.trim()) {
+      showErrorPopup("Vui lòng nhập nội dung kháng cáo");
+      return;
+    }
+    try {
+      setIsAppealing(true);
+      await appealReport(selectedReportForAppeal._id, appealText);
+      setSuccessMessage("Gửi kháng cáo đến Admin thành công!");
+      setSelectedReportForAppeal(null);
+      setAppealText("");
+      // Refresh reports list
+      await fetchReports();
+      setTimeout(() => setSuccessMessage(""), 5000);
+    } catch (e: any) {
+      showErrorPopup(e.message || "Không thể gửi kháng cáo");
+    } finally {
+      setIsAppealing(false);
+    }
+  };
+
   const confirmCancelBooking = async () => {
     if (!bookingToCancel) return;
     const bookingId = bookingToCancel._id;
@@ -494,6 +539,7 @@ export const ProfilePage: React.FC = () => {
 
   useEffect(() => {
     fetchBookings();
+    fetchReports();
   }, []);
 
   const handleDepositSuccess = () => {
@@ -1620,6 +1666,168 @@ export const ProfilePage: React.FC = () => {
                   </table>
                 </div>
               </div>
+
+              {/* Row 4: Reports Filed Against Me Section */}
+              <div className="bg-[#10111a] border border-white/[0.05] rounded-3xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.15)] relative overflow-hidden group">
+                <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-rose-500/15 to-transparent" />
+
+                {/* Header */}
+                <div className="flex items-center justify-between border-b border-white/[0.05] pb-4 mb-5">
+                  <div className="flex items-center gap-2.5">
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="h-5 w-5 text-rose-400"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
+                    <h3 className="text-base font-bold text-white tracking-wide">
+                      Đơn bị tố cáo
+                    </h3>
+                  </div>
+                  <span className="text-xs font-semibold text-slate-400">
+                    {reports.length} đơn
+                  </span>
+                </div>
+
+                {/* Content */}
+                <div className="space-y-4">
+                  {reportsLoading ? (
+                    <div className="text-center py-6 text-sm text-slate-400 animate-pulse">
+                      Đang tải danh sách tố cáo...
+                    </div>
+                  ) : reports.length === 0 ? (
+                    <div className="text-center py-10 bg-slate-950/20 border border-dashed border-white/10 rounded-2xl">
+                      <p className="text-xs font-bold uppercase tracking-[0.25em] text-slate-500">
+                        Hồ sơ sạch sẽ
+                      </p>
+                      <p className="text-xs leading-5 text-slate-400 mt-2 max-w-sm mx-auto">
+                        Bạn chưa bị ai tố cáo. Hãy giữ vững tinh thần thể thao này nhé!
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-white/[0.04] space-y-4">
+                      {reports.map((rep) => {
+                        const isExpanded = expandedReportId === rep._id;
+                        const hasAppealed = !!rep.appeal_description;
+                        const reporterName = rep.reporter_id?.name || rep.reporter_id?.userName || "Người chơi";
+                        const reporterAvatar = rep.reporter_id?.avatarUrl;
+
+                        let statusBadgeClass = "bg-amber-500/10 text-amber-400 border-amber-500/20";
+                        let statusBadgeText = "Đang chờ duyệt";
+
+                        if (hasAppealed) {
+                          statusBadgeClass = "bg-blue-500/10 text-blue-400 border-blue-500/20";
+                          statusBadgeText = "Đã gửi kháng cáo";
+                        } else if (rep.status === "resolved") {
+                          statusBadgeClass = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+                          statusBadgeText = "Đã xử lý";
+                        } else if (rep.status === "dismissed") {
+                          statusBadgeClass = "bg-slate-500/10 text-slate-400 border-white/[0.05]";
+                          statusBadgeText = "Bác bỏ";
+                        }
+
+                        return (
+                          <div key={rep._id} className="pt-4 first:pt-0">
+                            {/* Main row */}
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                              <div className="flex items-center gap-3">
+                                {/* Avatar */}
+                                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-rose-500 to-amber-500 flex items-center justify-center text-sm font-bold text-white overflow-hidden border border-white/10 shrink-0">
+                                  {reporterAvatar ? (
+                                    <img src={reporterAvatar} alt="avatar" className="h-full w-full object-cover" />
+                                  ) : (
+                                    reporterName.charAt(0).toUpperCase()
+                                  )}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-200">
+                                    Tố cáo bởi: <span className="text-white">{reporterName}</span>
+                                  </p>
+                                  <p className="text-xs text-slate-500 mt-0.5">
+                                    Ngày: {new Date(rep.createdAt).toLocaleDateString("vi-VN")} {new Date(rep.createdAt).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' })}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-3 self-end md:self-auto">
+                                <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusBadgeClass}`}>
+                                  {statusBadgeText}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedReportId(isExpanded ? null : rep._id)}
+                                  className="px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-xs font-bold text-slate-300 hover:bg-white/10 transition"
+                                >
+                                  {isExpanded ? "Thu gọn ▲" : "Chi tiết ▼"}
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Expanded details */}
+                            {isExpanded && (
+                              <div className="mt-4 bg-slate-950/35 border border-white/[0.04] rounded-2xl p-4 space-y-4 shadow-inner">
+                                <div>
+                                  <p className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">LÝ DO BÁO CÁO</p>
+                                  <p className="mt-1 text-sm font-semibold text-rose-400">{rep.reason}</p>
+                                </div>
+
+                                <div>
+                                  <p className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">MÔ TẢ CHI TIẾT</p>
+                                  <p className="mt-1 text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{rep.description}</p>
+                                </div>
+
+                                {rep.chat_logs && rep.chat_logs.length > 0 && (
+                                  <div>
+                                    <p className="text-[10px] font-bold text-slate-500 tracking-wider uppercase mb-2">ẢNH CHỤP ĐOẠN CHAT</p>
+                                    <div className="rounded-xl border border-white/[0.04] bg-slate-900/50 p-3 max-h-48 overflow-y-auto space-y-2.5 font-sans">
+                                      {rep.chat_logs.map((chat, idx) => (
+                                        <div key={idx} className="text-xs">
+                                          <span className="font-bold text-blue-400">{chat.sender_name}:</span>{" "}
+                                          <span className="text-slate-300">{chat.message}</span>
+                                          <span className="block text-[9px] text-slate-600 font-mono mt-0.5">
+                                            {new Date(chat.createdAt).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' })}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Appeal information */}
+                                {hasAppealed ? (
+                                  <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3.5">
+                                    <p className="text-xs font-bold text-blue-400 uppercase tracking-wider">Thông tin kháng cáo đã gửi:</p>
+                                    <p className="mt-1.5 text-sm text-slate-200 leading-relaxed whitespace-pre-wrap">"{rep.appeal_description}"</p>
+                                    <p className="mt-2 text-[10px] text-slate-500 font-mono">
+                                      Gửi ngày: {rep.appeal_created_at ? new Date(rep.appeal_created_at).toLocaleDateString("vi-VN") : ""} {rep.appeal_created_at ? new Date(rep.appeal_created_at).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' }) : ""}
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <div className="flex justify-end pt-2 border-t border-white/[0.04]">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedReportForAppeal(rep);
+                                        setAppealText("");
+                                      }}
+                                      className="px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-400 text-xs font-bold text-white transition shadow-md uppercase tracking-wider"
+                                    >
+                                      Kháng cáo đơn này
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
             </main>
           </div>
         )}
@@ -1673,6 +1881,73 @@ export const ProfilePage: React.FC = () => {
                       Đang xử lý...
                     </>
                   ) : "Xác nhận Hủy"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Appeal Input Modal */}
+        {selectedReportForAppeal && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm transition duration-200">
+            <div className="w-full max-w-lg rounded-2xl border border-white/[0.05] bg-[#121320] p-6 shadow-[0_28px_70px_-35px_rgba(0,0,0,0.9)] relative overflow-hidden">
+              <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500/40 to-transparent" />
+
+              <div className="flex items-center gap-3 mb-4">
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-5 w-5 text-blue-400"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                >
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                <h3 className="text-lg font-bold text-white">Kháng cáo đơn tố cáo</h3>
+              </div>
+
+              <div className="space-y-4 mb-6">
+                <div className="rounded-xl border border-white/[0.04] bg-slate-900/30 p-3 text-xs text-slate-400 space-y-1">
+                  <p><strong className="text-slate-300">Lý do bị tố cáo:</strong> <span className="text-rose-400 font-semibold">{selectedReportForAppeal.reason}</span></p>
+                  <p><strong className="text-slate-300">Chi tiết tố cáo:</strong> {selectedReportForAppeal.description}</p>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase block mb-1.5">
+                    NỘI DUNG KHÁNG CÁO GỬI ADMIN
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={appealText}
+                    onChange={(e) => setAppealText(e.target.value)}
+                    placeholder="Nhập lý do, bằng chứng hoặc lời giải thích của bạn để gửi lên Admin xem xét..."
+                    className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm font-semibold text-white outline-none focus:border-blue-500/50 placeholder:text-slate-600 resize-none"
+                  />
+                </div>
+                <p className="text-xs text-slate-500 italic">Lưu ý: Bạn chỉ được kháng cáo duy nhất 1 lần cho mỗi đơn tố cáo. Vui lòng nhập thông tin chính xác.</p>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSelectedReportForAppeal(null)}
+                  disabled={isAppealing}
+                  className="px-5 py-2.5 rounded-xl border border-white/10 bg-transparent hover:bg-white/5 text-slate-300 text-sm font-semibold transition disabled:opacity-50"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmAppeal}
+                  disabled={isAppealing}
+                  className="px-5 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-sm font-bold shadow-lg shadow-blue-500/20 transition disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isAppealing ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+                      Đang gửi...
+                    </>
+                  ) : "Gửi kháng cáo"}
                 </button>
               </div>
             </div>

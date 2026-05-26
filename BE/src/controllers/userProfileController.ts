@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import { IUserRole } from "../models/userModel.js";
+import Report from "../models/reportModel.js";
+import User from "../models/userModel.js";
 
 function resolveRedirectPathByRole(role: IUserRole): string {
 	if (role === "owner") {
@@ -185,6 +187,83 @@ export async function updateCurrentUserProfile(req: Request, res: Response): Pro
 						? "invalid profile data"
 						: "failed to update profile",
 			error: errorMessage,
+		});
+	}
+}
+
+export async function getMyReports(req: Request, res: Response): Promise<void> {
+	try {
+		const user = req.user!;
+		const reports = await Report.find({
+			target_id: user._id,
+			target_type: "user",
+		})
+		.populate({
+			path: "reporter_id",
+			select: "name userName avatarUrl",
+			model: User,
+		})
+		.sort({ createdAt: -1 });
+
+		res.status(200).json({
+			message: "my reports loaded successfully",
+			reports,
+		});
+	} catch (error: unknown) {
+		console.error("getMyReports error:", error);
+		res.status(500).json({
+			message: "failed to load reports",
+			error: error instanceof Error ? error.message : "unknown error",
+		});
+	}
+}
+
+export async function appealReport(req: Request, res: Response): Promise<void> {
+	try {
+		const user = req.user!;
+		const { reportId } = req.params;
+		const { appealDescription } = req.body as { appealDescription: string };
+
+		if (!appealDescription || !appealDescription.trim()) {
+			res.status(400).json({
+				message: "Nội dung kháng cáo không được để trống",
+			});
+			return;
+		}
+
+		const report = await Report.findOne({
+			_id: reportId,
+			target_id: user._id,
+			target_type: "user",
+		});
+
+		if (!report) {
+			res.status(404).json({
+				message: "Không tìm thấy đơn tố cáo hoặc bạn không có quyền kháng cáo đơn này",
+			});
+			return;
+		}
+
+		if (report.appeal_description) {
+			res.status(400).json({
+				message: "Bạn đã kháng cáo đơn tố cáo này rồi",
+			});
+			return;
+		}
+
+		report.appeal_description = appealDescription.trim();
+		report.appeal_created_at = new Date();
+		await report.save();
+
+		res.status(200).json({
+			message: "Gửi kháng cáo đến Admin thành công!",
+			report,
+		});
+	} catch (error: unknown) {
+		console.error("appealReport error:", error);
+		res.status(500).json({
+			message: "Gửi kháng cáo thất bại",
+			error: error instanceof Error ? error.message : "unknown error",
 		});
 	}
 }
