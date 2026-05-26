@@ -75,36 +75,37 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-blue-400/15 bg-slate-950/90 text-white shadow-lg backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-white/5 bg-[#0A0A0B]/90 text-white shadow-lg backdrop-blur-md font-inter">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <Link to="/home" className="flex items-center gap-2">
-            <div className="bg-blue-500 rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg">
-              A
+          <Link to="/home" className="flex items-center gap-2 group">
+            <div className="bg-[#CCFF00] rounded-full w-10 h-10 flex items-center justify-center font-black text-[#0A0A0B] text-lg transition-transform group-hover:scale-105">
+              <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
+                <path d="M13.49 5.48c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm-3.6 13.9l1-4.4 2.1 2v6h2v-7.5l-2.1-2 .6-3c1.3 1.5 3.3 2.5 5.5 2.5v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1l-5.2 2.2v4.7h2v-3.4l1.8-.7-1.6 8.1-4.9-1-.4 2 6.7 1.4 1.1-5.4z" />
+              </svg>
             </div>
-            <span className="text-2xl font-bold">ArenaS</span>
+            <span className="text-2xl font-black font-montserrat uppercase tracking-[0.2em] text-[#CCFF00]">ArenaS</span>
           </Link>
 
           {/* Navigation Menu */}
           <nav className="hidden md:flex items-center gap-8">
-
             <Link
               to="/tim-san"
-              className="hover:text-blue-400 transition duration-300 font-medium"
+              className="hover:text-[#00F5FF] transition duration-300 font-bold"
             >
               Tìm Sân
             </Link>
             <Link
               to="/home"
-              className="hover:text-blue-400 transition duration-300 font-medium"
+              className="hover:text-[#00F5FF] transition duration-300 font-bold"
             >
               Cộng Đồng
             </Link>
             {isPlayerAccount && (
               <Link
                 to="/matchmaking"
-                className="hover:text-blue-400 transition duration-300 font-medium flex items-center gap-1.5"
+                className="hover:text-[#00F5FF] transition duration-300 font-bold flex items-center gap-1.5"
               >
                 Tìm Đối Thủ
               </Link>
@@ -113,16 +114,10 @@ export const Header: React.FC = () => {
               <>
                 <Link
                   to="/bang-gia"
-                  className="hover:text-blue-400 transition duration-300 font-medium"
+                  className="hover:text-[#00F5FF] transition duration-300 font-bold"
                 >
                   Bảng Giá
                 </Link>
-                {/* <Link
-                  to="#"
-                  className="hover:text-blue-400 transition duration-300 font-medium"
-                >
-                  Dành Cho Chủ Sân
-                </Link> */}
               </>
             )}
           </nav>
@@ -134,9 +129,9 @@ export const Header: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsProfileMenuOpen((prev) => !prev)}
-                  className="flex items-center gap-3 rounded-full border border-blue-300/35 bg-blue-500/10 px-2 py-1.5 text-left transition hover:border-blue-300/60 hover:bg-blue-500/20"
+                  className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-2 py-1.5 text-left transition hover:border-[#CCFF00]/50 hover:bg-[#CCFF00]/10"
                 >
-                  <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-blue-400 to-cyan-400 text-base font-black text-slate-950">
+                  <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-[#CCFF00] text-base font-black text-[#0A0A0B]">
                     {profileAvatarUrl ? (
                       <img src={profileAvatarUrl} alt="avatar" className="h-full w-full object-cover" />
                     ) : (
@@ -144,20 +139,20 @@ export const Header: React.FC = () => {
                     )}
                   </span>
                   <span className="hidden pr-2 md:block">
-                    <span className="block text-sm font-bold text-white">{currentUser?.name ?? currentUser?.userName ?? 'Tài khoản'}</span>
-                    <span className="block text-xs text-blue-200/80">Hồ sơ</span>
+                    <span className="block text-sm font-bold text-white tracking-tight">{currentUser?.name ?? currentUser?.userName ?? 'Tài khoản'}</span>
+                    <span className="block text-[10px] uppercase font-bold tracking-widest text-[#00F5FF]">Hồ sơ</span>
                   </span>
                 </button>
 
                 {isProfileMenuOpen && (
-                  <div className="absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-2xl border border-blue-300/30 bg-slate-900/95 p-1.5 shadow-[0_16px_40px_-20px_rgba(2,6,23,0.95)] backdrop-blur">
+                  <div className="absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-2xl border border-white/10 bg-[#0A0A0B]/95 p-1.5 shadow-[0_16px_40px_-20px_rgba(204,255,0,0.1)] backdrop-blur">
                     <button
                       type="button"
                       onClick={() => {
                         setIsProfileMenuOpen(false);
                         navigate(profileMenuPath);
                       }}
-                      className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-blue-100 transition hover:bg-blue-500/20"
+                      className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-bold text-slate-300 transition hover:bg-white/10 hover:text-[#00F5FF]"
                     >
                       {isManagementAccount ? 'Trang quản lí' : 'Trang cá nhân'}
                     </button>
@@ -168,7 +163,7 @@ export const Header: React.FC = () => {
                           setIsProfileMenuOpen(false);
                           navigate('/profile');
                         }}
-                        className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-blue-100 transition hover:bg-blue-500/20"
+                        className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-bold text-slate-300 transition hover:bg-white/10 hover:text-[#00F5FF]"
                       >
                         Trang cá nhân
                       </button>
@@ -176,7 +171,7 @@ export const Header: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleLogout}
-                      className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-red-200 transition hover:bg-red-500/20"
+                      className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-bold text-red-400 transition hover:bg-red-500/10"
                     >
                       Đăng xuất
                     </button>
@@ -185,13 +180,12 @@ export const Header: React.FC = () => {
               </div>
             ) : (
               <>
-                <Link to="/login" className="hidden md:flex items-center gap-2 hover:text-blue-400 transition">
-
-                  <span className="text-sm font-medium">Đăng Nhập</span>
+                <Link to="/login" className="hidden md:flex items-center gap-2 hover:text-[#00F5FF] transition">
+                  <span className="text-sm font-bold uppercase tracking-wider">Đăng Nhập</span>
                 </Link>
                 <Link
                   to="/register"
-                  className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg transition duration-300"
+                  className="bg-[#2A3317] border border-[#CCFF00]/30 text-[#CCFF00] shadow-[0_0_15px_rgba(204,255,0,0.15)] font-bold py-2.5 px-6 rounded-xl transition duration-300 hover:bg-[#CCFF00] hover:text-[#0A0A0B] uppercase text-xs tracking-widest"
                 >
                   Đăng Ký Miễn Phí
                 </Link>
