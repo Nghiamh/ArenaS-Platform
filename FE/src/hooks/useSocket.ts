@@ -69,6 +69,15 @@ type CourtBookedPayload = {
 	end_time: string;
 };
 
+type CourtCancelledPayload = {
+	matchId: string;
+	cancelledByUserId: string;
+	courtName: string;
+	date: string;
+	start_time: string;
+	end_time: string;
+};
+
 type UseSocketReturn = {
 	socket: Socket | null;
 	isConnected: boolean;
@@ -84,6 +93,7 @@ type UseSocketReturn = {
 	onPlayerCheckedIn: (callback: (payload: PlayerCheckedInPayload) => void) => void;
 	onMatchCompleted: (callback: (payload: MatchCompletedPayload) => void) => void;
 	onCourtBooked: (callback: (payload: CourtBookedPayload) => void) => void;
+	onCourtCancelled: (callback: (payload: CourtCancelledPayload) => void) => void;
 	onPlayerReported: (callback: (payload: PlayerReportedPayload) => void) => void;
 };
 
@@ -101,6 +111,7 @@ export function useSocket(): UseSocketReturn {
 	const playerCheckedInCb = useRef<((payload: PlayerCheckedInPayload) => void) | null>(null);
 	const matchCompletedCb = useRef<((payload: MatchCompletedPayload) => void) | null>(null);
 	const courtBookedCb = useRef<((payload: CourtBookedPayload) => void) | null>(null);
+	const courtCancelledCb = useRef<((payload: CourtCancelledPayload) => void) | null>(null);
 	const playerReportedCb = useRef<((payload: PlayerReportedPayload) => void) | null>(null);
 
 	useEffect(() => {
@@ -178,6 +189,11 @@ export function useSocket(): UseSocketReturn {
 			courtBookedCb.current?.(payload);
 		});
 
+		socket.on('court_cancelled', (payload: CourtCancelledPayload) => {
+			console.log('[Socket] court_cancelled:', payload);
+			courtCancelledCb.current?.(payload);
+		});
+
 		socket.on('player_reported', (payload: PlayerReportedPayload) => {
 			console.log('[Socket] player_reported:', payload);
 			playerReportedCb.current?.(payload);
@@ -243,6 +259,10 @@ export function useSocket(): UseSocketReturn {
 		courtBookedCb.current = callback;
 	}, []);
 
+	const onCourtCancelled = useCallback((callback: (payload: CourtCancelledPayload) => void) => {
+		courtCancelledCb.current = callback;
+	}, []);
+
 	const onPlayerReported = useCallback((callback: (payload: PlayerReportedPayload) => void) => {
 		playerReportedCb.current = callback;
 	}, []);
@@ -262,6 +282,7 @@ export function useSocket(): UseSocketReturn {
 		onPlayerCheckedIn,
 		onMatchCompleted,
 		onCourtBooked,
+		onCourtCancelled,
 		onPlayerReported,
 	};
 }

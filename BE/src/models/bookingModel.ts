@@ -1,7 +1,13 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
 
-export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed';
+export type BookingStatus = 'pending' | 'waiting_opponent' | 'confirmed' | 'cancelled' | 'completed';
 export type BookingSource = 'app' | 'phone' | 'direct';
+
+export interface IBookingParticipant {
+  userId: Types.ObjectId;
+  amount: number;
+  status: 'paid' | 'unpaid' | 'refunded';
+}
 
 export interface IBooking extends Document {
   user_id?: Types.ObjectId; // Optional if booked by owner via phone/direct
@@ -18,6 +24,7 @@ export interface IBooking extends Document {
   source: BookingSource;
   tone?: 'blue' | 'violet' | 'emerald' | 'slate';
   match_id?: Types.ObjectId;
+  participants?: IBookingParticipant[];
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -34,10 +41,15 @@ const bookingSchema = new Schema<IBooking>(
     customer_phone: { type: String },
     note: { type: String },
     total_price: { type: Number, required: true },
-    status: { type: String, enum: ['pending', 'confirmed', 'cancelled', 'completed'], default: 'confirmed' },
+    status: { type: String, enum: ['pending', 'waiting_opponent', 'confirmed', 'cancelled', 'completed'], default: 'confirmed' },
     source: { type: String, enum: ['app', 'phone', 'direct'], default: 'app' },
     tone: { type: String, enum: ['blue', 'violet', 'emerald', 'slate'], default: 'blue' },
     match_id: { type: Schema.Types.ObjectId, ref: 'Match' },
+    participants: [{
+      userId: { type: Schema.Types.ObjectId, ref: 'User' },
+      amount: { type: Number, required: true },
+      status: { type: String, enum: ['paid', 'unpaid', 'refunded'], default: 'unpaid' }
+    }],
   },
   { timestamps: true }
 );

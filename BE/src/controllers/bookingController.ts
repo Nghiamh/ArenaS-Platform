@@ -791,6 +791,62 @@ export async function cancelBooking(req: Request, res: Response) {
 			}
 		}
 
+		// --- Notify via Chat if match_id exists ---
+		if (booking.match_id && mongoose.Types.ObjectId.isValid(booking.match_id)) {
+			try {
+				const match = await Match.findById(booking.match_id).session(session);
+				if (match) {
+					const court = await Court.findById(booking.court_id).session(session);
+					const courtDisplayName = court ? court.name : 'Sân';
+					let bookingDateStr = '';
+					if (typeof booking.date === 'string') {
+						bookingDateStr = booking.date.split('T')[0];
+					} else {
+						const d = new Date(booking.date as any);
+						const vnTime = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+						bookingDateStr = vnTime.toISOString().split('T')[0];
+					}
+					const msgContent = `Tôi đã huỷ đặt sân!\nTên sân: ${courtDisplayName}\nNgày giờ: ${bookingDateStr} ${booking.start_time} - ${booking.end_time}`;
+					
+					const newMsg = new ChatMessage({
+						match_id: booking.match_id,
+						sender_id: userId,
+						message: msgContent,
+					});
+					await newMsg.save({ session });
+					
+					// Clear scheduled_at so the match countdown reverts to unbooked state
+					match.scheduled_at = undefined;
+					await match.save({ session });
+
+					const io = req.app.get('io');
+					if (io) {
+						io.to(`match:${booking.match_id}`).emit('receive_message', {
+							_id: newMsg._id,
+							match_id: booking.match_id,
+							sender_id: userId.toString(),
+							message: newMsg.message,
+							createdAt: newMsg.createdAt,
+						});
+
+						const payload = {
+							matchId: booking.match_id,
+							cancelledByUserId: userId.toString(),
+							courtName: courtDisplayName,
+							date: bookingDateStr,
+							start_time: booking.start_time,
+							end_time: booking.end_time,
+						};
+						for (const p of match.participants) {
+							io.to(`user:${p.toString()}`).emit('court_cancelled', payload);
+						}
+					}
+				}
+			} catch (socketErr) {
+				console.error('Socket notify court_cancelled error:', socketErr);
+			}
+		}
+
 		await session.commitTransaction();
 		return res.status(200).json({ 
 			message: 'Hủy sân thành công', 
