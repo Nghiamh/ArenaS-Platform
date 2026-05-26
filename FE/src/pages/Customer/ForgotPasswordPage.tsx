@@ -2,6 +2,22 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { forgotPassword as forgotPasswordApi } from '../../Axios/Axios';
 
+const RunIcon = () => (
+  <svg viewBox="0 0 24 24" fill="#CCFF00" className="h-6 w-6" aria-hidden="true">
+    <path d="M13.49 5.48c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm-3.6 13.9l1-4.4 2.1 2v6h2v-7.5l-2.1-2 .6-3c1.3 1.5 3.3 2.5 5.5 2.5v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1l-5.2 2.2v4.7h2v-3.4l1.8-.7-1.6 8.1-4.9-1-.4 2 6.7 1.4 1.1-5.4z" />
+  </svg>
+);
+
+const PatternIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="11" y="2" width="2" height="6" fill="#00F5FF" />
+    <rect x="11" y="16" width="2" height="6" fill="#00F5FF" />
+    <rect x="16" y="11" width="6" height="2" fill="#00F5FF" />
+    <rect x="2" y="11" width="6" height="2" fill="#00F5FF" />
+    <circle cx="12" cy="12" r="3" fill="#00F5FF" />
+  </svg>
+);
+
 const EnvelopeIcon = () => (
   <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
     <path d="M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1Z" />
@@ -51,113 +67,133 @@ export const ForgotPasswordPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#050816] text-white">
-      <div className="grid min-h-screen lg:grid-cols-[1.08fr_0.92fr]">
-        <section
-          className="relative hidden min-h-screen overflow-hidden border-r border-white/5 lg:flex"
+    <div className="min-h-screen bg-[#0A0A0B] text-white flex flex-col lg:flex-row font-inter">
+      {/* LEFT SECTION (IMAGE) */}
+      <section className="hidden lg:flex relative w-full lg:w-1/2 min-h-screen flex-col justify-between p-12 overflow-hidden border-r border-white/5 sticky top-0">
+        <div 
+          className="absolute inset-0 z-0 opacity-40 mix-blend-luminosity"
           style={{
-            backgroundImage:
-              'linear-gradient(90deg, rgba(3,8,25,0.92) 0%, rgba(3,8,25,0.74) 50%, rgba(3,8,25,0.86) 100%), url(https://images.unsplash.com/photo-1522252234503-e356532cafd5?q=80&w=1600&auto=format&fit=crop)',
+            backgroundImage: 'url(https://images.unsplash.com/photo-1552674605-db6ffd4facb5?q=80&w=1600&auto=format&fit=crop)',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}
-        >
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(37,99,235,0.18),transparent_28%),radial-gradient(circle_at_80%_70%,rgba(59,130,246,0.16),transparent_28%),linear-gradient(180deg,rgba(0,0,0,0.04),rgba(0,0,0,0.22))]" />
-          <div className="absolute inset-0 opacity-[0.18] [background-image:linear-gradient(rgba(148,163,184,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.12)_1px,transparent_1px)] [background-size:56px_56px]" />
+        />
+        <div className="absolute inset-0 z-0 bg-gradient-to-t from-[#0A0A0B] via-[#0A0A0B]/80 to-[#0A0A0B]/30" />
+        <div className="absolute -left-20 top-1/4 h-[300px] w-[300px] rounded-full bg-[#CCFF00]/10 blur-[100px] z-0" />
+        
+        <div className="relative z-10 flex flex-col justify-between h-full max-w-xl">
+          <Link to="/home" className="inline-flex items-center gap-2 self-start transition-opacity hover:opacity-80">
+            <RunIcon />
+            <span className="text-xl font-black tracking-[0.2em] text-[#CCFF00] uppercase font-montserrat">
+              ArenaS
+            </span>
+          </Link>
 
-          <div className="relative z-10 flex w-full flex-col justify-between px-10 py-10">
-            <Link to="/home" className="inline-flex items-center gap-3 self-start">
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-xl font-black text-white shadow-[0_12px_30px_-10px_rgba(37,99,235,0.9)]">
-                A
-              </span>
-              <span className="text-2xl font-extrabold tracking-tight text-white">ArenaS</span>
+          <div className="mb-20 mt-auto">
+            <h1 className="text-[3.5rem] font-black leading-[1.1] tracking-tight text-white mb-6 font-montserrat">
+              Đặt lại mật khẩu,<br/>
+              <span className="text-[#CCFF00]">An Toàn Nhanh.</span>
+            </h1>
+            <p className="text-lg text-slate-400 leading-relaxed max-w-md">
+              Hệ thống quản lý chiến thuật dành riêng cho môi trường thể thao chuyên nghiệp. Kiểm soát mọi dữ liệu trong lòng bàn tay.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
+              <p className="text-[10px] font-bold tracking-[0.2em] text-[#00F5FF] uppercase mb-2">Hội viên Active</p>
+              <p className="text-3xl font-black text-white">12,450+</p>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
+              <p className="text-[10px] font-bold tracking-[0.2em] text-[#CCFF00] uppercase mb-2">Tăng trưởng</p>
+              <p className="text-3xl font-black text-white flex items-center gap-2">
+                <span className="text-[#CCFF00]">↗</span> 34.2%
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* RIGHT SECTION (FORM) */}
+      <section className="relative flex w-full lg:w-1/2 min-h-screen items-center justify-center p-6 sm:p-12">
+        <div className="absolute top-8 right-8 opacity-40">
+          <PatternIcon />
+        </div>
+        
+        <div className="w-full max-w-[28rem] py-8">
+          <div className="mb-10">
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-2 text-xs font-bold text-[#00F5FF] transition hover:opacity-80 mb-6"
+            >
+              <BackArrowIcon />
+              QUAY LẠI ĐĂNG NHẬP
             </Link>
+            
+            <h2 className="text-3xl font-black tracking-tight text-white mb-2 font-montserrat">
+              Quên Mật Khẩu
+            </h2>
+            <p className="text-sm text-slate-400">
+              Nhập email để nhận liên kết đặt lại mật khẩu
+            </p>
+          </div>
 
-            <div className="max-w-xl pb-10">
-              <div className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.24em] text-blue-400">
-                <span className="text-xl leading-none">⚡</span>
-                Bảo Mật Tài Khoản
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold tracking-[0.15em] text-slate-400 uppercase">
+                Địa Chỉ Email
+              </label>
+              <div className="flex items-center gap-3 border-b border-white/20 pb-2 pt-1 transition-colors focus-within:border-[#CCFF00]">
+                <span className="text-slate-500">
+                  <EnvelopeIcon />
+                </span>
+                <input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  autoComplete="email"
+                  className="login-input w-full bg-transparent border-0 p-0 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-0"
+                />
               </div>
-              <h1 className="mt-5 text-5xl font-black leading-[0.95] tracking-tight text-white">
-                Đặt Lại Mật Khẩu.
-                <span className="block text-blue-500">An Toàn Nhanh.</span>
-              </h1>
-              <p className="mt-6 max-w-lg text-lg leading-8 text-slate-300">
-                Nhập email đã đăng ký, ArenaS sẽ gửi liên kết khôi phục để bạn quay lại thi đấu trong vài phút.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <section className="flex min-h-screen items-center justify-center bg-[#0a1020] px-6 py-8 sm:px-10 lg:px-12">
-          <div className="w-full max-w-xl">
-            <div className="mb-8 flex justify-start">
-              <Link
-                to="/login"
-                className="inline-flex items-center gap-2 text-sm font-medium text-blue-400 transition hover:text-blue-300"
-              >
-                <BackArrowIcon />
-                Quay Lại Đăng Nhập
-              </Link>
             </div>
 
-            <div className="mx-auto max-w-[31rem]">
-              <h2 className="text-4xl font-black tracking-tight text-white sm:text-[3rem]">
-                Quên Mật Khẩu
-              </h2>
-              <p className="mt-4 text-lg text-blue-300/85">
-                Nhập email để nhận liên kết đặt lại mật khẩu
+            {errorMessage && (
+              <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-400">
+                {errorMessage}
               </p>
+            )}
 
-              <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
-                <label className="block space-y-2">
-                  <span className="text-sm font-semibold text-blue-200/90">Địa Chỉ Email</span>
-                  <div className="flex h-14 items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 text-slate-200 transition focus-within:border-blue-400/70 focus-within:bg-white/[0.07]">
-                    <span className="text-slate-500">
-                      <EnvelopeIcon />
-                    </span>
-                    <input
-                      type="email"
-                      placeholder="you@example.com"
-                      value={email}
-                      onChange={(event) => setEmail(event.target.value)}
-                      autoComplete="email"
-                      className="login-input h-full w-full border-0 bg-transparent p-0 text-base text-white placeholder:text-slate-500 focus:outline-none focus:ring-0"
-                    />
-                  </div>
-                </label>
-
-                {errorMessage && (
-                  <p className="rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-                    {errorMessage}
-                  </p>
-                )}
-
-                {successMessage && (
-                  <p className="rounded-xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-                    {successMessage}
-                  </p>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="mt-2 h-14 w-full rounded-2xl bg-[#1560ff] text-base font-bold text-white shadow-[0_18px_38px_-14px_rgba(21,96,255,0.95)] transition hover:-translate-y-0.5 hover:brightness-110"
-                >
-                  {isSubmitting ? 'Đang gửi...' : 'Gửi Liên Kết Đặt Lại'}
-                </button>
-              </form>
-
-              <p className="mt-8 text-center text-base text-slate-400">
-                Chưa có tài khoản?{' '}
-                <Link to="/register" className="font-bold text-blue-500 transition hover:text-blue-400">
-                  Đăng ký miễn phí
-                </Link>
+            {successMessage && (
+              <p className="rounded-lg border border-[#CCFF00]/30 bg-[#CCFF00]/10 px-4 py-3 text-xs text-[#CCFF00]">
+                {successMessage}
               </p>
-            </div>
-          </div>
-        </section>
-      </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#2A3317] border border-[#CCFF00]/30 text-sm font-bold text-[#CCFF00] shadow-[0_0_15px_rgba(204,255,0,0.15)] transition-all hover:bg-[#CCFF00] hover:text-[#0A0A0B] hover:shadow-[0_0_20px_rgba(204,255,0,0.4)] disabled:opacity-50 uppercase tracking-wider"
+            >
+              {isSubmitting ? 'Đang gửi...' : 'Gửi Liên Kết Đặt Lại'} 
+              {!isSubmitting && <span>→</span>}
+            </button>
+          </form>
+
+          <p className="mt-8 text-center text-xs font-medium text-slate-400">
+            Chưa có tài khoản?{' '}
+            <Link to="/register" className="font-bold text-[#00F5FF] transition hover:opacity-80">
+              Đăng ký miễn phí
+            </Link>
+          </p>
+        </div>
+
+        <div className="absolute bottom-6 right-8">
+          <span className="text-[9px] font-bold tracking-[0.2em] text-[#CCFF00]/50 uppercase">
+            * Sys.Auth.v2
+          </span>
+        </div>
+      </section>
     </div>
   );
 };

@@ -88,7 +88,7 @@ export const Header: React.FC = () => {
 
           {/* Navigation Menu */}
           <nav className="hidden md:flex items-center gap-8">
-          
+
             <Link
               to="/tim-san"
               className="hover:text-blue-400 transition duration-300 font-medium"
@@ -186,7 +186,7 @@ export const Header: React.FC = () => {
             ) : (
               <>
                 <Link to="/login" className="hidden md:flex items-center gap-2 hover:text-blue-400 transition">
-                  🔔
+
                   <span className="text-sm font-medium">Đăng Nhập</span>
                 </Link>
                 <Link

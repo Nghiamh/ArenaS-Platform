@@ -31,10 +31,10 @@ body {
 .login-input:-webkit-autofill:hover,
 .login-input:-webkit-autofill:focus,
 .login-input:-webkit-autofill:active {
-  -webkit-text-fill-color: #ffffff;
+  -webkit-text-fill-color: #ffffff !important;
   caret-color: #ffffff;
-  box-shadow: 0 0 0 1000px rgba(15, 23, 42, 0.12) inset !important;
-  -webkit-box-shadow: 0 0 0 1000px rgba(15, 23, 42, 0.12) inset !important;
+  box-shadow: 0 0 0 1000px #0A0A0B inset !important;
+  -webkit-box-shadow: 0 0 0 1000px #0A0A0B inset !important;
   transition: background-color 9999s ease-in-out 0s;
 }
 
