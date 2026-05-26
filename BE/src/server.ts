@@ -41,6 +41,13 @@ async function startServer(): Promise<void> {
 
 	console.log("MongoDB connected successfully");
 
+	// Start the matchmaking worker (runs every 5 seconds)
+	startMatchmakingWorker(io);
+
+	// Initialize background jobs
+	startSubscriptionCron();
+	startPayoutCron();
+
 	await new Promise<void>((resolve, reject) => {
 		const server = app.listen(PORT, () => {
 			console.log(`Server is running at http://localhost:${PORT}`);
