@@ -366,6 +366,16 @@ export async function userBookCourt(req: Request, res: Response) {
 		});
 		await newBooking.save({ session });
 
+		// Cập nhật giờ hẹn của Trận đấu (Match.scheduled_at) nếu đây là đặt sân từ ghép cặp
+		if (match_id && mongoose.Types.ObjectId.isValid(match_id)) {
+			const match = await Match.findById(match_id).session(session);
+			if (match) {
+				const dateStr = typeof date === 'string' ? date.split('T')[0] : new Date(date).toISOString().split('T')[0];
+				match.scheduled_at = new Date(`${dateStr}T${start_time}:00`);
+				await match.save({ session });
+			}
+		}
+
 		// --- Bước 7: Cập nhật slot status ---
 		for (let i = startIndex; i <= endIndex; i++) {
 			courtSlot.slots[i].status = 'booked';

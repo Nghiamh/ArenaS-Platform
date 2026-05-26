@@ -955,9 +955,22 @@ export const MatchmakingPage: React.FC = () => {
 								<div className="relative z-10 rounded-xl border border-slate-700/60 bg-slate-800/50 p-4 mb-6">
 									<div className="flex items-center gap-3">
 										<MapPin className="w-5 h-5 text-blue-400 shrink-0" />
-										<div className="min-w-0">
+										<div className="min-w-0 flex-1">
 											<p className="text-sm font-semibold text-white truncate">{matchData.court_id.name}</p>
 											<p className="text-xs text-slate-400 truncate">{matchData.court_id.location}</p>
+											{matchData.scheduled_at && (
+												<p className="text-xs text-cyan-400 font-bold mt-1.5 flex items-center gap-1.5">
+													<span>⏰ Giờ chơi:</span>
+													<span>
+														{(() => {
+															const d = new Date(matchData.scheduled_at);
+															const datePart = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+															const timePart = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+															return `${timePart} ngày ${datePart}`;
+														})()}
+													</span>
+												</p>
+											)}
 										</div>
 									</div>
 								</div>
@@ -1056,20 +1069,7 @@ export const MatchmakingPage: React.FC = () => {
 											className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-blue-500/25 transition hover:shadow-blue-500/40 hover:brightness-110">
 											<MessageCircle className="w-5 h-5" /> Vào Chat
 										</button>
-										{matchData.court_id && (
-											<button type="button"
-												onClick={() => {
-													const cid = typeof matchData.court_id === 'object'
-														? (matchData.court_id as any)._id?.toString() ?? ''
-														: String(matchData.court_id);
-													if (cid && !cid.includes('[object')) {
-														navigate(`/courts/${cid}?matchId=${matchData._id}`);
-													}
-												}}
-												className="w-full flex items-center justify-center gap-3 rounded-xl border border-slate-700/60 bg-slate-800/40 px-6 py-3.5 text-sm font-semibold text-slate-300 transition hover:bg-slate-700/50">
-												<MapPin className="w-4 h-4" /> Đặt Sân
-											</button>
-										)}
+
 
 										<button
 											type="button"
@@ -1078,11 +1078,10 @@ export const MatchmakingPage: React.FC = () => {
 												setReportReason("Không điểm danh / Bỏ trận (AFK)");
 												setIsReportModalOpen(true);
 											}}
-											className={`w-full flex flex-col items-center justify-center gap-1 rounded-xl border px-6 py-3 transition ${
-												isMeCheckedIn && !isOpponentCheckedIn && isMatchTimePassed
-													? 'border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 cursor-pointer'
-													: 'border-slate-800 bg-slate-900/30 text-slate-500 cursor-not-allowed'
-											}`}
+											className={`w-full flex flex-col items-center justify-center gap-1 rounded-xl border px-6 py-3 transition ${isMeCheckedIn && !isOpponentCheckedIn && isMatchTimePassed
+												? 'border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 cursor-pointer'
+												: 'border-slate-800 bg-slate-900/30 text-slate-500 cursor-not-allowed'
+												}`}
 										>
 											<div className="flex items-center gap-2 text-sm font-bold">
 												<span>⚠️ Tố cáo đối thủ không đến</span>
@@ -1102,7 +1101,7 @@ export const MatchmakingPage: React.FC = () => {
 
 										{matchData?.court_id?.coordinates?.coordinates && (
 											<div className="mt-2 p-3.5 rounded-xl border border-dashed border-amber-500/30 bg-amber-500/5 text-center">
-												<p className="text-[11px] font-bold text-amber-400 mb-2.5">🛠️ HỘP CÔNG CỤ GIẢ LẬP ĐỊNH VỊ & THỜI GIAN (DEV ONLY)</p>
+												<p className="text-[11px] font-bold text-amber-400 mb-2.5">(DEV ONLY)</p>
 												<div className="flex flex-col gap-2.5 items-center justify-center">
 													<div className="flex gap-2">
 														<button
@@ -1110,22 +1109,22 @@ export const MatchmakingPage: React.FC = () => {
 															onClick={() => {
 																const [courtLng, courtLat] = matchData.court_id.coordinates!.coordinates;
 																setUserLocation({ lng: courtLng, lat: courtLat });
-																showToast("📍 Giả lập GPS: Bạn đang đứng tại Sân (0m)");
+																showToast("Giả lập GPS: Bạn đang đứng tại Sân (0m)");
 															}}
 															className="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-[10px] font-bold hover:bg-emerald-500/30 transition cursor-pointer"
 														>
-															🎯 Đứng tại Sân (0m)
+															Đứng tại Sân (0m)
 														</button>
 														<button
 															type="button"
 															onClick={() => {
 																const [courtLng, courtLat] = matchData.court_id.coordinates!.coordinates;
 																setUserLocation({ lng: courtLng + 0.015, lat: courtLat + 0.01 });
-																showToast("📍 Giả lập GPS: Bạn ở cách xa sân (~1.8km)");
+																showToast("Giả lập GPS: Bạn ở cách xa sân (~1.8km)");
 															}}
 															className="px-2.5 py-1.5 rounded-lg bg-red-500/20 border border-red-500/40 text-red-400 text-[10px] font-bold hover:bg-red-500/30 transition cursor-pointer"
 														>
-															🚶 Ở xa sân (~1.8km)
+															Ở xa sân (~1.8km)
 														</button>
 													</div>
 													<div className="flex gap-2 items-center">
@@ -1133,22 +1132,22 @@ export const MatchmakingPage: React.FC = () => {
 															type="button"
 															onClick={() => {
 																setSimulatedTimeOffset(15 * 60 * 1000 + 1000);
-																showToast("⏰ Giả lập: Đã tua nhanh qua 15 phút thời gian chờ!");
+																showToast("Giả lập: Đã tua nhanh qua 15 phút thời gian chờ!");
 															}}
 															className="px-2.5 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-400 text-[10px] font-bold hover:bg-amber-500/30 transition cursor-pointer"
 														>
-															⏰ Tua nhanh 15 phút
+															Tua nhanh 15 phút
 														</button>
 														<button
 															type="button"
 															onClick={() => {
 																setSimulatedTimeOffset(0);
 																setUserLocation({ lng: 106.6297, lat: 10.8231 }); // default GPS
-																showToast("🔄 Đã reset tất cả giả lập về mặc định!");
+																showToast("Đã reset tất cả giả lập về mặc định!");
 															}}
 															className="px-2 py-1 rounded bg-slate-700/60 border border-slate-600/40 text-slate-400 text-[9px] font-bold hover:bg-slate-700/80 transition cursor-pointer"
 														>
-															🔄 Reset
+															Reset
 														</button>
 													</div>
 												</div>

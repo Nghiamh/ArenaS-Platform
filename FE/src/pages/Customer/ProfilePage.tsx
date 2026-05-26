@@ -1591,41 +1591,8 @@ export const ProfilePage: React.FC = () => {
                                   {statusLabel}
                                 </span>
                                 {booking.match_id && (
-                                  <div className="relative group inline-block z-10">
-                                    <button type="button" className="flex items-center justify-center h-6 w-6 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 hover:scale-105 transition-all duration-300">
-                                      <SwordsIcon className="h-3.5 w-3.5" />
-                                    </button>
-                                    
-                                    {/* Tooltip profile card */}
-                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-4 rounded-2xl bg-[#0F172A]/95 border border-cyan-500/25 backdrop-blur-md shadow-2xl shadow-cyan-950/50 scale-95 opacity-0 pointer-events-none group-hover:scale-100 group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-50">
-                                      <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-[#0F172A]/95" />
-                                      <p className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider mb-2.5">Đối thủ ghép trận</p>
-                                      {(() => {
-                                        const opponent = booking.match_id?.participants?.find(
-                                          (p) => p._id !== currentUser?.id
-                                        );
-                                        if (!opponent) {
-                                          return <span className="text-slate-400 text-xs italic">Đang chờ đối thủ...</span>;
-                                        }
-                                        return (
-                                          <div className="flex items-center gap-3">
-                                            <div className="h-10 w-10 rounded-full overflow-hidden border border-cyan-500/25 bg-slate-800 flex items-center justify-center shrink-0">
-                                              {opponent.avatarUrl ? (
-                                                <img src={opponent.avatarUrl} alt={opponent.name} className="h-full w-full object-cover" />
-                                              ) : (
-                                                <span className="text-sm font-black text-cyan-400">
-                                                  {(opponent.name || opponent.userName || "U").charAt(0).toUpperCase()}
-                                                </span>
-                                              )}
-                                            </div>
-                                            <div className="min-w-0 text-left">
-                                              <h4 className="text-xs font-bold text-white truncate">{opponent.name || opponent.userName}</h4>
-                                              <p className="text-[10px] text-slate-400 truncate">@{opponent.userName}</p>
-                                            </div>
-                                          </div>
-                                        );
-                                      })()}
-                                    </div>
+                                  <div className="flex items-center justify-center h-6 w-6 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400" title="Lịch đặt từ ghép cặp">
+                                    <SwordsIcon className="h-3.5 w-3.5" />
                                   </div>
                                 )}
                               </td>
