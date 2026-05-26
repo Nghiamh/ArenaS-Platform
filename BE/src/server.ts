@@ -95,6 +95,9 @@ async function startServer(): Promise<void> {
 
 	console.log("MongoDB connected successfully");
 
+	// Initialize background jobs
+	startSubscriptionCron();
+
 	// Start the matchmaking worker (runs every 5 seconds)
 	startMatchmakingWorker(io);
 	// Initialize background jobs

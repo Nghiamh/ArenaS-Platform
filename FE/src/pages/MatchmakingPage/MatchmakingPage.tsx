@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import {
 	joinMatchmaking, cancelMatchmaking, getMatchmakingStatus,
-	acceptMatch, declineMatch, checkInMatch, completeMatch, submitMatchFeedback,
+	acceptMatch, declineMatch, checkInMatch, completeMatch, submitMatchFeedback, reportOpponent,
 	type MatchData, type MatchmakingTicket,
 } from '../../Axios/matchmakingApi';
 import { getPublicCourts, type PublicCourt } from '../../Axios/Axios';
@@ -30,6 +30,21 @@ function formatTime(seconds: number): string {
 	const m = Math.floor(seconds / 60);
 	const s = seconds % 60;
 	return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+}
+
+function getDistanceInMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+	const R = 6371e3; // metres
+	const phi1 = lat1 * Math.PI / 180;
+	const phi2 = lat2 * Math.PI / 180;
+	const deltaPhi = (lat2 - lat1) * Math.PI / 180;
+	const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+
+	const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+		Math.cos(phi1) * Math.cos(phi2) *
+		Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+	const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+	return R * c; // in metres
 }
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
@@ -75,6 +90,56 @@ export const MatchmakingPage: React.FC = () => {
 	// Rewards Earned
 	const [rewardsEarned, setRewardsEarned] = useState<{ xpGained: number; pointsGained: number } | null>(null);
 
+	// Report Opponent States
+	const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+	const [reportReason, setReportReason] = useState('');
+	const [reportDescription, setReportDescription] = useState('');
+	const [reportLoading, setReportLoading] = useState(false);
+
+	// Toast Notification State
+	const [toastMessage, setToastMessage] = useState('');
+	const showToast = useCallback((msg: string) => {
+		setToastMessage(msg);
+		setTimeout(() => setToastMessage(''), 4000);
+	}, []);
+
+	// GPS and simulated time states
+	const [simulatedTimeOffset, setSimulatedTimeOffset] = useState(0);
+
+	// GPS and scheduled time verification logic
+	const distance = useMemo(() => {
+		if (!userLocation || !matchData?.court_id?.coordinates?.coordinates) return null;
+		const [courtLng, courtLat] = matchData.court_id.coordinates.coordinates;
+		return getDistanceInMeters(userLocation.lat, userLocation.lng, courtLat, courtLng);
+	}, [userLocation, matchData]);
+
+	const isWithinRange = useMemo(() => {
+		if (distance === null) return false;
+		return distance <= 100; // strictly 100 meters
+	}, [distance]);
+
+	const isCheckInAllowed = useMemo(() => {
+		// Fallback: If no coordinates are defined for the court, allow check-in anyway
+		if (!matchData?.court_id?.coordinates?.coordinates) return true;
+		return isWithinRange;
+	}, [matchData, isWithinRange]);
+
+	const reportCooldownMinutes = useMemo(() => {
+		if (!matchData) return 0;
+		const targetTime = matchData.scheduled_at
+			? new Date(matchData.scheduled_at).getTime()
+			: new Date(matchData.createdAt || Date.now()).getTime() + 15 * 60 * 1000;
+		const diff = targetTime - (Date.now() + simulatedTimeOffset);
+		return Math.max(0, Math.ceil(diff / 60000));
+	}, [matchData, simulatedTimeOffset]);
+
+	const isMatchTimePassed = useMemo(() => {
+		if (!matchData) return false;
+		const targetTime = matchData.scheduled_at
+			? new Date(matchData.scheduled_at).getTime()
+			: new Date(matchData.createdAt || Date.now()).getTime() + 15 * 60 * 1000;
+		return (Date.now() + simulatedTimeOffset) > targetTime;
+	}, [matchData, simulatedTimeOffset]);
 
 	const waitTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 	const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -435,8 +500,6 @@ export const MatchmakingPage: React.FC = () => {
 
 	const handleDecline = useCallback(async () => {
 		if (!resolvedMatchId) return;
-		const confirmed = window.confirm('Bạn chắc chắn muốn từ chối trận đấu này?');
-		if (!confirmed) return;
 		setLoading(true);
 		setError('');
 		try {
@@ -471,8 +534,6 @@ export const MatchmakingPage: React.FC = () => {
 
 	const handleCompleteMatch = useCallback(async () => {
 		if (!resolvedMatchId) return;
-		const confirmed = window.confirm('Bạn muốn đánh dấu trận đấu này đã hoàn thành?');
-		if (!confirmed) return;
 		setCompleteLoading(true);
 		setError('');
 		try {
@@ -484,6 +545,22 @@ export const MatchmakingPage: React.FC = () => {
 			setCompleteLoading(false);
 		}
 	}, [resolvedMatchId]);
+
+	const handleReset = useCallback(() => {
+		setMmState('IDLE'); setTicket(null); setMatchData(null); setResolvedMatchId(''); setWaitSeconds(0); setError('');
+		setHasAccepted(false); setOpponentAccepted(false);
+	}, []);
+
+	const handleCloseSurvey = useCallback(() => {
+		handleReset();
+		setFeedbackSubmitted(false);
+		setFeedbackSuccess(false);
+		setSurveyPunctual(null);
+		setSurveyAttitude(null);
+		setSurveySkill(null);
+		setSurveyPlayAgain(null);
+		setRewardsEarned(null);
+	}, [handleReset]);
 
 	const handleFeedbackSubmit = useCallback(async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -503,38 +580,51 @@ export const MatchmakingPage: React.FC = () => {
 				play_again: surveyPlayAgain,
 			});
 			if (res.rewards) {
-				setRewardsEarned(res.rewards);
+				showToast(`Đánh giá thành công! Bạn nhận được +${res.rewards.xpGained} XP và +${res.rewards.pointsGained} Điểm thưởng.`);
+			} else {
+				showToast('Đánh giá thành công!');
 			}
-			setFeedbackSuccess(true);
-			setFeedbackSubmitted(true);
+			handleCloseSurvey();
 		} catch (err: unknown) {
 			const errMsg = err instanceof Error ? err.message : 'Không thể gửi đánh giá';
 			if (errMsg.toLowerCase().includes('already') || errMsg.toLowerCase().includes('đã đánh giá')) {
-				setFeedbackSuccess(true);
-				setFeedbackSubmitted(true);
+				showToast('Bạn đã thực hiện đánh giá cho trận đấu này rồi!');
+				handleCloseSurvey();
 			} else {
 				setError(errMsg);
 			}
 		} finally {
 			setFeedbackLoading(false);
 		}
-	}, [resolvedMatchId, surveyPunctual, surveyAttitude, surveySkill, surveyPlayAgain]);
+	}, [resolvedMatchId, surveyPunctual, surveyAttitude, surveySkill, surveyPlayAgain, handleCloseSurvey]);
 
-	const handleReset = useCallback(() => {
-		setMmState('IDLE'); setTicket(null); setMatchData(null); setResolvedMatchId(''); setWaitSeconds(0); setError('');
-		setHasAccepted(false); setOpponentAccepted(false);
-	}, []);
+	const handleReportSubmit = useCallback(async (e: React.FormEvent) => {
+		e.preventDefault();
+		if (!resolvedMatchId) return;
+		if (!reportReason || !reportDescription) {
+			setError('Vui lòng chọn lý do và điền mô tả báo cáo!');
+			return;
+		}
 
-	const handleCloseSurvey = useCallback(() => {
-		handleReset();
-		setFeedbackSubmitted(false);
-		setFeedbackSuccess(false);
-		setSurveyPunctual(null);
-		setSurveyAttitude(null);
-		setSurveySkill(null);
-		setSurveyPlayAgain(null);
-		setRewardsEarned(null);
-	}, [handleReset]);
+		setReportLoading(true);
+		setError('');
+		try {
+			await reportOpponent(resolvedMatchId, {
+				reason: reportReason,
+				description: reportDescription,
+				simulatedTimeOffset,
+			});
+			showToast('Đã gửi báo cáo cho Admin kiểm duyệt! 🛡️');
+			setIsReportModalOpen(false);
+			setReportReason('');
+			setReportDescription('');
+			handleReset();
+		} catch (err: unknown) {
+			setError(err instanceof Error ? err.message : 'Không thể gửi báo cáo');
+		} finally {
+			setReportLoading(false);
+		}
+	}, [resolvedMatchId, reportReason, reportDescription, simulatedTimeOffset, handleReset, showToast]);
 
 	const opponent = useMemo(() => {
 		return matchData?.participants?.find((p) => {
@@ -865,9 +955,22 @@ export const MatchmakingPage: React.FC = () => {
 								<div className="relative z-10 rounded-xl border border-slate-700/60 bg-slate-800/50 p-4 mb-6">
 									<div className="flex items-center gap-3">
 										<MapPin className="w-5 h-5 text-blue-400 shrink-0" />
-										<div className="min-w-0">
+										<div className="min-w-0 flex-1">
 											<p className="text-sm font-semibold text-white truncate">{matchData.court_id.name}</p>
 											<p className="text-xs text-slate-400 truncate">{matchData.court_id.location}</p>
+											{matchData.scheduled_at && (
+												<p className="text-xs text-cyan-400 font-bold mt-1.5 flex items-center gap-1.5">
+													<span>⏰ Giờ chơi:</span>
+													<span>
+														{(() => {
+															const d = new Date(matchData.scheduled_at);
+															const datePart = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+															const timePart = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+															return `${timePart} ngày ${datePart}`;
+														})()}
+													</span>
+												</p>
+											)}
 										</div>
 									</div>
 								</div>
@@ -879,13 +982,13 @@ export const MatchmakingPage: React.FC = () => {
 										<div className="flex items-center justify-between">
 											<span className="text-slate-400">Trạng thái điểm danh của bạn:</span>
 											<span className={isMeCheckedIn ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"}>
-												{isMeCheckedIn ? "Đã Check-in " : "Chưa Check-in "}
+												{isMeCheckedIn ? "Đã điểm danh" : "Chưa điểm danh 📍"}
 											</span>
 										</div>
 										<div className="flex items-center justify-between">
 											<span className="text-slate-400">Trạng thái đối thủ:</span>
 											<span className={isOpponentCheckedIn ? "text-emerald-400 font-bold" : "text-slate-500 font-normal"}>
-												{isOpponentCheckedIn ? "Đã Check-in " : "Chưa Check-in "}
+												{isOpponentCheckedIn ? "Đã điểm danh" : "Chưa điểm danh 📍"}
 											</span>
 										</div>
 									</div>
@@ -939,10 +1042,20 @@ export const MatchmakingPage: React.FC = () => {
 								) : (
 									<>
 										{!isMeCheckedIn ? (
-											<button type="button" onClick={handleCheckIn} disabled={checkInLoading}
-												className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-amber-600 to-yellow-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-amber-500/25 transition hover:shadow-amber-500/40 hover:brightness-110 disabled:opacity-50">
-												{checkInLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <MapPin className="w-5 h-5 animate-bounce" />}
-												📍 Điểm Danh (Check-in)
+											<button
+												type="button"
+												onClick={handleCheckIn}
+												disabled={checkInLoading || !isCheckInAllowed}
+												className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-amber-600 to-yellow-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-amber-500/25 transition hover:shadow-amber-500/40 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
+											>
+												{checkInLoading ? (
+													<Loader2 className="w-5 h-5 animate-spin" />
+												) : (
+													<MapPin className="w-5 h-5 animate-bounce" />
+												)}
+												{!isCheckInAllowed && distance !== null
+													? `📍 Cách sân ${Math.round(distance)}m - Lại gần < 100m để điểm danh`
+													: 'Điểm Danh'}
 											</button>
 										) : (
 											<button type="button" onClick={handleCompleteMatch} disabled={completeLoading}
@@ -956,10 +1069,90 @@ export const MatchmakingPage: React.FC = () => {
 											className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-blue-500/25 transition hover:shadow-blue-500/40 hover:brightness-110">
 											<MessageCircle className="w-5 h-5" /> Vào Chat
 										</button>
-										<button type="button" onClick={handleReset}
-											className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-700/60 bg-slate-800/40 px-6 py-3 text-sm font-semibold text-slate-300 transition hover:bg-slate-700/50">
-											<RotateCcw className="w-4 h-4" /> Tìm Đối Thủ Khác
+
+
+										<button
+											type="button"
+											disabled={!isMeCheckedIn || isOpponentCheckedIn || !isMatchTimePassed}
+											onClick={() => {
+												setReportReason("Không điểm danh / Bỏ trận (AFK)");
+												setIsReportModalOpen(true);
+											}}
+											className={`w-full flex flex-col items-center justify-center gap-1 rounded-xl border px-6 py-3 transition ${isMeCheckedIn && !isOpponentCheckedIn && isMatchTimePassed
+												? 'border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 cursor-pointer'
+												: 'border-slate-800 bg-slate-900/30 text-slate-500 cursor-not-allowed'
+												}`}
+										>
+											<div className="flex items-center gap-2 text-sm font-bold">
+												<span>⚠️ Tố cáo đối thủ không đến</span>
+											</div>
+											{!isMeCheckedIn && (
+												<span className="text-[10px] text-slate-500">Bạn cần điểm danh trước khi tố cáo vắng mặt 🔒</span>
+											)}
+											{isMeCheckedIn && isOpponentCheckedIn && (
+												<span className="text-[10px] text-slate-500">Đối thủ đã điểm danh, không thể tố cáo 🔒</span>
+											)}
+											{isMeCheckedIn && !isOpponentCheckedIn && !isMatchTimePassed && (
+												<span className="text-[10px] text-slate-500">
+													Đợi thêm {reportCooldownMinutes} phút nữa để báo cáo vắng mặt 🔒
+												</span>
+											)}
 										</button>
+
+										{matchData?.court_id?.coordinates?.coordinates && (
+											<div className="mt-2 p-3.5 rounded-xl border border-dashed border-amber-500/30 bg-amber-500/5 text-center">
+												<p className="text-[11px] font-bold text-amber-400 mb-2.5">(DEV ONLY)</p>
+												<div className="flex flex-col gap-2.5 items-center justify-center">
+													<div className="flex gap-2">
+														<button
+															type="button"
+															onClick={() => {
+																const [courtLng, courtLat] = matchData.court_id.coordinates!.coordinates;
+																setUserLocation({ lng: courtLng, lat: courtLat });
+																showToast("Giả lập GPS: Bạn đang đứng tại Sân (0m)");
+															}}
+															className="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-[10px] font-bold hover:bg-emerald-500/30 transition cursor-pointer"
+														>
+															Đứng tại Sân (0m)
+														</button>
+														<button
+															type="button"
+															onClick={() => {
+																const [courtLng, courtLat] = matchData.court_id.coordinates!.coordinates;
+																setUserLocation({ lng: courtLng + 0.015, lat: courtLat + 0.01 });
+																showToast("Giả lập GPS: Bạn ở cách xa sân (~1.8km)");
+															}}
+															className="px-2.5 py-1.5 rounded-lg bg-red-500/20 border border-red-500/40 text-red-400 text-[10px] font-bold hover:bg-red-500/30 transition cursor-pointer"
+														>
+															Ở xa sân (~1.8km)
+														</button>
+													</div>
+													<div className="flex gap-2 items-center">
+														<button
+															type="button"
+															onClick={() => {
+																setSimulatedTimeOffset(15 * 60 * 1000 + 1000);
+																showToast("Giả lập: Đã tua nhanh qua 15 phút thời gian chờ!");
+															}}
+															className="px-2.5 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-400 text-[10px] font-bold hover:bg-amber-500/30 transition cursor-pointer"
+														>
+															Tua nhanh 15 phút
+														</button>
+														<button
+															type="button"
+															onClick={() => {
+																setSimulatedTimeOffset(0);
+																setUserLocation({ lng: 106.6297, lat: 10.8231 }); // default GPS
+																showToast("Đã reset tất cả giả lập về mặc định!");
+															}}
+															className="px-2 py-1 rounded bg-slate-700/60 border border-slate-600/40 text-slate-400 text-[9px] font-bold hover:bg-slate-700/80 transition cursor-pointer"
+														>
+															Reset
+														</button>
+													</div>
+												</div>
+											</div>
+										)}
 									</>
 								)}
 							</div>
@@ -1004,21 +1197,21 @@ export const MatchmakingPage: React.FC = () => {
 												type="button"
 												onClick={() => setSurveyPunctual(true)}
 												className={`py-2.5 rounded-xl border font-bold text-xs transition-all ${surveyPunctual === true
-														? 'border-emerald-500 bg-emerald-500/15 text-emerald-400 shadow-lg shadow-emerald-500/10'
-														: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
+													? 'border-emerald-500 bg-emerald-500/15 text-emerald-400 shadow-lg shadow-emerald-500/10'
+													: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
 													}`}
 											>
-												Có, đúng giờ 👍
+												Có, đúng giờ
 											</button>
 											<button
 												type="button"
 												onClick={() => setSurveyPunctual(false)}
 												className={`py-2.5 rounded-xl border font-bold text-xs transition-all ${surveyPunctual === false
-														? 'border-red-500 bg-red-500/15 text-red-400 shadow-lg shadow-red-500/10'
-														: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
+													? 'border-red-500 bg-red-500/15 text-red-400 shadow-lg shadow-red-500/10'
+													: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
 													}`}
 											>
-												Không, đi muộn ⏰
+												Không, đi muộn
 											</button>
 										</div>
 									</div>
@@ -1031,8 +1224,8 @@ export const MatchmakingPage: React.FC = () => {
 												type="button"
 												onClick={() => setSurveyAttitude('friendly')}
 												className={`flex flex-col items-center gap-1 py-2 rounded-xl border font-bold text-[10px] transition-all ${surveyAttitude === 'friendly'
-														? 'border-emerald-500 bg-emerald-500/15 text-emerald-400'
-														: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
+													? 'border-emerald-500 bg-emerald-500/15 text-emerald-400'
+													: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
 													}`}
 											>
 												<span className="text-lg">🙂</span>
@@ -1042,8 +1235,8 @@ export const MatchmakingPage: React.FC = () => {
 												type="button"
 												onClick={() => setSurveyAttitude('neutral')}
 												className={`flex flex-col items-center gap-1 py-2 rounded-xl border font-bold text-[10px] transition-all ${surveyAttitude === 'neutral'
-														? 'border-amber-500 bg-amber-500/15 text-amber-400'
-														: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
+													? 'border-amber-500 bg-amber-500/15 text-amber-400'
+													: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
 													}`}
 											>
 												<span className="text-lg">😐</span>
@@ -1053,8 +1246,8 @@ export const MatchmakingPage: React.FC = () => {
 												type="button"
 												onClick={() => setSurveyAttitude('bad')}
 												className={`flex flex-col items-center gap-1 py-2 rounded-xl border font-bold text-[10px] transition-all ${surveyAttitude === 'bad'
-														? 'border-pink-500 bg-pink-500/15 text-pink-400'
-														: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
+													? 'border-pink-500 bg-pink-500/15 text-pink-400'
+													: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
 													}`}
 											>
 												<span className="text-lg">🙁</span>
@@ -1071,21 +1264,21 @@ export const MatchmakingPage: React.FC = () => {
 												type="button"
 												onClick={() => setSurveySkill(true)}
 												className={`py-2.5 rounded-xl border font-bold text-xs transition-all ${surveySkill === true
-														? 'border-blue-500 bg-blue-500/15 text-blue-400 shadow-lg shadow-blue-500/10'
-														: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
+													? 'border-blue-500 bg-blue-500/15 text-blue-400 shadow-lg shadow-blue-500/10'
+													: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
 													}`}
 											>
-												Chuẩn mô tả ✔
+												Chuẩn mô tả
 											</button>
 											<button
 												type="button"
 												onClick={() => setSurveySkill(false)}
 												className={`py-2.5 rounded-xl border font-bold text-xs transition-all ${surveySkill === false
-														? 'border-amber-500 bg-amber-500/15 text-amber-400 shadow-lg shadow-amber-500/10'
-														: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
+													? 'border-amber-500 bg-amber-500/15 text-amber-400 shadow-lg shadow-amber-500/10'
+													: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
 													}`}
 											>
-												Lệch mô tả ✘
+												Lệch mô tả
 											</button>
 										</div>
 									</div>
@@ -1098,21 +1291,21 @@ export const MatchmakingPage: React.FC = () => {
 												type="button"
 												onClick={() => setSurveyPlayAgain(true)}
 												className={`py-2.5 rounded-xl border font-bold text-xs transition-all ${surveyPlayAgain === true
-														? 'border-emerald-500 bg-emerald-500/15 text-emerald-400 shadow-lg shadow-emerald-500/10'
-														: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
+													? 'border-emerald-500 bg-emerald-500/15 text-emerald-400 shadow-lg shadow-emerald-500/10'
+													: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
 													}`}
 											>
-												Có, muốn chơi lại 👍
+												Có, muốn chơi lại
 											</button>
 											<button
 												type="button"
 												onClick={() => setSurveyPlayAgain(false)}
 												className={`py-2.5 rounded-xl border font-bold text-xs transition-all ${surveyPlayAgain === false
-														? 'border-red-500 bg-red-500/15 text-red-400 shadow-lg shadow-red-500/10'
-														: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
+													? 'border-red-500 bg-red-500/15 text-red-400 shadow-lg shadow-red-500/10'
+													: 'border-slate-700 bg-slate-800/30 text-slate-400 hover:border-slate-600'
 													}`}
 											>
-												Không, không hợp 👎
+												Không, không hợp
 											</button>
 										</div>
 									</div>
@@ -1136,10 +1329,10 @@ export const MatchmakingPage: React.FC = () => {
 
 								<button
 									type="button"
-									onClick={handleCloseSurvey}
-									className="w-full py-2.5 rounded-xl border border-slate-700 bg-slate-800/20 text-slate-400 text-xs font-semibold transition hover:bg-slate-700/30 hover:text-slate-300"
+									onClick={() => setIsReportModalOpen(true)}
+									className="w-full py-2.5 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 text-xs font-bold transition hover:bg-red-500/20 hover:text-red-300"
 								>
-									Bỏ qua đánh giá & Quay lại
+									⚠️ Báo cáo đối thủ xấu
 								</button>
 							</form>
 						) : (
@@ -1182,6 +1375,83 @@ export const MatchmakingPage: React.FC = () => {
 							</div>
 						)}
 					</div>
+				</div>
+			)}
+			{/* ── REPORT MODAL ── */}
+			{isReportModalOpen && (
+				<div className="mm-modal-overlay" style={{ zIndex: 1100 }}>
+					<div className="mm-modal-content glass-panel" style={{ maxWidth: '440px', animation: 'mm-slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+						<div className="text-center mb-4">
+							<div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-red-500 to-pink-500 mb-2.5 shadow-lg shadow-red-500/20">
+								<Swords className="w-6 h-6 text-white" />
+							</div>
+							<h2 className="text-xl font-bold text-white">Báo Cáo Đối Thủ ⚠️</h2>
+							<p className="text-slate-400 text-xs mt-1">Nội dung báo cáo kèm bản ghi chat sẽ được gửi tới Admin để kiểm duyệt.</p>
+						</div>
+
+						<form onSubmit={handleReportSubmit} className="flex flex-col gap-4">
+							<div className="flex flex-col gap-1.5">
+								<label className="text-xs font-bold text-slate-400">LÝ DO BÁO CÁO</label>
+								<select
+									value={reportReason}
+									onChange={(e) => setReportReason(e.target.value)}
+									required
+									className="w-full rounded-xl border border-slate-700 bg-slate-800/80 px-3.5 py-2.5 text-xs text-white outline-none focus:border-red-500/50"
+								>
+									<option value="">-- Chọn lý do báo cáo --</option>
+									<option value="Thái độ không đẹp / Xúc phạm">Thái độ không đẹp / Lời lẽ xúc phạm 😡</option>
+									<option value="Gian lận / Sai lệch trình độ">Gian lận / Sai lệch trình độ 📈</option>
+									<option value="Không điểm danh / Bỏ trận (AFK)">Không điểm danh / Bỏ trận (AFK) ⏰</option>
+									<option value="Lý do khác">Lý do khác...</option>
+								</select>
+							</div>
+
+							<div className="flex flex-col gap-1.5">
+								<label className="text-xs font-bold text-slate-400">MÔ TẢ CHI TIẾT</label>
+								<textarea
+									value={reportDescription}
+									onChange={(e) => setReportDescription(e.target.value)}
+									required
+									placeholder="Vui lòng cung cấp chi tiết sự việc..."
+									rows={4}
+									className="w-full rounded-xl border border-slate-700 bg-slate-800/80 px-3.5 py-2.5 text-xs text-white outline-none focus:border-red-500/50 resize-none"
+								/>
+							</div>
+
+							{error && (
+								<div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs text-red-300">{error}</div>
+							)}
+
+							<div className="flex gap-3 mt-1">
+								<button
+									type="button"
+									onClick={() => {
+										setIsReportModalOpen(false);
+										setReportReason('');
+										setReportDescription('');
+										setError('');
+									}}
+									className="flex-1 py-3 rounded-xl border border-slate-700 bg-slate-800/20 text-slate-400 text-xs font-semibold transition hover:bg-slate-700/30 hover:text-slate-300"
+								>
+									Hủy bỏ
+								</button>
+								<button
+									type="submit"
+									disabled={reportLoading}
+									className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-red-600 to-pink-500 py-3 text-xs font-bold text-white shadow-lg shadow-red-500/25 transition hover:shadow-red-500/40 hover:brightness-110 disabled:opacity-50"
+								>
+									{reportLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Gửi Báo Cáo 🛡️'}
+								</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			)}
+
+			{toastMessage && (
+				<div className="fixed bottom-6 right-6 z-[9999] flex items-center gap-2.5 rounded-2xl border border-emerald-500/30 bg-[#06152d]/95 px-5 py-4 text-sm font-semibold text-emerald-400 shadow-2xl shadow-emerald-950/40 backdrop-blur animate-fade-in">
+					<span className="text-base font-bold">✓</span>
+					{toastMessage}
 				</div>
 			)}
 		</div>
