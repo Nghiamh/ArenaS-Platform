@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { RefreshCw, Download, Plus, Search, Smartphone, Phone, User } from 'lucide-react';
 import { createOwnerBooking, type OwnerCourt, type OwnerBooking } from '../../Axios/Axios';
 import {
   bookingHours,
@@ -37,8 +38,8 @@ const STATUS_CHIP = {
   default:   { bg: 'from-cyan-600/15 to-cyan-500/30',    border: 'border-cyan-400/40',    shadow: 'rgba(6,182,212,0.25)',  text: 'text-cyan-300' },
 };
 
-const COL   = '250px repeat(16, 110px)';
-const WIDTH = '2010px';
+const COL   = '250px repeat(16, 200px)';
+const WIDTH = '3450px';
 const HC    = bookingHours.length;
 const fmt   = (h: number) => `${String(Math.floor(h)).padStart(2, '0')}:${(h % 1) * 60 === 30 ? '30' : '00'}`;
 const WEEK_COL = 'minmax(230px,270px) repeat(7,minmax(150px,1fr))';
@@ -48,7 +49,7 @@ const WEEK_COL = 'minmax(230px,270px) repeat(7,minmax(150px,1fr))';
    ═══════════════════════════════════════ */
 const Chip: React.FC<{ b: any; onClick: () => void }> = ({ b, onClick }) => {
   const s    = b.startHour - 7;
-  const span = Math.max(1, b.endHour - b.startHour);
+  const span = b.endHour - b.startHour;
   
   // Pick chip tone based on booking status
   const statusKey = b.status || 'confirmed';
@@ -71,20 +72,20 @@ const Chip: React.FC<{ b: any; onClick: () => void }> = ({ b, onClick }) => {
       style={{
         left: `calc(${(s / HC) * 100}% + 4px)`,
         width: `calc(${(span / HC) * 100}% - 8px)`,
-        minWidth: 80,
+        minWidth: 40,
         boxShadow: `0 8px 20px -8px ${t.shadow}`,
       }}
     >
       <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
-      <div className="relative px-3 py-2">
-        <p className="text-[12px] font-bold leading-tight text-white truncate">
-          <span className={`mr-1 font-mono text-[10px] font-black opacity-80 ${t.text}`}>{bookingCode}</span> 
+      <div className="relative px-2.5 py-1.5">
+        <p className="text-[11px] font-bold leading-tight text-white truncate">
+          <span className={`mr-1 font-mono text-[9px] font-black opacity-80 ${t.text}`}>{bookingCode}</span> 
           {b.customer}
         </p>
-        <p className="mt-0.5 text-[10px] text-white/60 font-mono">{fmt(b.startHour)}–{fmt(b.endHour)}</p>
+        <p className="text-[9px] text-white/60 font-mono leading-tight">{fmt(b.startHour)}–{fmt(b.endHour)}</p>
       </div>
       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/40 rounded-xl">
-        <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">🔍 Chi tiết</span>
+        <span className="flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm"><Search className="w-3 h-3" /> Chi tiết</span>
       </div>
     </motion.button>
   );
@@ -102,7 +103,7 @@ const AddSlot: React.FC<{ onClick: () => void }> = ({ onClick }) => (
     title="Thêm lịch đặt"
   >
     <span className="flex items-center gap-1 text-[10px] font-bold text-slate-700 opacity-0 group-hover:opacity-100 transition">
-      ＋ Thêm lịch đặt
+      <Plus className="w-3 h-3" /> Thêm lịch đặt
     </span>
   </button>
 );
@@ -372,7 +373,10 @@ const ListView: React.FC<{
                       </span>
                     </td>
                     <td className="px-6 py-4 text-xs">
-                      {b.source === 'app' ? '📱 App' : b.source === 'phone' ? '📞 Điện thoại' : '🚶 Trực tiếp'}
+                      <div className="flex items-center gap-1.5">
+                        {b.source === 'app' ? <Smartphone className="w-3.5 h-3.5 text-slate-400" /> : b.source === 'phone' ? <Phone className="w-3.5 h-3.5 text-slate-400" /> : <User className="w-3.5 h-3.5 text-slate-400" />}
+                        {b.source === 'app' ? 'App' : b.source === 'phone' ? 'Điện thoại' : 'Trực tiếp'}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button
@@ -415,6 +419,13 @@ export const OwnerBookingScheduleBoard: React.FC<{
 }> = ({ viewMode, currentDate, setCurrentDate, courtsData, bookingsData, fetchScheduleData }) => {
   const [schedule, setSchedule] = useState<ScheduleState>([]);
   const [modal, setModal] = useState<ModalState>(CLOSED);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchScheduleData();
+    setTimeout(() => setIsRefreshing(false), 500);
+  };
 
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -721,17 +732,25 @@ export const OwnerBookingScheduleBoard: React.FC<{
           <div className="flex items-center gap-2">
             <button
               type="button"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="flex h-9 items-center gap-1.5 rounded-xl border border-white/[0.08] bg-[#0E1524] hover:border-white/20 hover:text-white px-3 text-xs font-bold text-slate-400 transition disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} /> Tải lại
+            </button>
+            <button
+              type="button"
               onClick={() => alert('Xuất dữ liệu Excel thành công')}
               className="flex h-9 items-center gap-1.5 rounded-xl border border-white/[0.08] bg-[#0E1524] hover:border-white/20 hover:text-white px-3 text-xs font-bold text-slate-400 transition"
             >
-              📥 Xuất dữ liệu
+              <Download className="w-3.5 h-3.5" /> Xuất dữ liệu
             </button>
             <button
               type="button"
               onClick={openGlobalAdd}
               className="flex h-9 items-center gap-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 px-3.5 text-xs font-extrabold text-[#07162f] transition shadow-[0_4px_12px_rgba(6,182,212,0.3)]"
             >
-              ＋ Tạo đơn mới
+              <Plus className="w-3.5 h-3.5" /> Tạo đơn mới
             </button>
           </div>
         </div>
@@ -795,7 +814,7 @@ export const OwnerBookingScheduleBoard: React.FC<{
           style={{ cursor: 'pointer' }}
           title="Thêm lịch đặt nhanh"
         >
-          ＋
+          <Plus className="w-6 h-6" />
         </button>
       )}
 
