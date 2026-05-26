@@ -721,6 +721,29 @@ export async function getOwnerBookings(params?: { startDate?: string; endDate?: 
 	}
 }
 
+export type OwnerListBookingsResponse = {
+	message: string;
+	bookings: OwnerBooking[];
+	pagination: {
+		page: number;
+		limit: number;
+		total: number;
+		totalPages: number;
+	};
+};
+
+export async function getOwnerListBookings(params?: { startDate?: string; endDate?: string; page?: number; limit?: number }): Promise<OwnerListBookingsResponse> {
+	try {
+		const { data } = await axiosClient.get<OwnerListBookingsResponse>('/bookings/owner-list-bookings', {
+			headers: withAuthHeaders(),
+			params,
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
 export type CreateOwnerBookingPayload = {
 	court_id: string;
 	sub_court_id: string;

@@ -44,6 +44,17 @@ const HC    = bookingHours.length;
 const fmt   = (h: number) => `${String(Math.floor(h)).padStart(2, '0')}:${(h % 1) * 60 === 30 ? '30' : '00'}`;
 const WEEK_COL = 'minmax(230px,270px) repeat(7,minmax(150px,1fr))';
 
+const getDisplayStatus = (status: string, date: string, endTime: string) => {
+  if (status === 'confirmed') {
+    const now = new Date();
+    const endTimeDate = new Date(`${date}T${endTime}:00+07:00`);
+    if (now > endTimeDate) {
+      return 'completed';
+    }
+  }
+  return status;
+};
+
 /* ═══════════════════════════════════════
    Booking chip (day view)
    ═══════════════════════════════════════ */
@@ -323,7 +334,10 @@ const ListView: React.FC<{
   bookingsData: OwnerBooking[];
   courtsData: OwnerCourt[];
   onDetailClick: (booking: OwnerBooking) => void;
-}> = ({ bookingsData, courtsData, onDetailClick }) => {
+  listPage?: number;
+  setListPage?: React.Dispatch<React.SetStateAction<number>>;
+  listTotalPages?: number;
+}> = ({ bookingsData, courtsData, onDetailClick, listPage, setListPage, listTotalPages }) => {
   const getSubCourtName = (courtId: string, subCourtId: string) => {
     const court = courtsData.find(c => c.id === courtId);
     const sub = court?.sub_courts.find(sc => sc._id === subCourtId);
@@ -342,9 +356,6 @@ const ListView: React.FC<{
               <th className="px-6 py-4">Sân đặt</th>
               <th className="px-6 py-4">Ngày đặt</th>
               <th className="px-6 py-4">Khung giờ</th>
-              <th className="px-6 py-4">Tổng tiền</th>
-              <th className="px-6 py-4">Trạng thái</th>
-              <th className="px-6 py-4">Nguồn</th>
               <th className="px-6 py-4 text-right">Thao tác</th>
             </tr>
           </thead>
@@ -360,24 +371,6 @@ const ListView: React.FC<{
                     <td className="px-6 py-4 font-medium text-slate-300">{getSubCourtName(b.court_id, b.sub_court_id)}</td>
                     <td className="px-6 py-4 text-slate-400">{b.date}</td>
                     <td className="px-6 py-4 text-slate-300 font-mono">{b.start_time} - {b.end_time}</td>
-                    <td className="px-6 py-4 font-bold text-[#00B074]">{(b.total_price || 0).toLocaleString('vi-VN')}₫</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-bold border ${
-                        b.status === 'confirmed' || b.status === 'completed'
-                          ? 'bg-[#00B074]/10 text-[#00B074] border-[#00B074]/20'
-                          : b.status === 'cancelled'
-                          ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                          : 'bg-amber-500/10 text-[#E59E0B] border-[#E59E0B]/20'
-                      }`}>
-                        {b.status === 'confirmed' ? 'Đã xác nhận' : b.status === 'cancelled' ? 'Đã hủy' : b.status || 'Chờ xử lý'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-xs">
-                      <div className="flex items-center gap-1.5">
-                        {b.source === 'app' ? <Smartphone className="w-3.5 h-3.5 text-slate-400" /> : b.source === 'phone' ? <Phone className="w-3.5 h-3.5 text-slate-400" /> : <User className="w-3.5 h-3.5 text-slate-400" />}
-                        {b.source === 'app' ? 'App' : b.source === 'phone' ? 'Điện thoại' : 'Trực tiếp'}
-                      </div>
-                    </td>
                     <td className="px-6 py-4 text-right">
                       <button
                         type="button"
@@ -392,7 +385,7 @@ const ListView: React.FC<{
               })
             ) : (
               <tr>
-                <td colSpan={10} className="px-6 py-12 text-center text-slate-500">
+                <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
                   Không có lịch đặt nào trong khoảng thời gian này
                 </td>
               </tr>
@@ -400,6 +393,32 @@ const ListView: React.FC<{
           </tbody>
         </table>
       </div>
+      
+      {listTotalPages && listTotalPages > 1 && setListPage && listPage && (
+        <div className="flex items-center justify-between border-t border-white/[0.08] px-6 py-4 bg-[#0A111E]/80">
+          <p className="text-[10px] text-slate-400 font-bold">
+            Trang <span className="text-white">{listPage}</span> / {listTotalPages}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={listPage <= 1}
+              onClick={() => setListPage(prev => prev - 1)}
+              className="flex h-8 items-center justify-center rounded-lg border border-white/[0.08] bg-[#0E1524] px-3 text-[10px] font-bold text-slate-400 hover:text-white hover:border-white/20 transition disabled:opacity-50 disabled:pointer-events-none"
+            >
+              Trang trước
+            </button>
+            <button
+              type="button"
+              disabled={listPage >= listTotalPages}
+              onClick={() => setListPage(prev => prev + 1)}
+              className="flex h-8 items-center justify-center rounded-lg border border-white/[0.08] bg-[#0E1524] px-3 text-[10px] font-bold text-slate-400 hover:text-white hover:border-white/20 transition disabled:opacity-50 disabled:pointer-events-none"
+            >
+              Trang sau
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -416,7 +435,10 @@ export const OwnerBookingScheduleBoard: React.FC<{
   courtsData: OwnerCourt[];
   bookingsData: OwnerBooking[];
   fetchScheduleData: () => Promise<void>;
-}> = ({ viewMode, currentDate, setCurrentDate, courtsData, bookingsData, fetchScheduleData }) => {
+  listPage?: number;
+  setListPage?: React.Dispatch<React.SetStateAction<number>>;
+  listTotalPages?: number;
+}> = ({ viewMode, currentDate, setCurrentDate, courtsData, bookingsData, fetchScheduleData, listPage, setListPage, listTotalPages }) => {
   const [schedule, setSchedule] = useState<ScheduleState>([]);
   const [modal, setModal] = useState<ModalState>(CLOSED);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -499,8 +521,10 @@ export const OwnerBookingScheduleBoard: React.FC<{
                 endHour: eh + em / 60,
                 tone: b.tone || accent,
                 note: b.note,
-                status: b.status,
+                status: getDisplayStatus(b.status, dateStr, b.end_time),
                 dayIndex: dIdx,
+                totalPrice: b.total_price,
+                date: b.date,
               };
             });
           }
@@ -523,7 +547,9 @@ export const OwnerBookingScheduleBoard: React.FC<{
                 endHour: eh + em / 60,
                 tone: b.tone || accent,
                 note: b.note,
-                status: b.status,
+                status: getDisplayStatus(b.status, currentDate, b.end_time),
+                totalPrice: b.total_price,
+                date: b.date,
               };
             }),
             bookingsByDay
@@ -569,7 +595,8 @@ export const OwnerBookingScheduleBoard: React.FC<{
         tone: b.tone, note: b.note ?? '',
         status: b.status || 'confirmed', 
         source: b.source || 'app',
-        date: currentDate,
+        date: b.date || currentDate,
+        totalPrice: b.totalPrice,
       },
     });
   }, [schedule]);
@@ -594,9 +621,10 @@ export const OwnerBookingScheduleBoard: React.FC<{
         endHour: eh + em / 60,
         tone: b.tone || 'blue',
         note: b.note || '',
-        status: b.status as any,
+        status: getDisplayStatus(b.status, b.date, b.end_time) as any,
         source: b.source as any,
         date: b.date,
+        totalPrice: b.total_price,
       }
     });
   }, [courtsData]);
@@ -800,6 +828,9 @@ export const OwnerBookingScheduleBoard: React.FC<{
               bookingsData={bookingsData}
               courtsData={courtsData}
               onDetailClick={openListDetail}
+              listPage={listPage}
+              setListPage={setListPage}
+              listTotalPages={listTotalPages}
             />
           </div>
         )}

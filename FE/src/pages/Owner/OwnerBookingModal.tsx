@@ -19,6 +19,7 @@ export type BookingModalData = {
   status: 'confirmed' | 'pending' | 'completed' | 'cancelled';
   source: 'app' | 'phone' | 'walkin';
   date: string;
+  totalPrice?: number;
 };
 
 type OwnerBookingModalProps = {
@@ -69,6 +70,7 @@ const mkDefault = (p: Partial<BookingModalData>): BookingModalData => ({
   status: p.status ?? 'confirmed',
   source: p.source ?? 'phone',
   date: p.date ?? new Date().toISOString().split('T')[0],
+  totalPrice: p.totalPrice,
 });
 
 /* ── Micro-components ── */
@@ -261,7 +263,7 @@ export const OwnerBookingModal: React.FC<OwnerBookingModalProps> = ({
               {/* Divider */}
               <div style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
 
-              {/* Facility + Court + Date (add mode only) */}
+              {/* Facility + Court (add mode only) */}
               {isAdd && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
@@ -278,17 +280,15 @@ export const OwnerBookingModal: React.FC<OwnerBookingModalProps> = ({
                       {courts.map(c => <option key={c} value={c}>{c}</option>)}
                     </SelectEl>
                   </div>
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <Label required>Ngày đặt</Label>
-                    <InputEl 
-                      type="date" 
-                      value={form.date} 
-                      min={new Date().toISOString().split('T')[0]}
-                      onChange={e => set('date', e.target.value)} 
-                    />
-                  </div>
                 </div>
               )}
+
+              {/* Ngày đặt */}
+              <div>
+                <Label required>Ngày đặt</Label>
+                {isView ? <StaticVal>{form.date}</StaticVal>
+                  : <InputEl type="date" min={new Date().toISOString().split('T')[0]} value={form.date} onChange={e => set('date', e.target.value)} />}
+              </div>
 
               {/* Customer name */}
               <div>
@@ -347,6 +347,18 @@ export const OwnerBookingModal: React.FC<OwnerBookingModalProps> = ({
                   </div>
                 )}
               </div>
+
+              {/* Tổng tiền */}
+              {form.totalPrice !== undefined && (
+                <div>
+                  <Label>Tổng tiền</Label>
+                  <StaticVal>
+                    <span className="font-bold text-[#00B074]">
+                      {form.totalPrice.toLocaleString('vi-VN')}₫
+                    </span>
+                  </StaticVal>
+                </div>
+              )}
 
               {/* Status */}
               <div>

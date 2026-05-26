@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { OwnerSidebar } from './OwnerSidebar';
 import { OwnerBookingScheduleBoard } from './OwnerBookingScheduleBoard';
-import { getOwnerCourts, getOwnerBookings, getOwnerRevenue, type OwnerCourt, type OwnerBooking, type OwnerRevenueResponse } from '../../Axios/Axios';
+import { getOwnerCourts, getOwnerBookings, getOwnerListBookings, getOwnerRevenue, type OwnerCourt, type OwnerBooking, type OwnerRevenueResponse } from '../../Axios/Axios';
 
 type BookingViewMode = 'day' | 'week' | 'list';
 
@@ -24,6 +24,9 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
 
   const [courtsData, setCourtsData] = useState<OwnerCourt[]>([]);
   const [bookingsData, setBookingsData] = useState<OwnerBooking[]>([]);
+  const [listBookingsData, setListBookingsData] = useState<OwnerBooking[]>([]);
+  const [listPage, setListPage] = useState(1);
+  const [listTotalPages, setListTotalPages] = useState(1);
   const [filteredBookings, setFilteredBookings] = useState<OwnerBooking[]>([]);
   const [revenueData, setRevenueData] = useState<OwnerRevenueResponse | null>(null);
   
@@ -72,18 +75,24 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
       setCourtsData(courts);
       setBookingsData(bks);
       setRevenueData(revenue);
+
+      if (viewMode === 'list') {
+        const listRes = await getOwnerListBookings({ page: listPage, limit: 10 });
+        setListBookingsData(listRes.bookings);
+        setListTotalPages(listRes.pagination.totalPages);
+      }
     } catch (err) {
       console.error('Lỗi khi tải dữ liệu booking:', err);
     }
-  }, [currentDate, viewMode]);
+  }, [currentDate, viewMode, listPage]);
 
   useEffect(() => {
     fetchScheduleData();
-  }, [fetchScheduleData]);
+  }, [fetchScheduleData, listPage]);
 
   // Apply filters and search
   useEffect(() => {
-    let filtered = bookingsData;
+    let filtered = viewMode === 'list' ? listBookingsData : bookingsData;
     if (selectedFacility !== 'all') {
       filtered = filtered.filter(b => b.court_id === selectedFacility);
     }
@@ -99,7 +108,7 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
       );
     }
     setFilteredBookings(filtered);
-  }, [bookingsData, selectedFacility, selectedStatus, searchQuery]);
+  }, [bookingsData, listBookingsData, viewMode, selectedFacility, selectedStatus, searchQuery]);
   const filteredCourts = useMemo(() => {
     if (selectedFacility === 'all') return courtsData;
     return courtsData.filter(c => c.id === selectedFacility);
@@ -407,6 +416,9 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
                 courtsData={filteredCourts}
                 bookingsData={filteredBookings}
                 fetchScheduleData={fetchScheduleData}
+                listPage={listPage}
+                setListPage={setListPage}
+                listTotalPages={listTotalPages}
               />
             </div>
 
