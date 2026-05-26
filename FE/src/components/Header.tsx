@@ -96,12 +96,7 @@ export const Header: React.FC = () => {
             >
               Tìm Sân
             </Link>
-            <Link
-              to="/home"
-              className="hover:text-[#00F5FF] transition duration-300 font-bold"
-            >
-              Cộng Đồng
-            </Link>
+
             {isPlayerAccount && (
               <Link
                 to="/matchmaking"
