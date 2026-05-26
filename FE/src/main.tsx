@@ -15,6 +15,19 @@ import { OwnerRevenueScreen } from './pages/Owner/OwnerRevenueScreen';
 import { OwnerBookingScheduleScreen } from './pages/Owner/OwnerBookingScheduleScreen';
 import { OwnerSettingsScreen } from './pages/Owner/OwnerSettingsScreen';
 import { AdminDashboardPage } from './pages/Admin/AdminDashboardPage';
+import { AdminManageStadiumPage } from './pages/Admin/AdminManageStadiumPage';
+import { AdminManageUsersPage } from './pages/Admin/AdminManageUsersPage';
+import { AdminModerationPage } from './pages/Admin/AdminModerationPage';
+import { AdminVoucherPage } from './pages/Admin/AdminVoucherPage';
+import { AdminIncomePage } from './pages/Admin/AdminIncomePage';
+import { PriceListPage } from './pages/HomePage/PriceListPage';
+import CourtDetailPage from './pages/CourtDetailPage/CourtDetailPage';
+import { WalletPage } from './pages/WalletPage/WalletPage';
+import { CheckoutPage } from './pages/CheckoutPage/CheckoutPage';
+import { PaymentSuccessPage } from './pages/CheckoutPage/PaymentSuccessPage';
+import { VietQRPaymentPage } from './pages/CheckoutPage/VietQRPaymentPage';
+import { MatchmakingPage } from './pages/MatchmakingPage/MatchmakingPage';
+import { ChatPage } from './pages/ChatPage/ChatPage';
 import './index.css';
 
 function App() {
@@ -44,6 +57,11 @@ function App() {
         <Route path="/owner/bookings" element={<OwnerBookingScheduleScreen />} />
         <Route path="/owner/settings" element={<OwnerSettingsScreen />} />
         <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+        <Route path="/admin/manage-stadiums" element={<AdminManageStadiumPage />} />
+        <Route path="/admin/manage-users" element={<AdminManageUsersPage />} />
+        <Route path="/admin/moderation" element={<AdminModerationPage />} />
+        <Route path="/admin/vouchers" element={<AdminVoucherPage />} />
+        <Route path="/admin/income" element={<AdminIncomePage />} />
         <Route
           path="/profile"
           element={
@@ -65,6 +83,49 @@ function App() {
           element={
             <Layout>
               <FindFieldPage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/bang-gia"
+          element={
+            <Layout>
+              <PriceListPage />
+            </Layout>
+          }
+        />
+        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/payment-qr" element={<VietQRPaymentPage />} />
+        <Route path="/payment-success" element={<PaymentSuccessPage />} />
+        <Route
+          path="/courts/:courtId"
+          element={
+            <Layout>
+              <CourtDetailPage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/matchmaking"
+          element={
+            <Layout>
+              <MatchmakingPage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/chat/:matchId"
+          element={
+            <Layout>
+              <ChatPage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/wallet"
+          element={
+            <Layout>
+              <WalletPage />
             </Layout>
           }
         />

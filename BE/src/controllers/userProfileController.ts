@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
-import jwt from "jsonwebtoken";
-import User, { IUserRole } from "../models/userModel.js";
+import { IUserRole } from "../models/userModel.js";
 
 function resolveRedirectPathByRole(role: IUserRole): string {
 	if (role === "owner") {
@@ -21,6 +20,7 @@ function buildUserProfileResponse(user: {
 	avatarUrl?: string;
 	email: string;
 	phone?: string;
+	address?: string;
 	userName: string;
 	role?: IUserRole;
 	createdAt?: Date;
@@ -35,6 +35,7 @@ function buildUserProfileResponse(user: {
 		avatarUrl: user.avatarUrl?.trim() || "",
 		email: user.email,
 		phone: user.phone?.trim() || "",
+		address: user.address?.trim() || "",
 		userName: user.userName,
 		role,
 		redirectPath: resolveRedirectPathByRole(role),
@@ -42,55 +43,6 @@ function buildUserProfileResponse(user: {
 	};
 }
 
-function parseBearerToken(authorizationHeader: string | undefined): string | null {
-	if (!authorizationHeader) {
-		return null;
-	}
-
-	const [scheme, token] = authorizationHeader.split(" ");
-	if (scheme !== "Bearer" || !token) {
-		return null;
-	}
-
-	return token;
-}
-
-async function findUserFromAuthorizationHeader(authorizationHeader: string | undefined) {
-	const token = parseBearerToken(authorizationHeader);
-	if (!token) {
-		throw new Error("missing_token");
-	}
-
-	const secret = process.env.JWT_SECRET;
-	if (!secret) {
-		throw new Error("Missing JWT_SECRET in environment variables");
-	}
-
-	let payload: jwt.JwtPayload;
-
-	try {
-		payload = jwt.verify(token, secret) as jwt.JwtPayload;
-	} catch (error: unknown) {
-		if (error instanceof jwt.JsonWebTokenError) {
-			throw new Error("invalid_token");
-		}
-
-		throw error;
-	}
-
-	const userId = payload.sub;
-
-	if (typeof userId !== "string" || !userId) {
-		throw new Error("invalid_token");
-	}
-
-	const user = await User.findById(userId);
-	if (!user) {
-		throw new Error("user_not_found");
-	}
-
-	return user;
-}
 
 function parseDateOfBirth(value: unknown): Date | undefined {
 	if (typeof value !== "string") {
@@ -121,7 +73,7 @@ function normalizeOptionalText(value: unknown): string | undefined {
 
 export async function getCurrentUserProfile(req: Request, res: Response): Promise<void> {
 	try {
-		const user = await findUserFromAuthorizationHeader(req.headers.authorization);
+		const user = req.user!;
 
 		res.status(200).json({
 			message: "current user profile loaded",
@@ -145,17 +97,19 @@ export async function getCurrentUserProfile(req: Request, res: Response): Promis
 
 export async function updateCurrentUserProfile(req: Request, res: Response): Promise<void> {
 	try {
-		const user = await findUserFromAuthorizationHeader(req.headers.authorization);
-		const { name, phone, dateOfBirth, avatarUrl } = req.body as {
+		const user = req.user!;
+		const { name, phone, dateOfBirth, avatarUrl, address } = req.body as {
 			name?: string;
 			phone?: string;
 			dateOfBirth?: string;
 			avatarUrl?: string;
+			address?: string;
 		};
 
 		const normalizedName = normalizeOptionalText(name);
 		const normalizedPhone = normalizeOptionalText(phone);
 		const parsedDateOfBirth = parseDateOfBirth(dateOfBirth);
+		const normalizedAddress = normalizeOptionalText(address);
 		let shouldSave = false;
 
 		if (normalizedName && user.name !== normalizedName) {
@@ -167,6 +121,14 @@ export async function updateCurrentUserProfile(req: Request, res: Response): Pro
 			const nextPhone = normalizedPhone ?? undefined;
 			if (user.phone !== nextPhone) {
 				user.phone = nextPhone;
+				shouldSave = true;
+			}
+		}
+
+		if (address !== undefined) {
+			const nextAddress = normalizedAddress ?? undefined;
+			if (user.address !== nextAddress) {
+				user.address = nextAddress;
 				shouldSave = true;
 			}
 		}
@@ -184,7 +146,7 @@ export async function updateCurrentUserProfile(req: Request, res: Response): Pro
 
 		if (avatarUrl !== undefined) {
 			const normalizedAvatarUrl = normalizeOptionalText(avatarUrl);
-			if (normalizedAvatarUrl && normalizedAvatarUrl.length > 2_000_000) {
+			if (normalizedAvatarUrl && normalizedAvatarUrl.length > 5_000_000) {
 				throw new Error("avatar_too_large");
 			}
 

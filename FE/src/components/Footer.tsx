@@ -59,7 +59,7 @@ export const Footer: React.FC = () => {
                   to="#"
                   className="hover:text-blue-400 transition duration-300 text-sm"
                 >
-                  Đăng Sân Của Bạn
+                  Đăng Kí Sân Của Bạn
                 </Link>
               </li>
               <li>
@@ -67,7 +67,7 @@ export const Footer: React.FC = () => {
                   to="#"
                   className="hover:text-blue-400 transition duration-300 text-sm"
                 >
-                  Bảng Quản Lý
+                  Phần Mềm Quản Lý Sân
                 </Link>
               </li>
               <li>

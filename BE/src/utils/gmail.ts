@@ -28,7 +28,6 @@ function getRequiredEnv(name: string): string {
 	if (!value) {
 		throw new Error(`Missing ${name} in environment variables`);
 	}
-
 	return value;
 }
 
@@ -37,7 +36,6 @@ function getOauthClientId(): string {
 	if (!value) {
 		throw new Error("Missing GMAIL_CLIENT_ID (or GOOGLE_CLIENT_ID) in environment variables");
 	}
-
 	return value;
 }
 
@@ -47,7 +45,6 @@ function getOauthClientSecret(): string {
 	if (!value) {
 		throw new Error("Missing GMAIL_CLIENT_SECRET (or GOOGLE_CLIENT_SECRET) in environment variables");
 	}
-
 	return value;
 }
 
@@ -96,8 +93,15 @@ function buildRawEmail(
 ): string {
 	const boundary = "arena-reset-boundary";
 	const encodedSubject = encodeHeaderUtf8(subject);
+	// Fallback to EMAIL_USER if GMAIL_SENDER_EMAIL is not set, since they have it in .env
+	const senderEmail = process.env.GMAIL_SENDER_EMAIL?.trim() || process.env.EMAIL_USER?.trim();
+	
+	if (!senderEmail) {
+		throw new Error("Missing GMAIL_SENDER_EMAIL or EMAIL_USER in environment variables");
+	}
+
 	const emailLines = [
-		`From: ArenaS <${getRequiredEnv("GMAIL_SENDER_EMAIL")}>`,
+		`From: ArenaS <${senderEmail}>`,
 		`To: ${toEmail}`,
 		`Subject: ${encodedSubject}`,
 		"MIME-Version: 1.0",
@@ -127,7 +131,13 @@ export async function sendResetPasswordEmail({
 }: ResetPasswordEmailPayload): Promise<void> {
 	const clientId = getOauthClientId();
 	const clientSecret = getOauthClientSecret();
-	const refreshToken = getRequiredEnv("GMAIL_REFRESH_TOKEN");
+	
+	// Fallback to check if they named it GOOGLE_REFRESH_TOKEN
+	const refreshToken = process.env.GMAIL_REFRESH_TOKEN?.trim() || process.env.GOOGLE_REFRESH_TOKEN?.trim();
+	
+	if (!refreshToken) {
+		throw new Error("Missing GMAIL_REFRESH_TOKEN in environment variables");
+	}
 
 	const oauth2Client = new google.auth.OAuth2(clientId, clientSecret);
 	oauth2Client.setCredentials({
@@ -135,7 +145,7 @@ export async function sendResetPasswordEmail({
 	});
 
 	const gmail = google.gmail({ version: "v1", auth: oauth2Client });
-	const displayName = toName?.trim() || "ban";
+	const displayName = toName?.trim() || "bạn";
 	const template = getTemplate(locale, displayName);
 	const text = [
 		template.headline,
@@ -149,6 +159,7 @@ export async function sendResetPasswordEmail({
 		template.ignore,
 		`${template.signOff} ${template.team}`,
 	].join("\n");
+	
 	const html = `
 		<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${template.preheader}</div>
 		<div style="font-family:Verdana,Arial,sans-serif;background:#f1f5f9;padding:28px 12px;color:#0f172a;">

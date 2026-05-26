@@ -6,11 +6,14 @@ export interface IUserSkill extends Document {
 	note?: string;
 	level: number;
 	rating_score: number;
+	confidence_score?: number;
+	survey_count?: number;
+	rating_history?: number[];
 	createdAt?: Date;
 	updatedAt?: Date;
 }
 
-interface IUserSkillModel extends Model<IUserSkill> {}
+interface IUserSkillModel extends Model<IUserSkill> { }
 
 const userSkillSchema = new Schema<IUserSkill, IUserSkillModel>(
 	{
@@ -35,6 +38,23 @@ const userSkillSchema = new Schema<IUserSkill, IUserSkillModel>(
 		rating_score: {
 			type: Number,
 			required: true,
+		},
+		confidence_score: {
+			type: Number,
+			required: true,
+			default: 50,
+			min: 10,
+			max: 100,
+		},
+		survey_count: {
+			type: Number,
+			required: true,
+			default: 0,
+		},
+		rating_history: {
+			type: [Number],
+			required: true,
+			default: [],
 		},
 	},
 	{

@@ -56,17 +56,19 @@ const FacebookIcon = () => (
   </svg>
 );
 
-const EnvelopeIcon = () => (
-  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-    <path d="M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1Z" />
-    <path d="m5 8 7 5 7-5" />
-  </svg>
-);
+
 
 const LockIcon = () => (
   <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
     <rect x="4" y="11" width="16" height="9" rx="2" />
     <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+  </svg>
+);
+
+const UserIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
   </svg>
 );
 
@@ -248,7 +250,7 @@ export const LoginPage: React.FC = () => {
         },
       });
     } catch (error: unknown) {
-      setErrorMessage(error instanceof Error ? error.message : 'Đăng nhập thất bại.');
+      setErrorMessage(error instanceof Error ? error.message : 'Đăng nhập thất bại. Email/tên đăng nhập hoặc mật khẩu không chính xác.');
     } finally {
       setIsSubmitting(false);
     }
@@ -293,14 +295,10 @@ export const LoginPage: React.FC = () => {
             </Link>
 
             <div className="max-w-xl pb-6 pt-10 sm:pt-16 lg:pt-0">
-              <div className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.24em] text-blue-400">
-                <span className="text-xl leading-none">⚡</span>
-                Đấu Trường Chờ Bạn
-              </div>
 
               <h1 className="mt-5 max-w-xl text-4xl font-black leading-[0.95] tracking-tight text-white sm:text-5xl lg:text-[4.5rem]">
-                Đặt Sân. Thi Đấu.
-                <span className="block text-blue-500">Chiến Thắng.</span>
+                Đặt Sân
+                <span className="block text-blue-500">Nhanh Chống.</span>
               </h1>
 
               <p className="mt-5 max-w-lg text-base leading-8 text-slate-300 sm:text-lg">
@@ -393,20 +391,20 @@ export const LoginPage: React.FC = () => {
 
               <div className="my-8 flex items-center gap-4 text-sm text-slate-500">
                 <span className="h-px flex-1 bg-white/10" />
-                hoặc tiếp tục với email
+                hoặc tiếp tục với tài khoản
                 <span className="h-px flex-1 bg-white/10" />
               </div>
 
               <form className="space-y-5" onSubmit={handleLogin}>
                 <label className="block space-y-2">
-                  <span className="text-sm font-semibold text-blue-200/90">Địa chỉ Email</span>
+                  <span className="text-sm font-semibold text-blue-200/90">Email hoặc Tên Đăng Nhập</span>
                   <div className="flex h-14 items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 text-slate-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition focus-within:border-blue-400/70 focus-within:bg-white/[0.07]">
                     <span className="text-slate-500">
-                      <EnvelopeIcon />
+                      <UserIcon />
                     </span>
                     <input
-                      type="email"
-                      placeholder="Email hoặc username"
+                      type="text"
+                      placeholder="Nhập email hoặc tên đăng nhập"
                       value={identifier}
                       onChange={(event) => setIdentifier(event.target.value)}
                       autoComplete="username"

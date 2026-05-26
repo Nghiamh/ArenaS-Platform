@@ -1,16 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
-import { createSearchParams, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { getPublicCourts, type PublicCourt } from '../../Axios/Axios';
 
-type SportCategory = {
-  name: string;
-  fields: string;
-  gradient: string;
-  icon: string;
-};
+
 
 type Venue = {
+  id: string;
   name: string;
   sport: string;
   distance: string;
@@ -19,6 +16,31 @@ type Venue = {
   slots: string[];
   tag: string;
   image: string;
+};
+
+const defaultCourtImage =
+  'https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=1280&auto=format&fit=crop';
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(value);
+
+const buildFeaturedVenue = (court: PublicCourt): Venue => {
+  const pricePerHour = Number.isFinite(court.price_per_hour) ? court.price_per_hour : 0;
+  const ratingValue = Number.isFinite(court.avg_rating) ? court.avg_rating : 0;
+  const primarySport = court.sports?.[0]?.trim() || 'Môn thể thao';
+  const location = court.location?.trim() || 'Liên hệ';
+
+  return {
+    id: court.id,
+    name: court.name,
+    sport: primarySport,
+    distance: location,
+    rating: ratingValue.toFixed(1),
+    price: formatCurrency(pricePerHour),
+    slots: [],
+    tag: court.status === 'closed' ? 'Tạm đóng' : 'Đang mở',
+    image: court.images?.[0]?.trim() || defaultCourtImage,
+  };
 };
 
 const container: Variants = {
@@ -41,66 +63,30 @@ const itemUp: Variants = {
   },
 };
 
-const sportCategories: SportCategory[] = [
+const defaultSportCategories = [
   {
     name: 'Bóng Đá',
-    fields: '850+ sân',
-    icon: '⚽',
-    gradient: 'from-emerald-600/90 to-teal-800/80',
+    image: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=400&auto=format&fit=crop',
+    glow: 'bg-emerald-500/30',
+    border: 'border-emerald-500/20 group-hover:border-emerald-500/60',
   },
   {
     name: 'Tennis',
-    fields: '420+ sân',
-    icon: '🎾',
-    gradient: 'from-orange-500/90 to-amber-700/80',
+    image: 'https://media.istockphoto.com/id/1223794261/photo/tennis-court-with-ball-and-net-close-up.jpg?s=612x612&w=0&k=20&c=kPQufmCwyiPQ6A1qEMZ62rucNgEIkDg5y_8f-qZcAN0=',
+    glow: 'bg-orange-500/30',
+    border: 'border-orange-500/20 group-hover:border-orange-500/60',
   },
   {
     name: 'Cầu Lông',
-    fields: '310+ sân',
-    icon: '🏸',
-    gradient: 'from-sky-600/90 to-indigo-800/80',
+    image: 'https://maythongdich.com/uploads/images/vi/news/cau-long-tieng-anh-la-gi.jpg',
+    glow: 'bg-blue-500/30',
+    border: 'border-blue-500/20 group-hover:border-blue-500/60',
   },
   {
     name: 'Pickleball',
-    fields: '180+ sân',
-    icon: '🥎',
-    gradient: 'from-fuchsia-600/85 to-purple-800/80',
-  },
-];
-
-const featuredVenues: Venue[] = [
-  {
-    name: 'Champions Arena',
-    sport: 'Bóng Đá',
-    distance: '1.2 km',
-    rating: '4.9 (187)',
-    price: '360.000',
-    slots: ['17:00', '18:00', '19:00'],
-    tag: 'Đánh giá cao',
-    image:
-      'https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=1280&auto=format&fit=crop',
-  },
-  {
-    name: 'Blue Sky Tennis Club',
-    sport: 'Tennis',
-    distance: '0.8 km',
-    rating: '4.8 (234)',
-    price: '280.000',
-    slots: ['08:00', '10:00', '14:00'],
-    tag: 'Xu hướng',
-    image:
-      'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?q=80&w=1280&auto=format&fit=crop',
-  },
-  {
-    name: 'Urban Pickleball Center',
-    sport: 'Pickleball',
-    distance: '2.1 km',
-    rating: '4.7 (156)',
-    price: '420.000',
-    slots: ['16:00', '18:00', '20:00'],
-    tag: 'Mới',
-    image:
-      'https://images.unsplash.com/photo-1661956602116-aa6865609028?q=80&w=1280&auto=format&fit=crop',
+    image: 'https://img.freepik.com/premium-photo/orange-pickleball-ball-with-paddle-closeup-pickleball-court-with-space-text_600978-7575.jpg',
+    glow: 'bg-purple-500/30',
+    border: 'border-purple-500/20 group-hover:border-purple-500/60',
   },
 ];
 
@@ -193,31 +179,7 @@ const heroRotatingWords = ['Đặt Sân', 'Nhanh Chóng', 'Tiện Lợi'];
 
 const sectionTitleClass = 'text-3xl md:text-5xl font-extrabold tracking-tight text-white';
 
-const hcmcLocationOptions = [
-  'Gần đây',
-  'Quận 1',
-  'Quận 3',
-  'Quận 4',
-  'Quận 5',
-  'Quận 6',
-  'Quận 7',
-  'Quận 8',
-  'Quận 10',
-  'Quận 11',
-  'Quận 12',
-  'Bình Thạnh',
-  'Phú Nhuận',
-  'Tân Bình',
-  'Tân Phú',
-  'Gò Vấp',
-  'Thủ Đức',
-  'Bình Tân',
-  'Hóc Môn',
-  'Bình Chánh',
-  'Nhà Bè',
-  'Củ Chi',
-  'Cần Giờ',
-];
+
 
 type HomeLocationState = {
   toastMessage?: string;
@@ -229,12 +191,11 @@ export const HomePage: React.FC = () => {
   const [activeHeroWordIndex, setActiveHeroWordIndex] = useState(0);
   const [toastMessage, setToastMessage] = useState('');
   const [lastToastLocationKey, setLastToastLocationKey] = useState<string | null>(null);
-  const today = new Date().toISOString().slice(0, 10);
-  const [form, setForm] = useState({
-    sport: 'Bóng Đá',
-    location: 'Gần đây',
-    date: today,
-  });
+  const [featuredVenues, setFeaturedVenues] = useState<Venue[]>([]);
+  const [sportCounts, setSportCounts] = useState<Record<string, number>>({});
+  const [isFeaturedLoading, setIsFeaturedLoading] = useState(true);
+  const [featuredError, setFeaturedError] = useState<string | null>(null);
+
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -242,6 +203,58 @@ export const HomePage: React.FC = () => {
     }, 2200);
 
     return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadFeaturedVenues = async () => {
+      setIsFeaturedLoading(true);
+      setFeaturedError(null);
+
+      try {
+        const courts = await getPublicCourts();
+        const nextVenues = courts.slice(0, 3).map(buildFeaturedVenue);
+
+        // Calculate dynamic counts for sports
+        const counts: Record<string, number> = {
+          'Bóng Đá': 0,
+          'Tennis': 0,
+          'Cầu Lông': 0,
+          'Pickleball': 0
+        };
+
+        courts.forEach(court => {
+          if (!court.sports || !Array.isArray(court.sports)) return;
+          court.sports.forEach(sport => {
+            const lowerSport = sport.toLowerCase();
+            if (lowerSport.includes('bóng đá') || lowerSport.includes('football') || lowerSport.includes('soccer')) counts['Bóng Đá']++;
+            else if (lowerSport.includes('tennis') || lowerSport.includes('quần vợt')) counts['Tennis']++;
+            else if (lowerSport.includes('cầu lông') || lowerSport.includes('badminton')) counts['Cầu Lông']++;
+            else if (lowerSport.includes('pickleball')) counts['Pickleball']++;
+          });
+        });
+
+        if (isMounted) {
+          setFeaturedVenues(nextVenues);
+          setSportCounts(counts);
+        }
+      } catch (error: unknown) {
+        if (isMounted) {
+          setFeaturedError(error instanceof Error ? error.message : 'Không thể tải sân nổi bật.');
+        }
+      } finally {
+        if (isMounted) {
+          setIsFeaturedLoading(false);
+        }
+      }
+    };
+
+    void loadFeaturedVenues();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -268,18 +281,7 @@ export const HomePage: React.FC = () => {
     return () => window.clearTimeout(timeout);
   }, [toastMessage]);
 
-  const handleSearch = (event: React.FormEvent) => {
-    event.preventDefault();
 
-    navigate({
-      pathname: '/tim-san',
-      search: `?${createSearchParams({
-        sport: form.sport,
-        location: form.location,
-        date: form.date,
-      })}`,
-    });
-  };
 
   return (
     <div className="relative overflow-x-clip bg-[radial-gradient(circle_at_15%_10%,rgba(37,99,235,0.22),transparent_30%),radial-gradient(circle_at_90%_10%,rgba(14,165,233,0.18),transparent_28%),linear-gradient(180deg,#020617_0%,#061136_45%,#030712_100%)] text-slate-100">
@@ -353,62 +355,7 @@ export const HomePage: React.FC = () => {
             </motion.p>
           </motion.div>
 
-          <motion.form
-            onSubmit={handleSearch}
-            className="glass-panel relative z-10 grid gap-3 rounded-3xl p-4 shadow-[0_30px_80px_-30px_rgba(37,99,235,0.65)] md:grid-cols-[1.3fr_1.3fr_1fr_auto] md:items-end md:gap-4 md:p-5"
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
-            <label className="space-y-2 text-xs uppercase tracking-[0.14em] text-slate-400">
-              Môn thể thao
-              <select
-                value={form.sport}
-                onChange={(event) => setForm((prev) => ({ ...prev, sport: event.target.value }))}
-                className="h-12 w-full rounded-xl border border-white/10 bg-slate-900/70 px-4 text-sm text-white outline-none transition focus:border-blue-400/70"
-              >
-                <option>Bóng Đá</option>
-                <option>Tennis</option>
-                <option>Cầu Lông</option>
-                <option>Pickleball</option>
-              </select>
-            </label>
 
-            <label className="space-y-2 text-xs uppercase tracking-[0.14em] text-slate-400">
-              Khu vực
-              <select
-                value={form.location}
-                onChange={(event) => setForm((prev) => ({ ...prev, location: event.target.value }))}
-                className="h-12 w-full rounded-xl border border-white/10 bg-slate-900/70 px-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-blue-400/70"
-              >
-                {hcmcLocationOptions.map((option) => (
-                  <option key={option} value={option} className="bg-slate-950 text-white">
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="space-y-2 text-xs uppercase tracking-[0.14em] text-slate-400">
-              Ngày
-              <input
-                type="date"
-                min={today}
-                value={form.date}
-                onChange={(event) => setForm((prev) => ({ ...prev, date: event.target.value }))}
-                className="h-12 w-full rounded-xl border border-white/10 bg-slate-900/70 px-4 text-sm text-white outline-none transition focus:border-blue-400/70"
-              />
-            </label>
-
-            <motion.button
-              type="submit"
-              whileHover={{ y: -2, scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="h-12 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-400 px-6 text-sm font-bold uppercase tracking-[0.08em] text-white shadow-[0_12px_30px_-12px_rgba(59,130,246,0.8)]"
-            >
-              Tìm sân
-            </motion.button>
-          </motion.form>
 
           <motion.div
             className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
@@ -434,22 +381,42 @@ export const HomePage: React.FC = () => {
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">Nổi bật</p>
               <h2 className={sectionTitleClass}>Sân được chọn lọc</h2>
             </div>
-            <button className="text-sm font-semibold text-blue-300 transition hover:text-white">Xem tất cả sân →</button>
+            <button onClick={() => navigate('/tim-san')} className="text-sm font-semibold text-blue-300 transition hover:text-white">Xem tất cả sân →</button>
           </div>
 
           <motion.div
+            key={isFeaturedLoading ? 'loading' : 'loaded'}
             className="grid gap-6 lg:grid-cols-3"
             variants={container}
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, amount: 0.25 }}
           >
+            {isFeaturedLoading && (
+              <div className="rounded-3xl border border-white/10 bg-slate-900/70 p-6 text-center text-sm text-slate-300">
+                Đang tải sân nổi bật...
+              </div>
+            )}
+
+            {featuredError && (
+              <div className="rounded-3xl border border-rose-300/25 bg-rose-500/10 p-6 text-center text-sm text-rose-100">
+                {featuredError}
+              </div>
+            )}
+
+            {!isFeaturedLoading && !featuredError && featuredVenues.length === 0 && (
+              <div className="rounded-3xl border border-white/10 bg-slate-900/70 p-6 text-center text-sm text-slate-300">
+                Chưa có sân nổi bật để hiển thị.
+              </div>
+            )}
+
             {featuredVenues.map((venue) => (
               <motion.article
-                key={venue.name}
+                key={venue.id}
                 variants={itemUp}
                 whileHover={{ y: -8 }}
-                className="group overflow-hidden rounded-3xl border border-white/10 bg-slate-900/70 shadow-[0_24px_60px_-32px_rgba(15,23,42,0.9)]"
+                onClick={() => navigate(`/courts/${venue.id}`)}
+                className="group cursor-pointer overflow-hidden rounded-3xl border border-white/10 bg-slate-900/70 shadow-[0_24px_60px_-32px_rgba(15,23,42,0.9)]"
               >
                 <div className="relative h-56 overflow-hidden">
                   <img
@@ -470,7 +437,9 @@ export const HomePage: React.FC = () => {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h3 className="text-xl font-bold text-white">{venue.name}</h3>
-                      <p className="mt-1 text-sm text-slate-400">⭐ {venue.rating} • 📍 {venue.distance}</p>
+                      <p className="mt-1 text-sm text-slate-400">
+                        {Number(venue.rating) > 0 ? `⭐ ${Number(venue.rating).toFixed(1)}` : <span className="italic opacity-60">Chưa có đánh giá</span>}
+                      </p>
                     </div>
                     <div className="text-right">
                       <p className="text-xs uppercase tracking-[0.12em] text-slate-400">từ</p>
@@ -480,11 +449,17 @@ export const HomePage: React.FC = () => {
                   </div>
 
                   <div className="flex flex-wrap gap-2">
-                    {venue.slots.map((slot) => (
-                      <span key={slot} className="rounded-full border border-white/15 px-3 py-1 text-xs text-slate-200">
-                        {slot}
+                    {venue.slots.length > 0 ? (
+                      venue.slots.map((slot) => (
+                        <span key={slot} className="rounded-full border border-white/15 px-3 py-1 text-xs text-slate-200">
+                          {slot}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="rounded-full border border-white/15 px-3 py-1 text-xs text-slate-200">
+                        Liên hệ để xem lịch trống
                       </span>
-                    ))}
+                    )}
                   </div>
 
                   <button className="w-full rounded-xl bg-gradient-to-r from-blue-500 to-cyan-400 py-3 text-sm font-bold uppercase tracking-[0.08em] text-white transition hover:brightness-110">
@@ -560,10 +535,10 @@ export const HomePage: React.FC = () => {
         <div className="mx-auto max-w-7xl">
           <div className="mb-10 flex items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">Khám phá</p>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-400">Khám phá</p>
               <h2 className={sectionTitleClass}>Tìm theo môn thể thao</h2>
             </div>
-            <button className="text-sm font-semibold text-blue-300 transition hover:text-white">Xem tất cả môn →</button>
+            <button className="text-sm font-semibold text-slate-300 transition hover:text-white">Xem tất cả môn →</button>
           </div>
 
           <motion.div
@@ -573,21 +548,33 @@ export const HomePage: React.FC = () => {
             whileInView="visible"
             viewport={{ once: true, amount: 0.3 }}
           >
-            {sportCategories.map((sport) => (
-              <motion.article
-                key={sport.name}
-                variants={itemUp}
-                whileHover={{ y: -6, scale: 1.01 }}
-                className={`group relative h-56 overflow-hidden rounded-3xl bg-gradient-to-br ${sport.gradient} p-6`}
-              >
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(255,255,255,0.18),transparent_50%)]" />
-                <div className="relative z-10 flex h-full flex-col justify-end">
-                  <span className="mb-2 text-3xl">{sport.icon}</span>
-                  <h3 className="text-3xl font-black text-white">{sport.name}</h3>
-                  <p className="mt-1 text-sm text-white/85">{sport.fields}</p>
-                </div>
-              </motion.article>
-            ))}
+            {defaultSportCategories.map((sport) => {
+              const count = sportCounts[sport.name] || 0;
+              return (
+                <motion.article
+                  key={sport.name}
+                  variants={itemUp}
+                  whileHover={{ y: -6, scale: 1.02 }}
+                  className={`group relative h-72 flex flex-col items-center justify-center overflow-hidden rounded-[2rem] bg-[#0A101D] border transition-colors duration-500 ${sport.border} p-6`}
+                >
+                  {/* Glow effect */}
+                  <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full blur-[60px] opacity-40 transition-opacity duration-500 group-hover:opacity-80 ${sport.glow}`} />
+
+                  {/* Image Center */}
+                  <div className="relative z-10 w-32 h-32 mb-8 mt-2 overflow-hidden rounded-2xl shadow-2xl transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110">
+                    <img src={sport.image} alt={sport.name} className="w-full h-full object-cover" />
+                  </div>
+
+                  {/* Text Bottom Left */}
+                  <div className="relative z-10 flex w-full flex-col items-start mt-auto">
+                    <h3 className="text-xl font-bold text-white">{sport.name}</h3>
+                    <p className="mt-1 text-sm font-bold text-emerald-400">
+                      {count > 0 ? `${count} sân` : '1 sân'}
+                    </p>
+                  </div>
+                </motion.article>
+              )
+            })}
           </motion.div>
         </div>
       </section>

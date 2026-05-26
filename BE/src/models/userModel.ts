@@ -9,6 +9,7 @@ export interface IUser extends Document {
 	avatarUrl?: string;
 	email: string;
 	phone?: string;
+	address?: string;
 	userName: string;
 	role: IUserRole;
 	password?: string;
@@ -16,10 +17,15 @@ export interface IUser extends Document {
 	authProvider: "local" | "google";
 	resetPasswordTokenHash?: string;
 	resetPasswordExpiresAt?: Date;
+	xp?: number;
+	points?: number;
+	reliability_score?: number;
+	completed_matches_count?: number;
+	canceled_matches_count?: number;
 	comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
-interface IUserModel extends Model<IUser> {}
+interface IUserModel extends Model<IUser> { }
 
 const userSchema = new Schema<IUser, IUserModel>(
 	{
@@ -45,6 +51,11 @@ const userSchema = new Schema<IUser, IUserModel>(
 			trim: true,
 		},
 		phone: {
+			type: String,
+			required: false,
+			trim: true,
+		},
+		address: {
 			type: String,
 			required: false,
 			trim: true,
@@ -85,6 +96,33 @@ const userSchema = new Schema<IUser, IUserModel>(
 		resetPasswordExpiresAt: {
 			type: Date,
 			required: false,
+		},
+		xp: {
+			type: Number,
+			required: true,
+			default: 0,
+		},
+		points: {
+			type: Number,
+			required: true,
+			default: 0,
+		},
+		reliability_score: {
+			type: Number,
+			required: true,
+			default: 100,
+			min: 0,
+			max: 100,
+		},
+		completed_matches_count: {
+			type: Number,
+			required: true,
+			default: 0,
+		},
+		canceled_matches_count: {
+			type: Number,
+			required: true,
+			default: 0,
 		},
 	},
 	{

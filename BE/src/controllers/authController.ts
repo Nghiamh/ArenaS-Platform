@@ -413,7 +413,7 @@ export async function loginWithGoogle(req: Request, res: Response): Promise<void
 				shouldSave = true;
 			}
 
-			if (googleProfile.picture && user.avatarUrl !== googleProfile.picture) {
+			if (googleProfile.picture && !user.avatarUrl?.trim()) {
 				user.avatarUrl = googleProfile.picture;
 				shouldSave = true;
 			}
@@ -511,10 +511,11 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
 		res.status(200).json({
 			message: "Gửi email đặt lại mật khẩu thành công. Vui lòng kiểm tra hộp thư của bạn.",
 		});
-	} catch (error: unknown) {
+	} catch (error: any) {
+		console.error("Forgot password error:", error);
 		res.status(500).json({
 			message: "failed to send reset email",
-			error: error instanceof Error ? error.message : "unknown error",
+			error: error?.response?.data || error?.message || String(error),
 		});
 	}
 }
@@ -556,6 +557,91 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
 	} catch (error: unknown) {
 		res.status(500).json({
 			message: "failed to reset password",
+			error: error instanceof Error ? error.message : "unknown error",
+		});
+	}
+}
+
+export async function createAdmin(req: Request, res: Response): Promise<void> {
+	try {
+		const { userName, password, email, name, adminSecret } = req.body as {
+			userName?: string;
+			password?: string;
+			email?: string;
+			name?: string;
+			adminSecret?: string;
+		};
+
+		// Validate admin secret key
+		const expectedSecret = process.env.ADMIN_SECRET_KEY;
+		if (!expectedSecret || adminSecret !== expectedSecret) {
+			res.status(403).json({
+				message: "Invalid or missing admin secret key",
+			});
+			return;
+		}
+
+		// Validate required fields
+		if (!userName || !password || !email) {
+			res.status(400).json({
+				message: "userName, password, and email are required",
+			});
+			return;
+		}
+
+		if (password.length < 6) {
+			res.status(400).json({
+				message: "password must be at least 6 characters",
+			});
+			return;
+		}
+
+		const normalizedEmail = normalizeEmail(email);
+		const normalizedUserName = normalizeUserName(userName);
+		const normalizedName = normalizeUserName(name ?? userName);
+
+		// Check if user already exists
+		const existedUser = await User.findOne({
+			$or: [{ email: normalizedEmail }, { userName: normalizedUserName }],
+		});
+
+		if (existedUser) {
+			const conflictField =
+				existedUser.email === normalizedEmail ? "email" : "userName";
+			res.status(409).json({
+				message: `${conflictField} already exists`,
+			});
+			return;
+		}
+
+		// Check if admin already exists
+		const existingAdmin = await User.findOne({ role: "admin" });
+		if (existingAdmin) {
+			res.status(409).json({
+				message: "Admin account already exists",
+			});
+			return;
+		}
+
+		// Create admin user
+		const createdAdmin = await User.create({
+			name: normalizedName,
+			email: normalizedEmail,
+			userName: normalizedUserName,
+			password,
+			role: "admin",
+			authProvider: "local",
+		});
+
+		const authResponse = buildAuthResponse(createdAdmin);
+
+		res.status(201).json({
+			message: "Admin account created successfully",
+			...authResponse,
+		});
+	} catch (error: unknown) {
+		res.status(500).json({
+			message: "failed to create admin account",
 			error: error instanceof Error ? error.message : "unknown error",
 		});
 	}

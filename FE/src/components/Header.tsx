@@ -55,6 +55,12 @@ export const Header: React.FC = () => {
   const profileInitial = currentUser?.name?.trim().charAt(0).toUpperCase() || currentUser?.userName?.trim().charAt(0).toUpperCase() || 'U';
   const profileAvatarUrl = (currentUser?.avatarUrl ?? '').trim();
   const isPlayerAccount = currentUser?.role === 'user';
+  const isManagementAccount = currentUser?.role === 'owner' || currentUser?.role === 'admin';
+  const profileMenuPath = currentUser?.role === 'owner'
+    ? '/owner/dashboard'
+    : currentUser?.role === 'admin'
+      ? '/admin/dashboard'
+      : '/profile';
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
@@ -82,12 +88,7 @@ export const Header: React.FC = () => {
 
           {/* Navigation Menu */}
           <nav className="hidden md:flex items-center gap-8">
-            <Link
-              to="#"
-              className="hover:text-blue-400 transition duration-300 font-medium"
-            >
-              Môn Thể Thao
-            </Link>
+          
             <Link
               to="/tim-san"
               className="hover:text-blue-400 transition duration-300 font-medium"
@@ -95,25 +96,33 @@ export const Header: React.FC = () => {
               Tìm Sân
             </Link>
             <Link
-              to="#"
+              to="/home"
               className="hover:text-blue-400 transition duration-300 font-medium"
             >
               Cộng Đồng
             </Link>
+            {isPlayerAccount && (
+              <Link
+                to="/matchmaking"
+                className="hover:text-blue-400 transition duration-300 font-medium flex items-center gap-1.5"
+              >
+                Tìm Đối Thủ
+              </Link>
+            )}
             {!isPlayerAccount && (
               <>
                 <Link
-                  to="#"
+                  to="/bang-gia"
                   className="hover:text-blue-400 transition duration-300 font-medium"
                 >
                   Bảng Giá
                 </Link>
-                <Link
+                {/* <Link
                   to="#"
                   className="hover:text-blue-400 transition duration-300 font-medium"
                 >
                   Dành Cho Chủ Sân
-                </Link>
+                </Link> */}
               </>
             )}
           </nav>
@@ -146,12 +155,24 @@ export const Header: React.FC = () => {
                       type="button"
                       onClick={() => {
                         setIsProfileMenuOpen(false);
-                        navigate('/profile');
+                        navigate(profileMenuPath);
                       }}
                       className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-blue-100 transition hover:bg-blue-500/20"
                     >
-                      Trang cá nhân
+                      {isManagementAccount ? 'Trang quản lí' : 'Trang cá nhân'}
                     </button>
+                    {isManagementAccount && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsProfileMenuOpen(false);
+                          navigate('/profile');
+                        }}
+                        className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-blue-100 transition hover:bg-blue-500/20"
+                      >
+                        Trang cá nhân
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={handleLogout}
