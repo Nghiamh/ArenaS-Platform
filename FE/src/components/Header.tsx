@@ -88,12 +88,7 @@ export const Header: React.FC = () => {
 
           {/* Navigation Menu */}
           <nav className="hidden md:flex items-center gap-8">
-            <Link
-              to="#"
-              className="hover:text-blue-400 transition duration-300 font-medium"
-            >
-              Môn Thể Thao
-            </Link>
+          
             <Link
               to="/tim-san"
               className="hover:text-blue-400 transition duration-300 font-medium"
@@ -101,11 +96,19 @@ export const Header: React.FC = () => {
               Tìm Sân
             </Link>
             <Link
-              to="#"
+              to="/home"
               className="hover:text-blue-400 transition duration-300 font-medium"
             >
               Cộng Đồng
             </Link>
+            {isPlayerAccount && (
+              <Link
+                to="/matchmaking"
+                className="hover:text-blue-400 transition duration-300 font-medium flex items-center gap-1.5"
+              >
+                Tìm Đối Thủ
+              </Link>
+            )}
             {!isPlayerAccount && (
               <>
                 <Link

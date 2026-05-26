@@ -10,6 +10,7 @@ type FindFieldLocationState = {
   sport?: string;
   directionsCourt?: any;
   showMap?: boolean;
+  fromMatch?: string;
 };
 
 type SortOption = 'distanceAsc' | 'priceAsc' | 'priceDesc' | 'ratingDesc';
@@ -218,6 +219,7 @@ export const FindFieldPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [searchText, setSearchText] = useState('');
   const [activeSportFilter, setActiveSportFilter] = useState<SportName | 'all'>('all');
+  const [fromMatch, setFromMatch] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -236,6 +238,10 @@ export const FindFieldPage: React.FC = () => {
 
     if (state?.showMap) {
       setViewMode('map');
+    }
+
+    if (state?.fromMatch) {
+      setFromMatch(state.fromMatch);
     }
 
     if (state?.sport && defaultSports.includes(state.sport as SportName)) {
@@ -488,7 +494,7 @@ export const FindFieldPage: React.FC = () => {
                         key={venue.id} layout
                         initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                         transition={{ delay: idx * 0.02, duration: 0.22 }}
-                        onClick={() => navigate(`/courts/${venue.id}`)}
+                        onClick={() => navigate(`/courts/${venue.id}`, { state: { fromMatch } })}
                         className="group cursor-pointer overflow-hidden rounded-2xl border border-white/8 bg-[#141e2b] transition hover:border-[#1D9E75]/50 hover:shadow-[0_12px_32px_-16px_rgba(29,158,117,0.25)]"
                       >
                         <div className="relative h-44 overflow-hidden">

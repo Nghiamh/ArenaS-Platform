@@ -71,8 +71,8 @@ export async function getCurrentUserSkills(req: Request, res: Response): Promise
 		const errorMessage = error instanceof Error ? error.message : "unknown error";
 		const statusCode =
 			errorMessage === "missing_token" ||
-			errorMessage === "invalid_token" ||
-			errorMessage === "user_not_found"
+				errorMessage === "invalid_token" ||
+				errorMessage === "user_not_found"
 				? 401
 				: errorMessage === "skills_disabled_for_role"
 					? 403
@@ -128,8 +128,8 @@ export async function createCurrentUserSkill(req: Request, res: Response): Promi
 
 		const statusCode =
 			errorMessage === "missing_token" ||
-			errorMessage === "invalid_token" ||
-			errorMessage === "user_not_found"
+				errorMessage === "invalid_token" ||
+				errorMessage === "user_not_found"
 				? 401
 				: errorMessage === "skills_disabled_for_role"
 					? 403
@@ -203,8 +203,8 @@ export async function updateCurrentUserSkill(req: Request, res: Response): Promi
 
 		const statusCode =
 			errorMessage === "missing_token" ||
-			errorMessage === "invalid_token" ||
-			errorMessage === "user_not_found"
+				errorMessage === "invalid_token" ||
+				errorMessage === "user_not_found"
 				? 401
 				: errorMessage === "skills_disabled_for_role"
 					? 403
@@ -251,8 +251,8 @@ export async function deleteCurrentUserSkill(req: Request, res: Response): Promi
 		const errorMessage = error instanceof Error ? error.message : "unknown error";
 		const statusCode =
 			errorMessage === "missing_token" ||
-			errorMessage === "invalid_token" ||
-			errorMessage === "user_not_found"
+				errorMessage === "invalid_token" ||
+				errorMessage === "user_not_found"
 				? 401
 				: errorMessage === "skills_disabled_for_role"
 					? 403

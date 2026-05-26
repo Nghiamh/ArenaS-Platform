@@ -6,6 +6,8 @@ import Court from '../models/courtModel.js';
 import { BookingModel } from '../models/bookingModel.js';
 import Wallet from '../models/walletModel.js';
 import WalletTransaction from '../models/walletTransactionModel.js';
+import Match from '../models/matchModel.js';
+import ChatMessage from '../models/chatMessageModel.js';
 
 // Helper: Khởi tạo các mốc thời gian 30 phút
 function generateTimeSlots(openTime: string, closeTime: string): ISlot[] {
@@ -287,7 +289,7 @@ export async function userBookCourt(req: Request, res: Response) {
 	try {
 		const user = req.user!;
 		const userId = user._id;
-		const { court_id, sub_court_id, date, start_time, end_time } = req.body;
+		const { court_id, sub_court_id, date, start_time, end_time, match_id } = req.body;
 
 		// --- Validate input ---
 		if (!court_id || !mongoose.Types.ObjectId.isValid(court_id)) {
@@ -466,6 +468,50 @@ export async function userBookCourt(req: Request, res: Response) {
 		// --- COMMIT ---
 		await session.commitTransaction();
 		session.endSession();
+
+		// --- Bước 10: Notify đối thủ qua Socket nếu có match_id ---
+		if (match_id && mongoose.Types.ObjectId.isValid(match_id)) {
+			try {
+				const match = await Match.findById(match_id);
+				if (match) {
+					const io = req.app.get('io');
+					const payload = {
+						matchId: match_id,
+						bookedByUserId: userId.toString(),
+						courtName: court.name,
+						date,
+						start_time,
+						end_time,
+					};
+					// Notify all participants about court booking via dedicated event
+					for (const p of match.participants) {
+						io.to(`user:${p.toString()}`).emit('court_booked', payload);
+					}
+
+					// Create a chat message to notify the other player in the chat history
+					const formattedPrice = new Intl.NumberFormat('vi-VN').format(total_price);
+					const courtDisplayName = subCourt?.name ? `${court.name} - ${subCourt.name}` : court.name;
+					const msgContent = `Tôi đã đặt sân thành công!\nTên sân: ${courtDisplayName}\nNgày giờ: ${date} ${start_time} - ${end_time}\nGiá: ${formattedPrice} đ`;
+					const newMsg = new ChatMessage({
+						match_id,
+						sender_id: userId,
+						message: msgContent,
+					});
+					await newMsg.save();
+
+					// Emit the chat message to the match room
+					io.to(`match:${match_id}`).emit('receive_message', {
+						_id: newMsg._id,
+						match_id,
+						sender_id: userId.toString(),
+						message: newMsg.message,
+						createdAt: newMsg.createdAt,
+					});
+				}
+			} catch (socketErr) {
+				console.error('Socket notify court_booked error:', socketErr);
+			}
+		}
 
 		return res.status(201).json({
 			message: 'Đặt sân thành công!',

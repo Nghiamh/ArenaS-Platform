@@ -413,7 +413,7 @@ export async function loginWithGoogle(req: Request, res: Response): Promise<void
 				shouldSave = true;
 			}
 
-			if (googleProfile.picture && user.avatarUrl !== googleProfile.picture) {
+			if (googleProfile.picture && !user.avatarUrl?.trim()) {
 				user.avatarUrl = googleProfile.picture;
 				shouldSave = true;
 			}

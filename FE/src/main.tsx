@@ -26,6 +26,8 @@ import { WalletPage } from './pages/WalletPage/WalletPage';
 import { CheckoutPage } from './pages/CheckoutPage/CheckoutPage';
 import { PaymentSuccessPage } from './pages/CheckoutPage/PaymentSuccessPage';
 import { VietQRPaymentPage } from './pages/CheckoutPage/VietQRPaymentPage';
+import { MatchmakingPage } from './pages/MatchmakingPage/MatchmakingPage';
+import { ChatPage } from './pages/ChatPage/ChatPage';
 import './index.css';
 
 function App() {
@@ -100,6 +102,22 @@ function App() {
           element={
             <Layout>
               <CourtDetailPage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/matchmaking"
+          element={
+            <Layout>
+              <MatchmakingPage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/chat/:matchId"
+          element={
+            <Layout>
+              <ChatPage />
             </Layout>
           }
         />

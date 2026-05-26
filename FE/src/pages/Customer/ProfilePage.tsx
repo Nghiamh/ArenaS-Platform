@@ -435,6 +435,34 @@ export const ProfilePage: React.FC = () => {
         return bookingDate >= thirtyDaysAgo;
       });
 
+      recentBookings.sort((a, b) => {
+        const aSuccess = a.status === 'confirmed' || a.status === 'completed';
+        const aEnd = new Date(`${a.date.split('T')[0]}T${a.end_time}:00`);
+        const aPlayed = aSuccess && aEnd < new Date();
+        let aScore = 3; // Đã hủy
+        if (aSuccess && !aPlayed) aScore = 1; // Thành công
+        else if (aSuccess && aPlayed) aScore = 2; // Đã chơi
+
+        const bSuccess = b.status === 'confirmed' || b.status === 'completed';
+        const bEnd = new Date(`${b.date.split('T')[0]}T${b.end_time}:00`);
+        const bPlayed = bSuccess && bEnd < new Date();
+        let bScore = 3; // Đã hủy
+        if (bSuccess && !bPlayed) bScore = 1; // Thành công
+        else if (bSuccess && bPlayed) bScore = 2; // Đã chơi
+
+        if (aScore !== bScore) {
+          return aScore - bScore;
+        }
+
+        const aTime = new Date(`${a.date.split('T')[0]}T${a.start_time}:00`).getTime();
+        const bTime = new Date(`${b.date.split('T')[0]}T${b.start_time}:00`).getTime();
+
+        if (aScore === 1) {
+          return aTime - bTime; // Sắp tới: gần nhất xếp trước
+        }
+        return bTime - aTime; // Đã qua/Đã hủy: mới nhất xếp trước
+      });
+
       setMyBookings(recentBookings);
     } catch (e) {
       console.error("Failed to fetch bookings", e);
