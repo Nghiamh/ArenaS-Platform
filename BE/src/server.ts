@@ -25,6 +25,7 @@ import bookingRoutes from "./routes/bookingRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 import planRoutes from "./routes/planRoutes.js";
 import { startSubscriptionCron } from "./cron/subscriptionCron.js";
+import { startPayoutCron } from "./cron/payoutCron.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 
@@ -99,6 +100,9 @@ async function startServer(): Promise<void> {
 
 	// Start the matchmaking worker (runs every 5 seconds)
 	startMatchmakingWorker(io);
+	// Initialize background jobs
+	startSubscriptionCron();
+	startPayoutCron();
 
 	await new Promise<void>((resolve, reject) => {
 		const server = httpServer.listen(PORT, () => {

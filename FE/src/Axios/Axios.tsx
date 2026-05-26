@@ -603,8 +603,28 @@ export async function deleteOwnerCourt(courtId: string): Promise<BasicMessageRes
 }
 
 // ---------------------------------------------------------------------------
-// COURT DASHBOARD / STATS
+// COURT DASHBOARD / STATS / REVENUE
 // ---------------------------------------------------------------------------
+
+export type OwnerRevenueResponse = {
+	today: number;
+	todayTrend: number;
+	week: number;
+	weekTrend: number;
+	month: number;
+	monthTrend: number;
+};
+
+export async function getOwnerRevenue(): Promise<OwnerRevenueResponse> {
+	try {
+		const { data } = await axiosClient.get<OwnerRevenueResponse>('/wallet/revenue', {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
 
 export type CourtDashboard = {
 	_id: string;

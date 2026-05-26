@@ -265,10 +265,13 @@ export async function userBookCourt(req: Request, res: Response) {
 			throw new Error('cannot_book_past_date');
 		}
 
-		// --- Bước 1: Tìm Court + Sub-court ---
 		const court = await Court.findById(court_id).session(session);
 		if (!court) {
 			throw new Error('court_not_found');
+		}
+
+		if (court.owner_id.toString() === userId.toString()) {
+			throw new Error('owner_cannot_book_own_court');
 		}
 
 		const subCourt = court.sub_courts?.find(
@@ -368,16 +371,36 @@ export async function userBookCourt(req: Request, res: Response) {
 		await courtSlot.save({ session });
 
 		// --- Bước 8: Tạo WalletTransaction ---
-		await WalletTransaction.create(
-			[{
+		const transactionsToCreate: any[] = [
+			{
 				walletId: wallet._id,
 				bookingId: newBooking._id,
 				amount: total_price,
 				type: 'payment',
 				status: 'completed',
-			}],
-			{ session }
-		);
+			}
+		];
+
+		// Tạo ví chủ sân nếu chưa có (số dư không cộng ngay)
+		let ownerWallet = await Wallet.findOne({ userId: court.owner_id }).session(session);
+		if (!ownerWallet) {
+			ownerWallet = new Wallet({
+				userId: court.owner_id,
+				balance: 0,
+				status: 'active',
+			});
+			await ownerWallet.save({ session });
+		}
+
+		transactionsToCreate.push({
+			walletId: ownerWallet._id,
+			bookingId: newBooking._id,
+			amount: total_price,
+			type: 'deposit',
+			status: 'pending', // Tiền được giữ ở trạng thái chờ (hold) cho đến khi trận đấu kết thúc
+		});
+
+		await WalletTransaction.insertMany(transactionsToCreate, { session });
 
 		// --- Bước 9: Cập nhật Dashboard ---
 		const dashDate = new Date(date);
@@ -427,6 +450,7 @@ export async function userBookCourt(req: Request, res: Response) {
 			missing_fields: { status: 400, message: 'Thiếu thông tin đặt sân' },
 			cannot_book_past_date: { status: 400, message: 'Không thể đặt sân cho ngày đã qua' },
 			court_not_found: { status: 404, message: 'Không tìm thấy sân' },
+			owner_cannot_book_own_court: { status: 403, message: 'Bạn không thể tự đặt lịch cho sân của chính mình' },
 			invalid_time_range: { status: 400, message: 'Khung thời gian không hợp lệ' },
 			slot_already_booked: { status: 400, message: 'Khung giờ này đã có người đặt. Vui lòng chọn giờ khác.' },
 			wallet_not_found: { status: 404, message: 'Chưa có ví. Vui lòng tạo ví trước.' },
@@ -575,6 +599,58 @@ export async function cancelBooking(req: Request, res: Response) {
 					status: 'completed',
 				});
 				await tx.save({ session });
+			}
+
+			// Xử lý giao dịch nhận tiền của chủ sân
+			const ownerPortion = booking.total_price - refundAmount;
+			
+			// 1. Tìm xem có giao dịch pending nào không
+			const pendingOwnerTx = await WalletTransaction.findOne({
+				bookingId: booking._id,
+				type: 'deposit',
+				status: 'pending'
+			}).session(session);
+
+			if (pendingOwnerTx) {
+				if (ownerPortion > 0) {
+					// Chủ sân nhận được phần còn lại (phí hủy sân)
+					pendingOwnerTx.amount = ownerPortion;
+					await pendingOwnerTx.save({ session });
+				} else {
+					// Hoàn 100%, chủ sân không nhận được tiền
+					pendingOwnerTx.status = 'failed';
+					await pendingOwnerTx.save({ session });
+				}
+			} else {
+				// 2. Nếu không có pending, có thể tiền đã được cộng (completed)
+				// Cần hoàn lại bằng cách trừ ví và tạo giao dịch payment
+				const completedOwnerTx = await WalletTransaction.findOne({
+					bookingId: booking._id,
+					type: 'deposit',
+					status: 'completed'
+				}).session(session);
+
+				if (completedOwnerTx) {
+					const court = await Court.findById(booking.court_id).session(session);
+					if (court) {
+						const ownerWallet = await Wallet.findOne({ userId: court.owner_id }).session(session);
+						if (ownerWallet) {
+							// Trừ phần tiền hoàn lại cho khách ra khỏi ví chủ sân
+							ownerWallet.balance -= refundAmount;
+							await ownerWallet.save({ session });
+
+							// Tạo giao dịch ghi nhận việc hoàn tiền (trừ tiền ví chủ sân)
+							const ownerRefundTx = new WalletTransaction({
+								walletId: ownerWallet._id,
+								bookingId: booking._id,
+								type: 'payment', // payment nghĩa là trừ tiền khỏi ví
+								amount: refundAmount,
+								status: 'completed',
+							});
+							await ownerRefundTx.save({ session });
+						}
+					}
+				}
 			}
 		}
 

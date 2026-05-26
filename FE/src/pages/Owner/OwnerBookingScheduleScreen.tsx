@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { OwnerSidebar } from './OwnerSidebar';
 import { OwnerBookingScheduleBoard } from './OwnerBookingScheduleBoard';
-import { getOwnerCourts, getOwnerBookings, type OwnerCourt, type OwnerBooking } from '../../Axios/Axios';
+import { getOwnerCourts, getOwnerBookings, getOwnerRevenue, type OwnerCourt, type OwnerBooking, type OwnerRevenueResponse } from '../../Axios/Axios';
 
 type BookingViewMode = 'day' | 'week' | 'list';
 
@@ -25,6 +25,7 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
   const [courtsData, setCourtsData] = useState<OwnerCourt[]>([]);
   const [bookingsData, setBookingsData] = useState<OwnerBooking[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<OwnerBooking[]>([]);
+  const [revenueData, setRevenueData] = useState<OwnerRevenueResponse | null>(null);
   
   const [selectedFacility, setSelectedFacility] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -62,13 +63,15 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
         end = next.toISOString().split('T')[0];
       }
 
-      const [courts, bks] = await Promise.all([
+      const [courts, bks, revenue] = await Promise.all([
         getOwnerCourts(),
-        getOwnerBookings({ startDate: start, endDate: end })
+        getOwnerBookings({ startDate: start, endDate: end }),
+        getOwnerRevenue()
       ]);
 
       setCourtsData(courts);
       setBookingsData(bks);
+      setRevenueData(revenue);
     } catch (err) {
       console.error('Lỗi khi tải dữ liệu booking:', err);
     }
@@ -117,7 +120,7 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
     return b.status === 'confirmed' && currentMinutes >= startMins && currentMinutes <= endMins;
   }).length;
 
-  const todayRevenue = todayBookings.reduce((sum, b) => sum + (b.total_price || 0), 0);
+  const todayRevenue = revenueData?.today || 0;
 
   // Format dynamic dates in Vietnamese
   const getVNDateLabel = (dateStr: string) => {

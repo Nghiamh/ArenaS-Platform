@@ -4,12 +4,7 @@ import type { Variants } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getPublicCourts, type PublicCourt } from '../../Axios/Axios';
 
-type SportCategory = {
-  name: string;
-  fields: string;
-  gradient: string;
-  icon: string;
-};
+
 
 type Venue = {
   id: string;
@@ -68,30 +63,30 @@ const itemUp: Variants = {
   },
 };
 
-const sportCategories: SportCategory[] = [
+const defaultSportCategories = [
   {
     name: 'Bóng Đá',
-    fields: '850+ sân',
-    icon: '⚽',
-    gradient: 'from-emerald-600/90 to-teal-800/80',
+    image: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=400&auto=format&fit=crop',
+    glow: 'bg-emerald-500/30',
+    border: 'border-emerald-500/20 group-hover:border-emerald-500/60',
   },
   {
     name: 'Tennis',
-    fields: '420+ sân',
-    icon: '🎾',
-    gradient: 'from-orange-500/90 to-amber-700/80',
+    image: 'https://media.istockphoto.com/id/1223794261/photo/tennis-court-with-ball-and-net-close-up.jpg?s=612x612&w=0&k=20&c=kPQufmCwyiPQ6A1qEMZ62rucNgEIkDg5y_8f-qZcAN0=',
+    glow: 'bg-orange-500/30',
+    border: 'border-orange-500/20 group-hover:border-orange-500/60',
   },
   {
     name: 'Cầu Lông',
-    fields: '310+ sân',
-    icon: '🏸',
-    gradient: 'from-sky-600/90 to-indigo-800/80',
+    image: 'https://maythongdich.com/uploads/images/vi/news/cau-long-tieng-anh-la-gi.jpg',
+    glow: 'bg-blue-500/30',
+    border: 'border-blue-500/20 group-hover:border-blue-500/60',
   },
   {
     name: 'Pickleball',
-    fields: '180+ sân',
-    icon: '🥎',
-    gradient: 'from-fuchsia-600/85 to-purple-800/80',
+    image: 'https://img.freepik.com/premium-photo/orange-pickleball-ball-with-paddle-closeup-pickleball-court-with-space-text_600978-7575.jpg',
+    glow: 'bg-purple-500/30',
+    border: 'border-purple-500/20 group-hover:border-purple-500/60',
   },
 ];
 
@@ -197,6 +192,7 @@ export const HomePage: React.FC = () => {
   const [toastMessage, setToastMessage] = useState('');
   const [lastToastLocationKey, setLastToastLocationKey] = useState<string | null>(null);
   const [featuredVenues, setFeaturedVenues] = useState<Venue[]>([]);
+  const [sportCounts, setSportCounts] = useState<Record<string, number>>({});
   const [isFeaturedLoading, setIsFeaturedLoading] = useState(true);
   const [featuredError, setFeaturedError] = useState<string | null>(null);
 
@@ -220,8 +216,28 @@ export const HomePage: React.FC = () => {
         const courts = await getPublicCourts();
         const nextVenues = courts.slice(0, 3).map(buildFeaturedVenue);
 
+        // Calculate dynamic counts for sports
+        const counts: Record<string, number> = {
+          'Bóng Đá': 0,
+          'Tennis': 0,
+          'Cầu Lông': 0,
+          'Pickleball': 0
+        };
+
+        courts.forEach(court => {
+          if (!court.sports || !Array.isArray(court.sports)) return;
+          court.sports.forEach(sport => {
+            const lowerSport = sport.toLowerCase();
+            if (lowerSport.includes('bóng đá') || lowerSport.includes('football') || lowerSport.includes('soccer')) counts['Bóng Đá']++;
+            else if (lowerSport.includes('tennis') || lowerSport.includes('quần vợt')) counts['Tennis']++;
+            else if (lowerSport.includes('cầu lông') || lowerSport.includes('badminton')) counts['Cầu Lông']++;
+            else if (lowerSport.includes('pickleball')) counts['Pickleball']++;
+          });
+        });
+
         if (isMounted) {
           setFeaturedVenues(nextVenues);
+          setSportCounts(counts);
         }
       } catch (error: unknown) {
         if (isMounted) {
@@ -519,10 +535,10 @@ export const HomePage: React.FC = () => {
         <div className="mx-auto max-w-7xl">
           <div className="mb-10 flex items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">Khám phá</p>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-400">Khám phá</p>
               <h2 className={sectionTitleClass}>Tìm theo môn thể thao</h2>
             </div>
-            <button className="text-sm font-semibold text-blue-300 transition hover:text-white">Xem tất cả môn →</button>
+            <button className="text-sm font-semibold text-slate-300 transition hover:text-white">Xem tất cả môn →</button>
           </div>
 
           <motion.div
@@ -532,21 +548,33 @@ export const HomePage: React.FC = () => {
             whileInView="visible"
             viewport={{ once: true, amount: 0.3 }}
           >
-            {sportCategories.map((sport) => (
-              <motion.article
-                key={sport.name}
-                variants={itemUp}
-                whileHover={{ y: -6, scale: 1.01 }}
-                className={`group relative h-56 overflow-hidden rounded-3xl bg-gradient-to-br ${sport.gradient} p-6`}
-              >
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(255,255,255,0.18),transparent_50%)]" />
-                <div className="relative z-10 flex h-full flex-col justify-end">
-                  <span className="mb-2 text-3xl">{sport.icon}</span>
-                  <h3 className="text-3xl font-black text-white">{sport.name}</h3>
-                  <p className="mt-1 text-sm text-white/85">{sport.fields}</p>
-                </div>
-              </motion.article>
-            ))}
+            {defaultSportCategories.map((sport) => {
+              const count = sportCounts[sport.name] || 0;
+              return (
+                <motion.article
+                  key={sport.name}
+                  variants={itemUp}
+                  whileHover={{ y: -6, scale: 1.02 }}
+                  className={`group relative h-72 flex flex-col items-center justify-center overflow-hidden rounded-[2rem] bg-[#0A101D] border transition-colors duration-500 ${sport.border} p-6`}
+                >
+                  {/* Glow effect */}
+                  <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full blur-[60px] opacity-40 transition-opacity duration-500 group-hover:opacity-80 ${sport.glow}`} />
+
+                  {/* Image Center */}
+                  <div className="relative z-10 w-32 h-32 mb-8 mt-2 overflow-hidden rounded-2xl shadow-2xl transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110">
+                    <img src={sport.image} alt={sport.name} className="w-full h-full object-cover" />
+                  </div>
+
+                  {/* Text Bottom Left */}
+                  <div className="relative z-10 flex w-full flex-col items-start mt-auto">
+                    <h3 className="text-xl font-bold text-white">{sport.name}</h3>
+                    <p className="mt-1 text-sm font-bold text-emerald-400">
+                      {count > 0 ? `${count} sân` : '1 sân'}
+                    </p>
+                  </div>
+                </motion.article>
+              )
+            })}
           </motion.div>
         </div>
       </section>
