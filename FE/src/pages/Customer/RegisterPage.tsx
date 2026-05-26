@@ -125,24 +125,24 @@ export const RegisterPage: React.FC = () => {
           <div className="absolute inset-0 opacity-[0.18] [background-image:linear-gradient(rgba(148,163,184,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.12)_1px,transparent_1px)] [background-size:56px_56px]" />
           <div className="absolute -left-24 top-20 h-72 w-72 rounded-full bg-blue-500/20 blur-3xl" />
 
-          <div className="relative z-10 flex w-full flex-col justify-between px-10 py-10">
+          <div className="relative z-10 flex w-full flex-col justify-between px-6 py-6 sm:px-8 sm:py-8 lg:px-10 lg:py-10">
             <Link to="/home" className="inline-flex items-center gap-3 self-start">
               <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-xl font-black text-white shadow-[0_12px_30px_-10px_rgba(37,99,235,0.9)]">
                 A
               </span>
-              <span className="text-2xl font-extrabold tracking-tight text-white">ArenaS</span>
+              <span className="text-2xl font-extrabold tracking-tight text-white drop-shadow-[0_2px_18px_rgba(0,0,0,0.45)]">ArenaS</span>
             </Link>
 
-            <div className="max-w-xl pb-10">
-              <div className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.24em] text-blue-400">
+            <div className="my-auto max-w-xl pb-10 pt-16 lg:pt-0">
+              <div className="inline-flex items-center gap-4 text-sm font-semibold uppercase tracking-[0.24em] text-blue-400">
                 <span className="text-xl leading-none">⚡</span>
                 Gia Nhập Cộng Đồng
               </div>
-              <h1 className="mt-5 text-5xl font-black leading-[0.95] tracking-tight text-white">
-                Tạo Tài Khoản.
-                <span className="block text-blue-500">Đặt Sân Dễ Dàng.</span>
+              <h1 className="mt-5 max-w-xl text-4xl font-black leading-[1.4] tracking-tight text-white sm:text-5xl lg:text-[4.5rem]">
+                Tạo Tài Khoản
+                <span className="mt-[10px] block text-blue-500">Đặt Sân Dễ Dàng</span>
               </h1>
-              <p className="mt-6 max-w-lg text-lg leading-8 text-slate-300">
+              <p className="mt-5 max-w-lg text-base leading-8 text-slate-300 sm:text-lg">
                 Đăng ký trong 1 phút để đặt sân, kết nối đối thủ và quản lý lịch thi đấu ngay trên ArenaS.
               </p>
             </div>

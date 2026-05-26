@@ -298,7 +298,7 @@ export const LoginPage: React.FC = () => {
 
               <h1 className="mt-5 max-w-xl text-4xl font-black leading-[0.95] tracking-tight text-white sm:text-5xl lg:text-[4.5rem]">
                 Đặt Sân
-                <span className="block text-blue-500">Nhanh Chống.</span>
+                <span className="block text-blue-500">Nhanh Chống</span>
               </h1>
 
               <p className="mt-5 max-w-lg text-base leading-8 text-slate-300 sm:text-lg">
