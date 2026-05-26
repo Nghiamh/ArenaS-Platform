@@ -192,7 +192,7 @@ export const PriceListPage: React.FC = () => {
   const [selectedActionType, setSelectedActionType] = useState<'renew' | 'upgrade' | 'downgrade' | null>(null);
 
   const isYearly = billingCycle === 'yearly';
-  const savingsLabelClass = isYearly ? 'text-emerald-200' : 'text-emerald-100';
+
 
   // Current user access level
   const currentPlanSortOrder = currentSubscription?.planId?.sortOrder || 1;
