@@ -540,7 +540,7 @@ export const FindFieldPage: React.FC = () => {
           >
             {topBar}
             <div className="flex-1 overflow-hidden">
-              <CourtMap targetCourt={directionsCourt} />
+              <CourtMap targetCourt={directionsCourt} activeSportProp={activeSportFilter === 'all' ? undefined : SPORT_TO_API[activeSportFilter as SportName]} />
             </div>
           </motion.div>
         )}
