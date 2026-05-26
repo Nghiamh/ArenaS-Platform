@@ -1013,6 +1013,7 @@ export type UserBookingPayload = {
 	date: string;
 	start_time: string;
 	end_time: string;
+	match_id?: string;
 };
 
 export type UserBookingResponse = {

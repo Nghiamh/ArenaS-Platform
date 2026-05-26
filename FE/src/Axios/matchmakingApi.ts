@@ -114,6 +114,7 @@ export type ChatHistoryResponse = {
 	votesRemaining?: number;
 	chat_deleted_by?: string[];
 	canVote?: boolean;
+	court_id?: string;
 	pagination?: {
 		page: number;
 		limit: number;

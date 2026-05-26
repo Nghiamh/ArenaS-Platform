@@ -7,7 +7,7 @@ import {
 } from '../../Axios/Axios';
 import { BookingModal } from '../../components/BookingModal';
 
-type LocationState = { court?: PublicCourt };
+type LocationState = { court?: PublicCourt; fromMatch?: string };
 
 const DEFAULT_IMG =
   'https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=1600&auto=format&fit=crop';
@@ -809,6 +809,7 @@ const CourtDetailPage: React.FC = () => {
             date: selectedDateStr,
             start_time: selectedSlot.startTime,
             end_time: selectedSlot.endTime,
+            ...(state?.fromMatch ? { match_id: state.fromMatch } : {}),
           }}
           pricePerHour={court.price_per_hour || 0}
           onSuccess={() => {
