@@ -511,10 +511,11 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
 		res.status(200).json({
 			message: "Gửi email đặt lại mật khẩu thành công. Vui lòng kiểm tra hộp thư của bạn.",
 		});
-	} catch (error: unknown) {
+	} catch (error: any) {
+		console.error("Forgot password error:", error);
 		res.status(500).json({
 			message: "failed to send reset email",
-			error: error instanceof Error ? error.message : "unknown error",
+			error: error?.response?.data || error?.message || String(error),
 		});
 	}
 }
