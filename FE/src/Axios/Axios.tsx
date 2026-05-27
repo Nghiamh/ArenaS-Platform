@@ -107,6 +107,8 @@ export type UserSkill = {
 	sport: string;
 	note?: string;
 	level: number;
+	play_frequency?: number;
+	play_vibe?: "casual" | "balanced" | "competitive";
 	rating_score: number;
 	createdAt?: string;
 	updatedAt?: string;
@@ -127,6 +129,8 @@ export type UserSkillPayload = {
 	note?: string;
 	level: number;
 	rating_score: number;
+	play_frequency?: number;
+	play_vibe?: string;
 };
 
 type ApiErrorPayload = {
