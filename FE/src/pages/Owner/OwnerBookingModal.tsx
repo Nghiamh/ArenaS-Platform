@@ -277,7 +277,7 @@ export const OwnerBookingModal: React.FC<OwnerBookingModalProps> = ({
                     <Label required>Sân</Label>
                     <SelectEl value={form.courtName} onChange={e => set('courtName', e.target.value)}>
                       <option value="">-- Chọn --</option>
-                      {courts.map(c => <option key={c} value={c}>{c}</option>)}
+                      {courts.map((c, i) => <option key={`${c}-${i}`} value={c}>{c}</option>)}
                     </SelectEl>
                   </div>
                 </div>
