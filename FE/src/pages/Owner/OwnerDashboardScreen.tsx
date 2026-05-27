@@ -219,7 +219,7 @@ export const OwnerDashboardScreen: React.FC = () => {
   }, [bookings, courts]);
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[#020B1F] text-slate-100">
+    <div className="relative min-h-screen overflow-x-hidden bg-[#0A0A0B] text-slate-100">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_18%,rgba(37,99,235,0.2),transparent_34%),radial-gradient(circle_at_75%_0%,rgba(14,165,233,0.12),transparent_28%),radial-gradient(circle_at_50%_100%,rgba(59,130,246,0.08),transparent_40%)]" />
       <div className="pointer-events-none absolute inset-0 opacity-[0.25] [background-image:linear-gradient(rgba(71,85,105,0.2)_1px,transparent_1px),linear-gradient(90deg,rgba(71,85,105,0.2)_1px,transparent_1px)] [background-size:70px_70px]" />
 

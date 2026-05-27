@@ -38,8 +38,8 @@ const STATUS_CHIP = {
   default:   { bg: 'from-cyan-600/15 to-cyan-500/30',    border: 'border-cyan-400/40',    shadow: 'rgba(6,182,212,0.25)',  text: 'text-cyan-300' },
 };
 
-const COL   = '250px repeat(16, 200px)';
-const WIDTH = '3450px';
+const COL   = `250px repeat(${bookingHours.length}, 200px)`;
+const WIDTH = `${250 + bookingHours.length * 200}px`;
 const HC    = bookingHours.length;
 const fmt   = (h: number) => `${String(Math.floor(h)).padStart(2, '0')}:${(h % 1) * 60 === 30 ? '30' : '00'}`;
 const WEEK_COL = 'minmax(230px,270px) repeat(7,minmax(150px,1fr))';
@@ -58,8 +58,8 @@ const getDisplayStatus = (status: string, date: string, endTime: string) => {
 /* ═══════════════════════════════════════
    Booking chip (day view)
    ═══════════════════════════════════════ */
-const Chip: React.FC<{ b: any; onClick: () => void }> = ({ b, onClick }) => {
-  const s    = b.startHour - 7;
+const Chip: React.FC<{ b: any; onClick: () => void; track?: number; totalTracks?: number }> = ({ b, onClick, track = 0, totalTracks = 1 }) => {
+  const s    = b.startHour - bookingHours[0];
   const span = b.endHour - b.startHour;
   
   // Pick chip tone based on booking status
@@ -71,6 +71,10 @@ const Chip: React.FC<{ b: any; onClick: () => void }> = ({ b, onClick }) => {
     ? `BK-${b.bookingId.substring(b.bookingId.length - 4).toUpperCase()}` 
     : 'BK-0000';
 
+  const heightPercent = 100 / totalTracks;
+  const chipTop = `calc(${track * heightPercent}% + 6px)`;
+  const chipHeight = `calc(${heightPercent}% - 12px)`;
+
   return (
     <motion.button
       type="button"
@@ -78,11 +82,13 @@ const Chip: React.FC<{ b: any; onClick: () => void }> = ({ b, onClick }) => {
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-      className={`group absolute top-[6px] bottom-[6px] z-20 overflow-hidden rounded-xl border bg-gradient-to-r
+      className={`group absolute z-20 overflow-hidden rounded-xl border bg-gradient-to-r
         text-left transition-all hover:brightness-110 hover:scale-[1.01] hover:z-30 ${t.bg} ${t.border}`}
       style={{
         left: `calc(${(s / HC) * 100}% + 4px)`,
         width: `calc(${(span / HC) * 100}% - 8px)`,
+        top: chipTop,
+        height: chipHeight,
         minWidth: 40,
         boxShadow: `0 8px 20px -8px ${t.shadow}`,
       }}
@@ -122,40 +128,70 @@ const AddSlot: React.FC<{ onClick: () => void }> = ({ onClick }) => (
 /* ═══════════════════════════════════════
    Court row
    ═══════════════════════════════════════ */
+const getBookingsWithTracks = (bookings: any[]) => {
+  const sorted = [...(bookings || [])].sort((a, b) => a.startHour - b.startHour);
+  const tracks: number[] = [];
+  const result = [];
+  for (const b of sorted) {
+    let placed = false;
+    for (let i = 0; i < tracks.length; i++) {
+      if (tracks[i] <= b.startHour) {
+        tracks[i] = b.endHour;
+        result.push({ ...b, track: i });
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) {
+      tracks.push(b.endHour);
+      result.push({ ...b, track: tracks.length - 1 });
+    }
+  }
+  return { bookings: result, totalTracks: Math.max(1, tracks.length) };
+};
+
+/* ═══════════════════════════════════════
+   Court row
+   ═══════════════════════════════════════ */
 const CourtRow: React.FC<{
   court: any;
   onChipClick: (b: any, bIdx: number) => void;
   onAddClick: () => void;
-}> = ({ court, onChipClick, onAddClick }) => (
-  <div
-    className="grid border-t border-white/[0.05] hover:bg-white/[0.01] transition-colors"
-    style={{ gridTemplateColumns: COL, width: WIDTH }}
-  >
-    {/* Court label */}
-    <div className="flex min-h-[64px] items-center gap-3 px-5 py-3 border-r border-white/[0.05]">
-      <div className={`h-2 w-2 flex-shrink-0 rounded-full ${court.open ? 'bg-[#00B074]' : 'bg-slate-600'}`} />
-      <div>
-        <p className="text-xs font-black text-white">{court.name}</p>
-        <p className="mt-0.5 text-[10px] text-slate-500 font-semibold">{court.capacity}</p>
+}> = ({ court, onChipClick, onAddClick }) => {
+  const { bookings: trackedBookings, totalTracks } = getBookingsWithTracks(court.bookings);
+  const minH = Math.max(64, totalTracks * 44 + 12);
+
+  return (
+    <div
+      className="group grid border-t border-white/[0.05] hover:bg-[#101011] transition-colors"
+      style={{ gridTemplateColumns: COL, width: WIDTH }}
+    >
+      {/* Court label */}
+      <div className="sticky left-0 z-40 flex items-center gap-3 px-5 py-3 border-r border-white/[0.05] bg-[#0A0A0B] group-hover:bg-[#101011] transition-colors" style={{ minHeight: minH }}>
+        <div className={`h-2 w-2 flex-shrink-0 rounded-full ${court.open ? 'bg-[#00B074]' : 'bg-slate-600'}`} />
+        <div>
+          <p className="text-xs font-black text-white">{court.name}</p>
+          <p className="mt-0.5 text-[10px] text-slate-500 font-semibold">{court.capacity}</p>
+        </div>
+      </div>
+
+      {/* Timeline */}
+      <div className="relative" style={{ gridColumn: '2 / -1', minHeight: minH }}>
+        {bookingHours.map((_, i) => (
+          <div
+            key={i}
+            className="absolute top-0 bottom-0 border-r border-white/[0.03]"
+            style={{ left: `${(i / HC) * 100}%`, pointerEvents: 'none' }}
+          />
+        ))}
+        <AddSlot onClick={onAddClick} />
+        {trackedBookings.map((b: any, bIdx: number) => (
+          <Chip key={`${court.name}-${b.customer}-${b.startHour}-${bIdx}`} b={b} onClick={() => onChipClick(b, bIdx)} track={b.track} totalTracks={totalTracks} />
+        ))}
       </div>
     </div>
-
-    {/* Timeline */}
-    <div className="relative min-h-[64px]" style={{ gridColumn: '2 / -1', position: 'relative' }}>
-      {bookingHours.map((_, i) => (
-        <div
-          key={i}
-          className="absolute top-0 bottom-0 border-r border-white/[0.03]"
-          style={{ left: `${(i / HC) * 100}%`, pointerEvents: 'none' }}
-        />
-      ))}
-      <AddSlot onClick={onAddClick} />
-      {court.bookings.map((b: any, bIdx: number) => (
-        <Chip key={`${court.name}-${b.customer}-${b.startHour}-${bIdx}`} b={b} onClick={() => onChipClick(b, bIdx)} />
-      ))}
-    </div>
-  </div>
-);
+  );
+};
 
 /* ═══════════════════════════════════════
    Facility section
@@ -169,10 +205,10 @@ const FacilitySection: React.FC<{
   <section className="border-t border-white/[0.05] first:border-t-0">
     {/* Facility header */}
     <div
-      className="grid items-center bg-white/[0.015]"
+      className="grid items-center bg-[#0A0A0B]"
       style={{ gridTemplateColumns: COL, width: WIDTH }}
     >
-      <div className="flex items-center gap-2.5 px-5 py-3.5 border-r border-white/[0.05]">
+      <div className="sticky left-0 z-40 flex items-center gap-2.5 px-5 py-3.5 border-r border-white/[0.05] bg-[#0A0A0B]">
         <span className={`inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-md ${ACCENT[facility.accent] || ACCENT.blue}`}>
           <span className="h-1 w-1 rounded-full bg-current" />
         </span>
@@ -236,8 +272,8 @@ const WeekView: React.FC<{
   });
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0E1524]/60">
-      <div className="grid border-b border-white/[0.08] bg-[#0A111E]/80" style={{ gridTemplateColumns: WEEK_COL }}>
+    <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#101011]">
+      <div className="grid border-b border-white/[0.08] bg-[#0A0A0B]" style={{ gridTemplateColumns: WEEK_COL }}>
         <div className="border-r border-white/[0.06] px-5 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-500">Cơ sở / Sân</div>
         {weekDays.map(d => (
           <div key={d.key} className="border-r border-white/[0.06] px-3 py-3 text-center last:border-r-0">
@@ -345,10 +381,10 @@ const ListView: React.FC<{
   };
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0E1524]/60">
+    <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#101011]">
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-xs text-slate-300">
-          <thead className="bg-[#0A111E]/80 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-white/[0.08]">
+          <thead className="bg-[#0A0A0B] text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-white/[0.08]">
             <tr>
               <th className="px-6 py-4">Mã Đơn</th>
               <th className="px-6 py-4">Khách hàng</th>
@@ -395,7 +431,7 @@ const ListView: React.FC<{
       </div>
       
       {listTotalPages && listTotalPages > 1 && setListPage && listPage && (
-        <div className="flex items-center justify-between border-t border-white/[0.08] px-6 py-4 bg-[#0A111E]/80">
+        <div className="flex items-center justify-between border-t border-white/[0.08] px-6 py-4 bg-[#0A0A0B]">
           <p className="text-[10px] text-slate-400 font-bold">
             Trang <span className="text-white">{listPage}</span> / {listTotalPages}
           </p>
@@ -404,7 +440,7 @@ const ListView: React.FC<{
               type="button"
               disabled={listPage <= 1}
               onClick={() => setListPage(prev => prev - 1)}
-              className="flex h-8 items-center justify-center rounded-lg border border-white/[0.08] bg-[#0E1524] px-3 text-[10px] font-bold text-slate-400 hover:text-white hover:border-white/20 transition disabled:opacity-50 disabled:pointer-events-none"
+              className="flex h-8 items-center justify-center rounded-lg border border-white/[0.08] bg-[#101011] px-3 text-[10px] font-bold text-slate-400 hover:text-white hover:border-white/20 transition disabled:opacity-50 disabled:pointer-events-none"
             >
               Trang trước
             </button>
@@ -412,7 +448,7 @@ const ListView: React.FC<{
               type="button"
               disabled={listPage >= listTotalPages}
               onClick={() => setListPage(prev => prev + 1)}
-              className="flex h-8 items-center justify-center rounded-lg border border-white/[0.08] bg-[#0E1524] px-3 text-[10px] font-bold text-slate-400 hover:text-white hover:border-white/20 transition disabled:opacity-50 disabled:pointer-events-none"
+              className="flex h-8 items-center justify-center rounded-lg border border-white/[0.08] bg-[#101011] px-3 text-[10px] font-bold text-slate-400 hover:text-white hover:border-white/20 transition disabled:opacity-50 disabled:pointer-events-none"
             >
               Trang sau
             </button>
@@ -726,10 +762,10 @@ export const OwnerBookingScheduleBoard: React.FC<{
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-        className="overflow-hidden rounded-2xl border border-white/[0.06] bg-[#0E1524]/60 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.8)]"
+        className="overflow-hidden rounded-2xl border border-white/[0.06] bg-[#101011] shadow-[0_24px_60px_-30px_rgba(0,0,0,0.8)]"
       >
         {/* ── Top bar matching Mockup ── */}
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.05] bg-[#0A111E]/40 px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.05] bg-[#0A0A0B] px-5 py-4">
           
           <div className="flex items-center gap-3">
             <h3 className="text-base font-extrabold text-white">Lịch Trình Chi Tiết</h3>
@@ -746,13 +782,13 @@ export const OwnerBookingScheduleBoard: React.FC<{
             <button
               type="button"
               onClick={handlePrev}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-[#0E1524] text-slate-400 text-lg transition hover:border-white/20 hover:text-white"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-[#101011] text-slate-400 text-lg transition hover:border-white/20 hover:text-white"
             >‹</button>
             <span className="text-xs font-black text-white">{headerTitle}</span>
             <button
               type="button"
               onClick={handleNext}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-[#0E1524] text-slate-400 text-lg transition hover:border-white/20 hover:text-white"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-[#101011] text-slate-400 text-lg transition hover:border-white/20 hover:text-white"
             >›</button>
           </div>
 
@@ -762,14 +798,14 @@ export const OwnerBookingScheduleBoard: React.FC<{
               type="button"
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="flex h-9 items-center gap-1.5 rounded-xl border border-white/[0.08] bg-[#0E1524] hover:border-white/20 hover:text-white px-3 text-xs font-bold text-slate-400 transition disabled:opacity-50"
+              className="flex h-9 items-center gap-1.5 rounded-xl border border-white/[0.08] bg-[#101011] hover:border-white/20 hover:text-white px-3 text-xs font-bold text-slate-400 transition disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} /> Tải lại
             </button>
             <button
               type="button"
               onClick={() => alert('Xuất dữ liệu Excel thành công')}
-              className="flex h-9 items-center gap-1.5 rounded-xl border border-white/[0.08] bg-[#0E1524] hover:border-white/20 hover:text-white px-3 text-xs font-bold text-slate-400 transition"
+              className="flex h-9 items-center gap-1.5 rounded-xl border border-white/[0.08] bg-[#101011] hover:border-white/20 hover:text-white px-3 text-xs font-bold text-slate-400 transition"
             >
               <Download className="w-3.5 h-3.5" /> Xuất dữ liệu
             </button>
@@ -797,10 +833,10 @@ export const OwnerBookingScheduleBoard: React.FC<{
               
               {/* Hour header */}
               <div
-                className="grid sticky top-0 z-10 border-b border-white/[0.05] bg-[#0A111E] text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider"
+                className="grid sticky top-0 z-50 border-b border-white/[0.05] bg-[#0A0A0B] text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider"
                 style={{ gridTemplateColumns: COL }}
               >
-                <div className="px-5 py-3 text-left font-black text-slate-500 border-r border-white/[0.05]">CƠ SỞ / SÂN VẬN ĐỘNG</div>
+                <div className="sticky left-0 z-50 px-5 py-3 text-left font-black text-slate-500 border-r border-white/[0.05] bg-[#0A0A0B]">CƠ SỞ / SÂN VẬN ĐỘNG</div>
                 {bookingHours.map(h => (
                   <div key={h} className="border-l border-white/[0.03] px-1 py-3">{fmt(h)}</div>
                 ))}

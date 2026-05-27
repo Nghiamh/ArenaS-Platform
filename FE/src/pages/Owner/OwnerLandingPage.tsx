@@ -343,7 +343,7 @@ export const OwnerLandingPage: React.FC = () => {
   };
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[#020B1F] text-slate-100">
+    <div className="relative min-h-screen overflow-x-hidden bg-[#0A0A0B] text-slate-100">
 
       {/* ── Fixed background effects ─────────────────────────────────────── */}
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_80%_50%_at_20%_-10%,rgba(37,99,235,0.18),transparent),radial-gradient(ellipse_60%_40%_at_80%_5%,rgba(14,165,233,0.1),transparent),radial-gradient(ellipse_60%_50%_at_50%_90%,rgba(59,130,246,0.06),transparent)]" />
