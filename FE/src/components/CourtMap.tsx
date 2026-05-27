@@ -1,6 +1,22 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Map, { Layer, type MapRef, Source } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+// Explicitly import mapbox-gl to disable telemetry (prevents requests to events.mapbox.com)
+import mapboxgl from 'mapbox-gl';
+
+// Disable Mapbox telemetry/analytics which some browsers or extensions block and
+// cause console errors like `events.mapbox.com ... ERR_BLOCKED_BY_CLIENT`.
+try {
+	// setTelemetryEnabled exists in mapbox-gl v2+; guard to avoid runtime issues
+	if (typeof (mapboxgl as any).setTelemetryEnabled === 'function') {
+		(mapboxgl as any).setTelemetryEnabled(false);
+	}
+} catch (err) {
+	// Swallow errors to avoid breaking the map component initialization
+	// (e.g., when running in SSR or mocked mapbox environments)
+	// eslint-disable-next-line no-console
+	console.warn('Could not disable Mapbox telemetry:', err);
+}
 import { useCourtSearch, type Court } from '../hooks/useCourtSearch';
 import { CourtMarker } from './CourtMarker';
 import { CourtPopup } from './CourtPopup';
