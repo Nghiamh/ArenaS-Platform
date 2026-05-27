@@ -628,18 +628,7 @@ export async function completeMatch(req: Request, res: Response): Promise<void> 
 			return;
 		}
 
-		// Required condition: Caller must be checked-in to mark complete
-		const isCallerCheckedIn = match.checked_in_players.some(
-			(id: any) => id.toString() === userId
-		);
-
-		if (!isCallerCheckedIn) {
-			res.status(400).json({
-				message: "check_in_required",
-				error: "You must check-in first before marking the match as completed",
-			});
-			return;
-		}
+		// Note: check-in is no longer required to mark a match completed.
 
 		// Set status to COMPLETED
 		match.status = "COMPLETED";
@@ -745,8 +734,8 @@ async function processMatchRatings(matchId: string): Promise<void> {
 			const currentReliability = user.reliability_score ?? 100;
 			// Formula: new = 0.85 * old + 0.15 * punctualScore
 			// Plus check-in reward: if user checked in, slight boost (+2)
-			const checkedIn = match.checked_in_players.some((id: any) => id.toString() === targetId.toString());
-			let checkInReward = checkedIn ? 2 : -10; // no-show penalty is heavy
+			// Check-in has been removed from the flow; neutralize its effect on reliability
+			const checkInReward = 0;
 
 			const newReliability = Math.max(0, Math.min(100, Math.round(0.85 * currentReliability + 0.15 * punctualScore + checkInReward)));
 			user.reliability_score = newReliability;
@@ -857,17 +846,7 @@ export async function submitMatchFeedback(req: Request, res: Response): Promise<
 			return;
 		}
 
-		// User must have checked-in to be allowed to feedback
-		const isCheckedIn = match.checked_in_players.some(
-			(id: any) => id.toString() === userId
-		);
-		if (!isCheckedIn) {
-			res.status(403).json({
-				message: "check_in_required",
-				error: "You did not check-in for this match, so you cannot submit feedback",
-			});
-			return;
-		}
+		// Note: check-in is no longer required to submit feedback.
 
 		// Get target opponent ID
 		const targetId = match.participants
