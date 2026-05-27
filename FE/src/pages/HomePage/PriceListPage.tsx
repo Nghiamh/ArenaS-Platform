@@ -913,34 +913,34 @@ export const PriceListPage: React.FC = () => {
                 <div className="text-center text-[#CCFF00]">Doanh Nghiệp</div>
               </div>
 
-            <div className="divide-y divide-white/6 bg-white/5">
-              {compareRows.map((row) => (
-                <div key={`${row.section}-${row.label}`} className="grid grid-cols-[1.7fr_repeat(4,minmax(110px,1fr))] items-center px-4 py-3 text-sm sm:py-4">
-                  <div>
-                    <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#00F5FF]/85">{row.section}</div>
-                    <div className="mt-1 text-slate-200">{row.label}</div>
+              <div className="divide-y divide-white/6 bg-white/5">
+                {compareRows.map((row) => (
+                  <div key={`${row.section}-${row.label}`} className="grid grid-cols-[1.7fr_repeat(4,minmax(110px,1fr))] items-center px-4 py-3 text-sm sm:py-4">
+                    <div>
+                      <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#00F5FF]/85">{row.section}</div>
+                      <div className="mt-1 text-slate-200">{row.label}</div>
+                    </div>
+                    {row.values.map((value, index) => {
+                      const positive = value === '✓';
+                      const negative = value === '×';
+                      return (
+                        <div key={`${row.label}-${index}`} className="flex justify-center text-center text-sm font-semibold">
+                          <span
+                            className={`inline-flex min-h-8 items-center justify-center rounded-full px-3 py-1 ${positive
+                              ? 'bg-[#CCFF00]/15 text-[#CCFF00]'
+                              : negative
+                                ? 'bg-white/5 text-slate-500'
+                                : 'bg-[#00F5FF]/10 text-[#00F5FF]'
+                              }`}
+                          >
+                            {value}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
-                  {row.values.map((value, index) => {
-                    const positive = value === '✓';
-                    const negative = value === '×';
-                    return (
-                      <div key={`${row.label}-${index}`} className="flex justify-center text-center text-sm font-semibold">
-                        <span
-                          className={`inline-flex min-h-8 items-center justify-center rounded-full px-3 py-1 ${positive
-                            ? 'bg-[#CCFF00]/15 text-[#CCFF00]'
-                            : negative
-                              ? 'bg-white/5 text-slate-500'
-                              : 'bg-[#00F5FF]/10 text-[#00F5FF]'
-                            }`}
-                        >
-                          {value}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -1002,7 +1002,7 @@ export const PriceListPage: React.FC = () => {
               <div className="rounded-[1.5rem] border border-white/8 bg-white/4 p-5 hover:border-[#CCFF00]/30 transition-all hover:bg-white/5 cursor-pointer">
                 <div className="text-xl font-black leading-tight text-white sm:text-2xl">Gọi Điện Thoại</div>
                 <p className="mt-2 text-xs leading-6 text-slate-300">Nhận hỗ trợ giải quyết thắc mắc kỹ thuật từ các tổng đài viên trực tiếp.</p>
-                <div className="mt-3 text-xs font-bold text-[#CCFF00] uppercase tracking-widest">1900 0000 →</div>
+                <div className="mt-3 text-xs font-bold text-[#CCFF00] uppercase tracking-widest">0337095968 →</div>
               </div>
               <div className="rounded-[1.5rem] border border-white/8 bg-white/4 p-5 hover:border-[#00F5FF]/30 transition-all hover:bg-white/5 cursor-pointer">
                 <div className="text-xl font-black leading-tight text-white sm:text-2xl">Demo Chi Tiết</div>
@@ -1011,7 +1011,7 @@ export const PriceListPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="relative flex min-h-[280px] flex-col justify-between overflow-hidden rounded-[2.5rem] border border-[#CCFF00]/30 bg-[#0A0A0B] p-6 shadow-[0_0_50px_rgba(204,255,0,0.2)] sm:p-8">
+            <div className="relative flex min-h-[280px] flex-col justify-between overflow-hidden rounded-[2.5rem] border border-white/8 bg-[#101011] p-6 sm:p-8">
               <div className="absolute inset-0 bg-gradient-to-tr from-[#CCFF00]/10 to-transparent pointer-events-none" />
               <div className="relative z-10">
                 <span className="inline-flex rounded-full border border-[#CCFF00]/30 bg-[#CCFF00]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.28em] text-[#CCFF00]">
@@ -1028,7 +1028,7 @@ export const PriceListPage: React.FC = () => {
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <button
                   type="button"
-                  onClick={() => navigate('/auth/register')}
+                  onClick={() => navigate('/cho-chu-san')}
                   className="rounded-2xl bg-[#CCFF00] px-5 py-3.5 text-xs font-black text-[#0A0A0B] hover:brightness-110 shadow-[0_0_15px_rgba(204,255,0,0.2)] transition duration-300 ease-out hover:-translate-y-0.5"
                 >
                   ĐĂNG KÝ MIỄN PHÍ →
