@@ -261,7 +261,7 @@ export const LoginPage: React.FC = () => {
           <div className="mb-20">
             <h1 className="text-[3.5rem] font-black leading-[1.1] tracking-tight text-white mb-6 font-montserrat">
               Đặt Sân,<br />
-              <span className="text-[#CCFF00]">Nhanh Chống</span>
+              <span className="text-[#CCFF00]">Nhanh Chóng</span>
             </h1>
             <p className="text-lg text-slate-400 leading-relaxed max-w-md">
               ArenaS - Nền tảng đặt sân thể thao hàng đầu, mang đến trải nghiệm liền mạch và tiện lợi cho người dùng.
