@@ -745,9 +745,9 @@ export const HomePage: React.FC = () => {
           <div className="mb-12 flex items-end justify-between gap-4">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#00F5FF] mb-2">Khám phá</p>
-              <h2 className={sectionTitleClass}>Tìm theo môn thể thao</h2>
+              <h2 className={sectionTitleClass}>Các môn thể thao</h2>
             </div>
-            <button className="text-sm font-bold text-[#CCFF00] transition hover:text-white">Xem tất cả môn →</button>
+            
           </div>
 
           <motion.div
