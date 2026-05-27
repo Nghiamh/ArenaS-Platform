@@ -221,7 +221,6 @@ export function OwnerContactPage() {
             <motion.h1
               variants={fadeUp}
               className="mt-6 text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl"
-              style={{ fontFamily: 'Montserrat, sans-serif' }}
             >
               Biến Sân Thể Thao Của Bạn&nbsp;
               <span
@@ -294,7 +293,6 @@ export function OwnerContactPage() {
             <motion.div variants={fadeUp} className="mb-12 text-center">
               <h2
                 className="text-2xl font-black tracking-tight sm:text-3xl"
-                style={{ fontFamily: 'Montserrat, sans-serif' }}
               >
                 Tại Sao Chủ Sân Chọn ArenaS?
               </h2>
@@ -339,7 +337,6 @@ export function OwnerContactPage() {
             <motion.div variants={fadeUp} className="mb-12 text-center">
               <h2
                 className="text-2xl font-black tracking-tight sm:text-3xl"
-                style={{ fontFamily: 'Montserrat, sans-serif' }}
               >
                 Quy Trình Đơn Giản, 3 Bước
               </h2>
@@ -392,7 +389,6 @@ export function OwnerContactPage() {
               <motion.div variants={fadeUp} className="mb-10 text-center">
                 <h2
                   className="text-2xl font-black tracking-tight sm:text-3xl"
-                  style={{ fontFamily: 'Montserrat, sans-serif' }}
                 >
                   Đăng Ký Hợp Tác
                 </h2>
@@ -612,7 +608,6 @@ export function OwnerContactPage() {
             <motion.div variants={fadeUp} className="mb-10 text-center">
               <h2
                 className="text-2xl font-black tracking-tight sm:text-3xl"
-                style={{ fontFamily: 'Montserrat, sans-serif' }}
               >
                 Câu Hỏi Thường Gặp
               </h2>
@@ -667,7 +662,6 @@ export function OwnerContactPage() {
           >
             <h2
               className="text-2xl font-black tracking-tight sm:text-3xl"
-              style={{ fontFamily: 'Montserrat, sans-serif' }}
             >
               Sẵn Sàng Bắt Đầu?
             </h2>
