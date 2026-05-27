@@ -575,23 +575,23 @@ export function OwnerContactPage() {
                 className="mt-6 flex flex-wrap items-center justify-center gap-4"
               >
                 <a
-                  href="tel:1900xxxx"
+                  href="tel:0337095968"
                   className="inline-flex items-center gap-2 rounded-full border border-[#00F5FF]/25 bg-[#00F5FF]/8 px-5 py-2 text-xs font-semibold text-[#00F5FF] transition-all hover:bg-[#00F5FF]/15"
                 >
                   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.68A2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" />
                   </svg>
-                  Gọi ngay: 1900 xxxx
+                  Gọi ngay: 0337095968
                 </a>
                 <a
-                  href="mailto:owner@arenas.vn"
+                  href="mailto:ArenaSport2605@gmail.com"
                   className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 py-2 text-xs font-semibold text-white/60 transition-all hover:bg-white/10"
                 >
                   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                     <path d="M22 6l-10 7L2 6" />
                   </svg>
-                  owner@arenas.vn
+                  ArenaSport2605@gmail.com
                 </a>
               </motion.div>
             </motion.div>
