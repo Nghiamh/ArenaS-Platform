@@ -1018,10 +1018,10 @@ export const ProfilePage: React.FC = () => {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#08090d] text-slate-100 px-4 py-8 md:px-8 md:py-12 selection:bg-blue-500/30 overflow-x-hidden">
+    <div className="relative min-h-screen bg-deep text-slate-100 px-4 py-8 md:px-8 md:py-12 selection:bg-accent-primary/30 overflow-x-hidden">
       {/* Global Toast Notification */}
       {successMessage && (
-        <div className="fixed bottom-10 right-6 md:right-10 z-[9999] flex items-center gap-3 px-5 py-4 rounded-xl bg-[#141E2B] border-l-4 border-l-[#1D9E75] border-y border-r border-white/10 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] animate-[slideIn_0.3s_ease-out_forwards]">
+        <div className="fixed bottom-10 right-6 md:right-10 z-[9999] flex items-center gap-3 px-5 py-4 rounded-xl bg-deep border-l-4 border-l-[#1D9E75] border-y border-r border-white/10 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] animate-[slideIn_0.3s_ease-out_forwards]">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1D9E75]/20 text-[#1D9E75] shrink-0">
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5">
               <polyline points="20 6 9 17 4 12" />
@@ -1048,7 +1048,7 @@ export const ProfilePage: React.FC = () => {
             {/* ─── LEFT SIDEBAR ────────────────────────────────────────────── */}
             <aside className="w-full lg:w-80 shrink-0 flex flex-col gap-6">
               {/* Profile Main Info */}
-              <div className="bg-[#10111a] border border-white/[0.05] rounded-3xl p-6 flex flex-col items-center text-center shadow-[0_8px_30px_rgb(0,0,0,0.15)] relative overflow-hidden group">
+              <div className="bg-white/[0.03] border border-white/[0.05] rounded-3xl p-6 flex flex-col items-center text-center shadow-[0_8px_30px_rgb(0,0,0,0.15)] relative overflow-hidden group">
                 <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500/25 to-transparent" />
 
                 {/* Avatar Frame with Stars & Verified Check */}
@@ -1067,7 +1067,7 @@ export const ProfilePage: React.FC = () => {
                     )}
                   </div>
                   {/* Verified Check Badge */}
-                  <div className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-blue-500 border-2 border-[#10111a] flex items-center justify-center shadow-lg">
+                  <div className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-blue-500 border-2 border-deep flex items-center justify-center shadow-lg">
                     <CheckedVerifiedIcon />
                   </div>
 
@@ -1270,7 +1270,7 @@ export const ProfilePage: React.FC = () => {
                 {/* Wallet Balance Card */}
                 <div
                   onClick={() => setShowHistoryModal(true)}
-                  className="bg-gradient-to-br from-blue-600 to-indigo-900 border border-blue-400/20 rounded-3xl p-6 shadow-[0_12px_40px_-10px_rgba(37,99,235,0.35)] flex flex-col justify-between text-white relative overflow-hidden group cursor-pointer hover:shadow-[0_15px_45px_-5px_rgba(37,99,235,0.45)] transition duration-300"
+                  className="bg-gradient-to-br from-accent-primary/90 to-accent-secondary/90 border border-accent-primary/20 rounded-3xl p-6 shadow-lg flex flex-col justify-between text-white relative overflow-hidden group cursor-pointer hover:shadow-xl transition duration-300"
                 >
                   {/* Glowing background bubble */}
                   <div className="absolute -right-16 -top-16 w-48 h-48 rounded-full bg-sky-400/15 blur-3xl pointer-events-none group-hover:scale-110 transition duration-500" />
@@ -1347,7 +1347,7 @@ export const ProfilePage: React.FC = () => {
                         e.stopPropagation();
                         setShowDeposit(true);
                       }}
-                      className="flex-1 py-2.5 rounded-xl bg-white text-xs font-bold text-[#08090d] transition duration-200 hover:bg-slate-100 active:scale-95 shadow-md uppercase tracking-wider"
+                      className="flex-1 py-2.5 rounded-xl bg-white text-xs font-bold text-deep transition duration-200 hover:bg-slate-100 active:scale-95 shadow-md uppercase tracking-wider"
                     >
                       Nạp tiền
                     </button>
@@ -1365,7 +1365,7 @@ export const ProfilePage: React.FC = () => {
               </div>
 
               {/* Row 2: Performance Analytics Section (Skills list & management) */}
-              <div className="bg-[#10111a] border border-white/[0.05] rounded-3xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.15)] relative overflow-hidden group">
+              <div className="bg-white/[0.03] border border-white/[0.05] rounded-3xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.15)] relative overflow-hidden group">
                 <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-500/15 to-transparent" />
 
                 {/* Header */}
@@ -1393,7 +1393,7 @@ export const ProfilePage: React.FC = () => {
                       type="button"
                       onClick={handleStartSkillCreate}
                       disabled={!canAddNewSkill}
-                      className="px-4 py-1.5 rounded-xl bg-blue-500 hover:bg-blue-400 text-xs font-bold text-white transition disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                      className="px-4 py-1.5 rounded-xl bg-accent-primary hover:bg-accent-primary/80 text-xs font-bold text-deep transition disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
                     >
                       + Thêm kỹ năng
                     </button>
@@ -1746,7 +1746,7 @@ export const ProfilePage: React.FC = () => {
               </div>
 
               {/* Row 3: Recent Bookings Section (Placeholder, developed later) */}
-              <div className="bg-[#10111a] border border-white/[0.05] rounded-3xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.15)] relative overflow-hidden group">
+              <div className="bg-white/[0.03] border border-white/[0.05] rounded-3xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.15)] relative overflow-hidden group">
                 <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-500/10 to-transparent" />
 
                 {/* Header */}
@@ -1771,7 +1771,7 @@ export const ProfilePage: React.FC = () => {
 
                   <button
                     onClick={() => { setShowAllBookingsModal(true); setBookingsCurrentPage(1); }}
-                    className="text-xs font-bold text-blue-400 hover:text-blue-300 transition"
+                    className="text-xs font-bold text-accent-primary hover:text-accent-primary/80 transition"
                   >
                     Xem tất cả
                   </button>

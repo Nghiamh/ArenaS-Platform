@@ -1,13 +1,154 @@
-@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=Montserrat:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg-deep: #030712;
+  --bg-deep: #0A0A0B;
   --text-main: #e2e8f0;
+  
+  /* Theme: Arena Original (Default) */
+  --accent-primary: #3B82F6;
+  --accent-secondary: #10B981;
+  --accent-light: #60A5FA;
+  --accent-primary-rgb: 59, 130, 246;
+  --accent-secondary-rgb: 16, 185, 129;
+  --accent-light-rgb: 96, 165, 250;
 }
+
+[data-theme='default'], [data-theme='arena'] {
+  --bg-deep: #0B1120; /* Dark Slate Blue */
+  --accent-primary: #3B82F6;
+  --accent-secondary: #10B981;
+  --accent-light: #60A5FA;
+  --accent-primary-rgb: 59, 130, 246;
+  --accent-secondary-rgb: 16, 185, 129;
+  --accent-light-rgb: 96, 165, 250;
+}
+
+[data-theme='neon'] {
+  --bg-deep: #0A0A0B; /* Pure Dark */
+  --accent-primary: #CCFF00;
+  --accent-secondary: #00F5FF;
+  --accent-light: #E6FF66;
+  --accent-primary-rgb: 204, 255, 0;
+  --accent-secondary-rgb: 0, 245, 255;
+  --accent-light-rgb: 230, 255, 102;
+}
+
+[data-theme='cyber'] {
+  --bg-deep: #0F0914; /* Deep Purple Tint */
+  --accent-primary: #FF0055;
+  --accent-secondary: #8A2BE2;
+  --accent-light: #FF66A3;
+  --accent-primary-rgb: 255, 0, 85;
+  --accent-secondary-rgb: 138, 43, 226;
+  --accent-light-rgb: 255, 102, 163;
+}
+
+[data-theme='grass'] {
+  --bg-deep: #0A110D; /* Deep Green Tint */
+  --accent-primary: #FF5722;
+  --accent-secondary: #4CAF50;
+  --accent-light: #FF8A65;
+  --accent-primary-rgb: 255, 87, 34;
+  --accent-secondary-rgb: 76, 175, 80;
+  --accent-light-rgb: 255, 138, 101;
+}
+
+[data-theme='laser'] {
+  --bg-deep: #12120A; /* Deep Gold Tint */
+  --accent-primary: #CCFF00;
+  --accent-secondary: #FFD700;
+  --accent-light: #E6FF66;
+  --accent-primary-rgb: 204, 255, 0;
+  --accent-secondary-rgb: 255, 215, 0;
+  --accent-light-rgb: 230, 255, 102;
+}
+
+[data-theme='speed'] {
+  --bg-deep: #F8FAFC; /* Slate 50 - Very light background */
+  --accent-primary: #0F172A; /* Slate 900 */
+  --accent-secondary: #334155; /* Slate 700 */
+  --accent-light: #64748B; /* Slate 500 */
+  --accent-primary-rgb: 15, 23, 42;
+  --accent-secondary-rgb: 51, 65, 85;
+  --accent-light-rgb: 100, 116, 139;
+}
+
+/* Light Theme Overrides for Speed Monochrome */
+[data-theme='speed'] .text-white { color: #0F172A !important; }
+[data-theme='speed'] .text-white\/20 { color: rgba(15, 23, 42, 0.2) !important; }
+[data-theme='speed'] .text-white\/25 { color: rgba(15, 23, 42, 0.25) !important; }
+[data-theme='speed'] .text-white\/30 { color: rgba(15, 23, 42, 0.3) !important; }
+[data-theme='speed'] .text-white\/40 { color: rgba(15, 23, 42, 0.4) !important; }
+[data-theme='speed'] .text-white\/50 { color: rgba(15, 23, 42, 0.5) !important; }
+[data-theme='speed'] .text-white\/55 { color: rgba(15, 23, 42, 0.55) !important; }
+[data-theme='speed'] .text-white\/60 { color: rgba(15, 23, 42, 0.6) !important; }
+[data-theme='speed'] .text-white\/70 { color: rgba(15, 23, 42, 0.7) !important; }
+[data-theme='speed'] .text-white\/75 { color: rgba(15, 23, 42, 0.75) !important; }
+[data-theme='speed'] .text-white\/80 { color: rgba(15, 23, 42, 0.8) !important; }
+[data-theme='speed'] .text-white\/90 { color: rgba(15, 23, 42, 0.9) !important; }
+
+[data-theme='speed'] .text-slate-100 { color: #1E293B !important; }
+[data-theme='speed'] .text-slate-200 { color: #334155 !important; }
+[data-theme='speed'] .text-slate-300 { color: #475569 !important; }
+[data-theme='speed'] .text-slate-400 { color: #64748B !important; }
+[data-theme='speed'] .text-slate-500 { color: #94A3B8 !important; }
+
+[data-theme='speed'] .bg-white\/\[0\.02\] { background-color: #FFFFFF !important; }
+[data-theme='speed'] .bg-white\/\[0\.03\] { background-color: #FFFFFF !important; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1) !important; }
+[data-theme='speed'] .bg-white\/\[0\.05\] { background-color: #FFFFFF !important; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1) !important; }
+[data-theme='speed'] .bg-white\/5 { background-color: #FFFFFF !important; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1) !important; }
+[data-theme='speed'] .bg-white\/10 { background-color: rgba(0,0,0,0.04) !important; }
+[data-theme='speed'] .border-white\/5 { border-color: rgba(0,0,0,0.08) !important; }
+[data-theme='speed'] .border-white\/10 { border-color: rgba(0,0,0,0.15) !important; }
+
+[data-theme='speed'] .bg-\[\#101011\] { background-color: #FFFFFF !important; box-shadow: 0 4px 20px -5px rgba(0,0,0,0.08); border-color: rgba(0,0,0,0.1) !important; }
+[data-theme='speed'] .bg-black { background-color: #FFFFFF !important; }
+[data-theme='speed'] .from-black { --tw-gradient-from: #FFFFFF !important; }
+[data-theme='speed'] .to-black { --tw-gradient-to: #FFFFFF !important; }
+
+[data-theme='speed'] .from-deep\/95 { --tw-gradient-from: rgba(248, 250, 252, 0.95) !important; }
+[data-theme='speed'] .to-black\/95 { --tw-gradient-to: rgba(255, 255, 255, 0.95) !important; }
+
+/* Force dark mode for specific sections (like Hero) in Light Mode */
+[data-theme='speed'] .force-dark-mode .text-white { color: #FFFFFF !important; }
+[data-theme='speed'] .force-dark-mode .text-white\/20 { color: rgba(255, 255, 255, 0.2) !important; }
+[data-theme='speed'] .force-dark-mode .text-white\/25 { color: rgba(255, 255, 255, 0.25) !important; }
+[data-theme='speed'] .force-dark-mode .text-white\/30 { color: rgba(255, 255, 255, 0.3) !important; }
+[data-theme='speed'] .force-dark-mode .text-white\/40 { color: rgba(255, 255, 255, 0.4) !important; }
+[data-theme='speed'] .force-dark-mode .text-white\/50 { color: rgba(255, 255, 255, 0.5) !important; }
+[data-theme='speed'] .force-dark-mode .text-white\/55 { color: rgba(255, 255, 255, 0.55) !important; }
+[data-theme='speed'] .force-dark-mode .text-white\/60 { color: rgba(255, 255, 255, 0.6) !important; }
+[data-theme='speed'] .force-dark-mode .text-white\/70 { color: rgba(255, 255, 255, 0.7) !important; }
+[data-theme='speed'] .force-dark-mode .text-white\/75 { color: rgba(255, 255, 255, 0.75) !important; }
+[data-theme='speed'] .force-dark-mode .text-white\/80 { color: rgba(255, 255, 255, 0.8) !important; }
+[data-theme='speed'] .force-dark-mode .text-white\/90 { color: rgba(255, 255, 255, 0.9) !important; }
+
+[data-theme='speed'] .force-dark-mode .text-slate-100 { color: #f1f5f9 !important; }
+[data-theme='speed'] .force-dark-mode .text-slate-200 { color: #e2e8f0 !important; }
+[data-theme='speed'] .force-dark-mode .text-slate-300 { color: #cbd5e1 !important; }
+[data-theme='speed'] .force-dark-mode .text-slate-400 { color: #94a3b8 !important; }
+[data-theme='speed'] .force-dark-mode .text-slate-500 { color: #64748b !important; }
+[data-theme='speed'] .force-dark-mode .text-accent-primary { color: #FFFFFF !important; }
+[data-theme='speed'] .force-dark-mode .text-accent-secondary { color: #E2E8F0 !important; }
+[data-theme='speed'] .force-dark-mode .bg-white\/5 { background-color: rgba(255,255,255,0.05) !important; }
+[data-theme='speed'] .force-dark-mode .bg-white\/10 { background-color: rgba(255,255,255,0.1) !important; }
+[data-theme='speed'] .force-dark-mode .border-white\/10 { border-color: rgba(255,255,255,0.1) !important; }
+[data-theme='speed'] .force-dark-mode .border-accent-primary\/30 { border-color: rgba(255,255,255,0.3) !important; }
+[data-theme='speed'] .force-dark-mode .bg-accent-primary\/10 { background-color: rgba(255,255,255,0.1) !important; }
+
+[data-theme='speed'] .bg-\[\#0C0C0E\] { background-color: #F1F5F9 !important; }
+[data-theme='speed'] .bg-\[\#0A0A0B\] { background-color: #FFFFFF !important; }
+[data-theme='speed'] .bg-\[\#0A0A0B\]\/90 { background-color: rgba(255, 255, 255, 0.9) !important; }
+[data-theme='speed'] .bg-\[\#0A0A0B\]\/95 { background-color: rgba(255, 255, 255, 0.95) !important; }
+[data-theme='speed'] .text-\[\#0A0A0B\] { color: #FFFFFF !important; }
+
+/* Override card button background */
+[data-theme='speed'] .bg-\[\#2A3317\] { background-color: rgba(15, 23, 42, 0.06) !important; border-color: rgba(15, 23, 42, 0.2) !important; }
+[data-theme='speed'] .text-deep { color: #FFFFFF !important; }
 
 * {
   margin: 0;
@@ -45,28 +186,22 @@ body {
 
 .glass-panel {
   border: 1px solid rgba(148, 163, 184, 0.2);
-  background: linear-gradient(
-    135deg,
-    rgba(15, 23, 42, 0.82) 0%,
-    rgba(15, 23, 42, 0.62) 100%
-  );
+  background: linear-gradient(135deg,
+      rgba(15, 23, 42, 0.82) 0%,
+      rgba(15, 23, 42, 0.62) 100%);
   backdrop-filter: blur(14px);
 }
 
 .glass-soft {
-  background: linear-gradient(
-    145deg,
-    rgba(30, 41, 59, 0.72) 0%,
-    rgba(15, 23, 42, 0.62) 100%
-  );
+  background: linear-gradient(145deg,
+      rgba(30, 41, 59, 0.72) 0%,
+      rgba(15, 23, 42, 0.62) 100%);
   backdrop-filter: blur(10px);
 }
 
 .bg-grid-pattern {
-  background-image: linear-gradient(
-      rgba(148, 163, 184, 0.08) 1px,
-      transparent 1px
-    ),
+  background-image: linear-gradient(rgba(148, 163, 184, 0.08) 1px,
+      transparent 1px),
     linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
   background-size: 44px 44px;
 }
@@ -102,10 +237,12 @@ body {
 }
 
 @keyframes arena-map-pulse {
+
   0%,
   100% {
     filter: saturate(0.95) brightness(0.95);
   }
+
   50% {
     filter: saturate(1.12) brightness(1.05);
   }
