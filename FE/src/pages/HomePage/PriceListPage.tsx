@@ -903,14 +903,15 @@ export const PriceListPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="overflow-hidden rounded-[1.5rem] border border-white/8">
-            <div className="grid grid-cols-[1.7fr_repeat(4,minmax(110px,1fr))] bg-white/4 px-4 py-4 text-xs font-bold uppercase tracking-[0.2em] text-slate-300">
-              <div>Tính năng</div>
-              <div className="text-center text-slate-200">Khởi Nghiệp</div>
-              <div className="text-center text-slate-200">Cơ Bản</div>
-              <div className="text-center text-[#00F5FF]">Chuyên Nghiệp</div>
-              <div className="text-center text-[#CCFF00]">Doanh Nghiệp</div>
-            </div>
+          <div className="overflow-x-auto rounded-[1.5rem] border border-white/8">
+            <div className="min-w-[800px]">
+              <div className="grid grid-cols-[1.7fr_repeat(4,minmax(110px,1fr))] bg-white/4 px-4 py-4 text-xs font-bold uppercase tracking-[0.2em] text-slate-300">
+                <div>Tính năng</div>
+                <div className="text-center text-slate-200">Khởi Nghiệp</div>
+                <div className="text-center text-slate-200">Cơ Bản</div>
+                <div className="text-center text-[#00F5FF]">Chuyên Nghiệp</div>
+                <div className="text-center text-[#CCFF00]">Doanh Nghiệp</div>
+              </div>
 
             <div className="divide-y divide-white/6 bg-white/5">
               {compareRows.map((row) => (
@@ -939,6 +940,7 @@ export const PriceListPage: React.FC = () => {
                   })}
                 </div>
               ))}
+            </div>
             </div>
           </div>
 

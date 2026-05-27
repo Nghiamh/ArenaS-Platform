@@ -14,6 +14,7 @@ export const Header: React.FC = () => {
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const [currentUser, setCurrentUser] = useState<StoredUser | null>(null);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const syncUser = () => {
@@ -188,15 +189,94 @@ export const Header: React.FC = () => {
                 </Link>
                 <Link
                   to="/register"
-                  className="bg-[#2A3317] border border-[#CCFF00]/30 text-[#CCFF00] shadow-[0_0_15px_rgba(204,255,0,0.15)] font-bold py-2.5 px-6 rounded-xl transition duration-300 hover:bg-[#CCFF00] hover:text-[#0A0A0B] uppercase text-xs tracking-widest"
+                  className="hidden md:flex bg-[#2A3317] border border-[#CCFF00]/30 text-[#CCFF00] shadow-[0_0_15px_rgba(204,255,0,0.15)] font-bold py-2.5 px-6 rounded-xl transition duration-300 hover:bg-[#CCFF00] hover:text-[#0A0A0B] uppercase text-xs tracking-widest"
                 >
                   Đăng Ký Miễn Phí
                 </Link>
               </>
             )}
+
+            {/* Mobile Menu Toggle Button */}
+            <button
+              className="md:hidden flex items-center justify-center p-2 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:text-[#00F5FF] transition-colors"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Mobile Menu */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden absolute top-full left-0 w-full bg-[#0A0A0B]/95 border-b border-white/10 shadow-lg backdrop-blur-md">
+          <nav className="flex flex-col px-6 py-6 space-y-4">
+            <Link
+              to="/tim-san"
+              className="text-white hover:text-[#00F5FF] transition duration-300 font-bold text-lg"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Tìm Sân
+            </Link>
+
+            {isPlayerAccount && (
+              <Link
+                to="/matchmaking"
+                className="text-white hover:text-[#00F5FF] transition duration-300 font-bold text-lg"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Tìm Đối Thủ
+              </Link>
+            )}
+            {!isManagementAccount && (
+              <Link
+                to="/cho-chu-san"
+                className="text-[#CCFF00] hover:text-[#d4ff1a] transition duration-300 font-bold text-lg"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Liên Hệ Chủ Sân
+              </Link>
+            )}
+            {!isPlayerAccount && (
+              <Link
+                to="/bang-gia"
+                className="text-white hover:text-[#00F5FF] transition duration-300 font-bold text-lg"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Bảng Giá
+              </Link>
+            )}
+            
+            {!isLoggedIn && (
+              <>
+                <div className="h-px bg-white/10 my-2" />
+                <Link
+                  to="/login"
+                  className="text-white hover:text-[#00F5FF] transition duration-300 font-bold uppercase text-sm tracking-wider"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Đăng Nhập
+                </Link>
+                <Link
+                  to="/register"
+                  className="text-[#CCFF00] hover:text-[#d4ff1a] transition duration-300 font-bold uppercase text-sm tracking-wider"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Đăng Ký Miễn Phí
+                </Link>
+              </>
+            )}
+          </nav>
+        </div>
+      )}
     </header>
   );
 };
