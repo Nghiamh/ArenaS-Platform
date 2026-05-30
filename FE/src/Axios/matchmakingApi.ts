@@ -119,6 +119,11 @@ export type ChatHistoryResponse = {
 	chat_deleted_by?: string[];
 	canVote?: boolean;
 	court_id?: string;
+	pending_deposit?: {
+		bookingId: string;
+		amount: number;
+		deadline: string;
+	};
 	pagination?: {
 		page: number;
 		limit: number;

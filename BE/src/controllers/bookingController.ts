@@ -1299,3 +1299,51 @@ export async function cancelBooking(req: Request, res: Response) {
 	}
 }
 
+// 10. API: Lấy thông tin pending deposit cho đối thủ trong match
+export async function getMatchPendingDeposit(req: Request, res: Response) {
+	try {
+		const userId = req.user!._id;
+		const { matchId } = req.params;
+
+		if (!matchId || !mongoose.Types.ObjectId.isValid(matchId)) {
+			return res.status(400).json({ error: 'matchId không hợp lệ' });
+		}
+
+		// Find booking that's waiting for opponent payment in this match
+		const booking = await BookingModel.findOne({
+			match_id: matchId,
+			status: 'waiting_opponent',
+		});
+
+		if (!booking || !booking.participants) {
+			return res.status(200).json({ pending_deposit: null });
+		}
+
+		// Check if current user is the unpaid participant
+		const unpaidEntry = booking.participants.find(
+			(p) => p.userId.toString() === userId.toString() && p.status === 'unpaid'
+		);
+
+		if (!unpaidEntry) {
+			return res.status(200).json({ pending_deposit: null });
+		}
+
+		// Check deadline
+		const deadline = booking.opponent_deadline;
+		if (deadline && new Date() > deadline) {
+			return res.status(200).json({ pending_deposit: null, expired: true });
+		}
+
+		return res.status(200).json({
+			pending_deposit: {
+				bookingId: (booking._id as any).toString(),
+				amount: unpaidEntry.amount,
+				deadline: deadline?.toISOString() || null,
+			},
+		});
+	} catch (error) {
+		console.error('getMatchPendingDeposit error:', error);
+		return res.status(500).json({ error: 'internal_server_error' });
+	}
+}
+

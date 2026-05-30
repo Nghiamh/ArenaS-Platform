@@ -1174,6 +1174,20 @@ export async function opponentPayBooking(bookingId: string): Promise<{
 	}
 }
 
+export async function getMatchPendingDeposit(matchId: string): Promise<{
+	pending_deposit: { bookingId: string; amount: number; deadline: string | null } | null;
+	expired?: boolean;
+}> {
+	try {
+		const { data } = await axiosClient.get(`/bookings/match/${matchId}/pending-deposit`, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
 // ---------------------------------------------------------------------------
 // REVIEWS
 // ---------------------------------------------------------------------------
