@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
 	ArrowLeft,
@@ -10,14 +10,13 @@ import {
 	ShieldAlert,
 	MapPin,
 	Clock,
-	Zap,
 } from 'lucide-react';
 import {
 	getChatHistory,
 	voteChatDelete,
 	type ChatMessageData,
 } from '../../Axios/matchmakingApi';
-import { opponentPayBooking } from '../../Axios/Axios';
+import { opponentPayBooking, getMatchPendingDeposit } from '../../Axios/Axios';
 import { useSocket } from '../../hooks/useSocket';
 import { DepositModal } from '../WalletPage/DepositModal';
 
@@ -129,6 +128,17 @@ export const ChatPage: React.FC = () => {
 					if (res.court_id) {
 						setCourtId(res.court_id);
 					}
+					// Populate pending deposit info from API response
+					// (handles case where user missed the real-time socket event)
+					if (res.pending_deposit && !depositInfo && !depositPaid) {
+						setDepositInfo({
+							bookingId: res.pending_deposit.bookingId,
+							amount: res.pending_deposit.amount,
+							deadline: res.pending_deposit.deadline,
+						});
+						const remainingSec = Math.max(0, Math.floor((new Date(res.pending_deposit.deadline).getTime() - Date.now()) / 1000));
+						setDepositCountdown(remainingSec);
+					}
 				}
 			})
 			.catch((err) => {
@@ -136,6 +146,40 @@ export const ChatPage: React.FC = () => {
 			})
 			.finally(() => setLoading(false));
 	}, [matchId]);
+
+	// Auto-fetch pending deposit info when deposit message detected but depositInfo is null
+	useEffect(() => {
+		if (!matchId || loading || depositInfo || depositPaid) return;
+
+		// Check if any message is a deposit message from opponent
+		const hasDepositMsg = messages.some((msg) => {
+			const senderId = getSenderId(msg.sender_id);
+			const isMine = senderId === currentUserId;
+			const isDepositMsg = msg.message.includes('đặt cọc 50%') && msg.message.includes('Đợi bạn thanh toán');
+			return isDepositMsg && !isMine;
+		});
+
+		if (!hasDepositMsg) return;
+
+		// Fetch pending deposit from dedicated API
+		getMatchPendingDeposit(matchId)
+			.then((res) => {
+				if (res.pending_deposit) {
+					setDepositInfo({
+						bookingId: res.pending_deposit.bookingId,
+						amount: res.pending_deposit.amount,
+						deadline: res.pending_deposit.deadline || '',
+					});
+					if (res.pending_deposit.deadline) {
+						const remainingSec = Math.max(0, Math.floor((new Date(res.pending_deposit.deadline).getTime() - Date.now()) / 1000));
+						setDepositCountdown(remainingSec);
+					}
+				}
+			})
+			.catch((err) => {
+				console.error('Failed to fetch pending deposit:', err);
+			});
+	}, [matchId, messages, loading, depositInfo, depositPaid, currentUserId]);
 
 	// Listen for new messages from socket
 	useEffect(() => {
@@ -411,73 +455,56 @@ export const ChatPage: React.FC = () => {
 									)}
 									<div className="text-sm whitespace-pre-wrap">
 										{(() => {
-											// Detect deposit 50% message from opponent → show pay button
-											const isDepositMsg = msg.message.includes('đặt cọc 50%') && msg.message.includes('Đợi bạn thanh toán');
-											if (isDepositMsg && !isMine && depositInfo && !depositPaid) {
-												// Show message without "Đợi bạn..." line + add pay button
-												const cleanedMsg = msg.message.replace(/\nĐợi bạn thanh toán 50% còn lại trong 30 phút\.?/, '');
-												const fmtMin = Math.floor(depositCountdown / 60).toString().padStart(2, '0');
-												const fmtSec = (depositCountdown % 60).toString().padStart(2, '0');
-												return (
-													<>
-														{cleanedMsg}
-														<div className="mt-3 pt-3 border-t border-slate-600/40">
-															{depositCountdown > 0 ? (
-																<>
-																	<div className="flex items-center gap-1.5 mb-2">
-																		<Clock className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-																		<span className="text-xs text-amber-400 font-mono font-bold">{fmtMin}:{fmtSec}</span>
-																		<span className="text-xs text-slate-500">còn lại</span>
-																	</div>
-																	<button
-																		type="button"
-																		disabled={depositPayLoading}
-																		onClick={async (e) => {
-																			e.stopPropagation();
-																			try {
-																				setDepositPayLoading(true);
-																				await opponentPayBooking(depositInfo.bookingId);
-																				setDepositPaid(true);
-																			} catch (err: any) {
-																				const errMsg = err.message || 'Thanh toán thất bại';
-																				if (errMsg.includes('Số dư') || errMsg.includes('insufficient_balance')) {
-																					setMissingAmount(depositInfo.amount);
-																					setShowDeposit(true);
-																				} else {
-																					setError(errMsg);
-																				}
-																			} finally {
-																				setDepositPayLoading(false);
-																			}
-																		}}
-																		className="w-full flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2.5 text-sm font-bold text-white shadow-md transition hover:brightness-110 disabled:opacity-50"
-																	>
-																		{depositPayLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-																		💳 Thanh toán 50% ({new Intl.NumberFormat('vi-VN').format(depositInfo.amount)} đ)
-																	</button>
-																</>
-															) : (
-																<p className="text-xs text-red-400">⏰ Hết thời hạn thanh toán</p>
-															)}
-														</div>
-													</>
-												);
-											}
-											// If deposit already paid, show confirmation on that message
-											if (isDepositMsg && !isMine && depositPaid) {
-												const cleanedMsg = msg.message.replace(/\nĐợi bạn thanh toán 50% còn lại trong 30 phút\.?/, '');
-												return (
-													<>
-														{cleanedMsg}
-														<div className="mt-3 pt-3 border-t border-emerald-600/40">
-															<p className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">✅ Đã thanh toán 50% — Đặt sân xác nhận!</p>
-														</div>
-													</>
-												);
-											}
-											// Normal message
-											return msg.message;
-										})()}
+									// Detect deposit 50% message from opponent
+									const isDepositMsg = msg.message.includes('đặt cọc 50%') && msg.message.includes('Đợi bạn thanh toán');
+									
+									if (isDepositMsg && !isMine) {
+										const cleanedMsg = msg.message.replace(/\nĐợi bạn thanh toán 50% còn lại trong 30 phút\.?/, '');
+										// Check subsequent messages to determine this deposit's status
+										const subsequentMsgs = messages.slice(idx + 1);
+										const wasCancelled = subsequentMsgs.some((m) => m.message.includes('huỷ đặt sân') || m.message.includes('hủy đặt sân'));
+										const wasPaid = subsequentMsgs.some((m) => m.message.includes('đã thanh toán 50% còn lại'));
+										const laterDepositMsgs = subsequentMsgs.filter((m) => {
+											const sid = getSenderId(m.sender_id);
+											return sid !== currentUserId && m.message.includes('đặt cọc 50%') && m.message.includes('Đợi bạn thanh toán');
+										});
+										const isLatestDeposit = laterDepositMsgs.length === 0;
+										// OLD deposit that was cancelled
+										if (wasCancelled && !isLatestDeposit) {
+											return (<>{cleanedMsg}<div className="mt-2 pt-2 border-t border-red-600/30"><p className="text-xs text-red-400 font-semibold">❌ Đã huỷ</p></div></>);
+										}
+										// Already paid
+										if (wasPaid || depositPaid) {
+											return (<>{cleanedMsg}<div className="mt-2 pt-2 border-t border-emerald-600/40"><p className="text-xs text-emerald-400 font-semibold">✅ Đã thanh toán</p></div></>);
+										}
+										// Active deposit: show button only if latest AND depositInfo exists
+										if (isLatestDeposit && depositInfo && !depositPaid) {
+											const fmtMin = Math.floor(depositCountdown / 60).toString().padStart(2, '0');
+											const fmtSec = (depositCountdown % 60).toString().padStart(2, '0');
+											return (
+												<>
+													{cleanedMsg}
+													<div className="mt-3 pt-3 border-t border-slate-600/40">
+														{depositCountdown > 0 ? (<>
+															<div className="flex items-center gap-1.5 mb-2">
+																<Clock className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+																<span className="text-xs text-amber-400 font-mono font-bold">{fmtMin}:{fmtSec}</span>
+																<span className="text-xs text-slate-500">còn lại</span>
+															</div>
+															<button type="button" disabled={depositPayLoading} onClick={async (e) => { e.stopPropagation(); try { setDepositPayLoading(true); await opponentPayBooking(depositInfo.bookingId); setDepositPaid(true); } catch (err: any) { const errMsg = err.message || 'Thanh toán thất bại'; if (errMsg.includes('Số dư') || errMsg.includes('insufficient_balance')) { setMissingAmount(depositInfo.amount); setShowDeposit(true); } else { setError(errMsg); } } finally { setDepositPayLoading(false); } }} className="w-full flex items-center justify-center rounded-md bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-1.5 text-xs font-bold text-white transition hover:brightness-110 disabled:opacity-50">
+																{depositPayLoading ? 'Đang xử lý...' : `Thanh toán 50% (${new Intl.NumberFormat('vi-VN').format(depositInfo.amount)} đ)`}
+															</button>
+														</>) : (<p className="text-xs text-red-400">⏰ Hết thời hạn thanh toán</p>)}
+													</div>
+												</>
+											);
+										}
+										// Fallback: just show cleaned message
+										return cleanedMsg;
+									}
+									// Normal message
+									return msg.message;
+								})()}
 									</div>
 									<div className={`text-[0.65rem] mt-1 opacity-60 ${isMine ? "text-right text-white/70" : "text-left text-slate-400"}`}>
 										{formatMessageTime(msg.createdAt)}

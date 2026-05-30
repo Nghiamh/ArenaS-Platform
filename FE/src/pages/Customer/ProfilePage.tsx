@@ -323,7 +323,8 @@ type SkillFormState = {
   sport: string;
   note: string;
   level: string;
-  ratingScore: string;
+  playFrequency: string;
+  playVibe: string;
 };
 
 const SKILL_SPORT_OPTIONS = ["Bóng đá", "Tennis", "Pickleball", "Cầu lông"];
@@ -331,31 +332,42 @@ const SKILL_SPORT_OPTIONS = ["Bóng đá", "Tennis", "Pickleball", "Cầu lông"
 const ALLOWED_SKILL_SPORTS = new Set(SKILL_SPORT_OPTIONS);
 
 const SKILL_LEVEL_OPTIONS = [
-  { value: "1", label: "Mới bắt đầu" },
-  { value: "2", label: "Cơ bản" },
-  { value: "3", label: "Khá" },
-  { value: "4", label: "Tốt" },
-  { value: "5", label: "Chuyên nghiệp" },
+  { value: "1", label: "Mới chơi", desc: "Vừa bắt đầu tập, chưa nắm rõ luật" },
+  { value: "2", label: "Chơi được", desc: "Biết luật, chơi được nhưng chưa ổn định" },
+  { value: "3", label: "Khá", desc: "Chơi thường xuyên, kỹ thuật cơ bản tốt" },
+  { value: "4", label: "Giỏi", desc: "Đã thi đấu phong trào, chiến thuật tốt" },
+  { value: "5", label: "Chuyên nghiệp", desc: "Thi đấu cấp câu lạc bộ trở lên" },
 ];
 
-const SKILL_RATING_OPTIONS = [
-  { value: "1", label: "1 - Rất thấp" },
-  { value: "2", label: "2 - Thấp" },
-  { value: "3", label: "3 - Trung bình" },
-  { value: "4", label: "4 - Cao" },
-  { value: "5", label: "5 - Rất cao" },
+const PLAY_FREQUENCY_OPTIONS = [
+  { value: "1", label: "Thỉnh thoảng" },
+  { value: "2", label: "1-2 lần mỗi tuần" },
+  { value: "3", label: "3 lần trở lên mỗi tuần" },
+];
+
+const PLAY_VIBE_OPTIONS = [
+  { value: "casual", label: "Vui là chính" },
+  { value: "balanced", label: "Vừa vui vừa nghiêm túc" },
+  { value: "competitive", label: "Thi đấu thật sự" },
 ];
 
 const EMPTY_SKILL_FORM: SkillFormState = {
   sport: "",
   note: "",
   level: "",
-  ratingScore: "",
+  playFrequency: "2",
+  playVibe: "balanced",
 };
 
 const getSkillLevelLabel = (value: number): string =>
   SKILL_LEVEL_OPTIONS.find((option) => option.value === String(value))?.label ??
   String(value);
+
+const getPlayFrequencyLabel = (value: number): string =>
+  PLAY_FREQUENCY_OPTIONS.find((opt) => opt.value === String(value))?.label ?? "";
+
+const getPlayVibeLabel = (value: string): string =>
+  PLAY_VIBE_OPTIONS.find((opt) => opt.value === value)?.label ?? "";
 
 const isAuthError = (message: string): boolean => {
   const norm = message.toLowerCase().trim();
@@ -425,6 +437,17 @@ export const ProfilePage: React.FC = () => {
   const [isAppealing, setIsAppealing] = useState(false);
   const [showReportsModal, setShowReportsModal] = useState(false);
 
+  const isAnyModalOpen =
+    isEditModalOpen ||
+    showDeposit ||
+    showHistoryModal ||
+    showAllBookingsModal ||
+    showReportsModal ||
+    Boolean(bookingToCancel) ||
+    Boolean(selectedReportForAppeal) ||
+    Boolean(popupErrorMessage) ||
+    Boolean(editingSkillId);
+
   const fetchReports = async () => {
     try {
       setReportsLoading(true);
@@ -488,6 +511,28 @@ export const ProfilePage: React.FC = () => {
       navigate(".", { replace: true, state: {} });
     }
   }, [location.state, navigate]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    const previousPaddingRight = document.body.style.paddingRight;
+
+    if (isAnyModalOpen) {
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      document.body.style.overflow = "hidden";
+      if (scrollbarWidth > 0) {
+        document.body.style.paddingRight = `${scrollbarWidth}px`;
+      }
+    }
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.paddingRight = previousPaddingRight;
+    };
+  }, [isAnyModalOpen]);
 
   const fetchBookings = async () => {
     try {
@@ -817,7 +862,8 @@ export const ProfilePage: React.FC = () => {
       sport: skill.sport,
       note: skill.note ?? "",
       level: String(skill.level),
-      ratingScore: String(skill.rating_score),
+      playFrequency: String(skill.play_frequency ?? 2),
+      playVibe: skill.play_vibe ?? "balanced",
     });
     setEditingSkillId(skill.id);
     setSuccessMessage("");
@@ -840,7 +886,8 @@ export const ProfilePage: React.FC = () => {
       sport: nextSport,
       note: "",
       level: "",
-      ratingScore: "",
+      playFrequency: "2",
+      playVibe: "balanced",
     });
     setEditingSkillId("new");
     setSuccessMessage("");
@@ -861,15 +908,15 @@ export const ProfilePage: React.FC = () => {
       return;
     }
     const level = Number(skillForm.level);
-    const ratingScore = Number(skillForm.ratingScore);
     if (!Number.isInteger(level) || level < 1 || level > 5) {
-      showErrorPopup("Level phải là số nguyên từ 1 đến 5.");
+      showErrorPopup("Vui lòng chọn cấp độ.");
       return;
     }
-    if (!Number.isInteger(ratingScore) || ratingScore < 1 || ratingScore > 5) {
-      showErrorPopup("Tự đánh giá phải là số nguyên từ 1 đến 5.");
-      return;
-    }
+    const playFrequency = Number(skillForm.playFrequency) || 2;
+    const playVibe = skillForm.playVibe || "balanced";
+    const frequencyBonus = playFrequency === 3 ? 0.5 : playFrequency === 1 ? -0.5 : 0;
+    const vibeBonus = playVibe === "competitive" ? 0.5 : playVibe === "casual" ? -0.5 : 0;
+    const computedRating = Math.min(5, Math.max(1, Math.round(level + frequencyBonus + vibeBonus)));
     try {
       setIsSkillSubmitting(true);
       setSuccessMessage("");
@@ -878,7 +925,9 @@ export const ProfilePage: React.FC = () => {
         sport,
         note,
         level,
-        rating_score: ratingScore,
+        rating_score: computedRating,
+        play_frequency: playFrequency,
+        play_vibe: playVibe,
       };
       const skillToUpdate =
         editingSkillId && editingSkillId !== "new"
@@ -969,10 +1018,10 @@ export const ProfilePage: React.FC = () => {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#08090d] text-slate-100 px-4 py-8 md:px-8 md:py-12 selection:bg-blue-500/30 overflow-x-hidden">
+    <div className="relative min-h-screen bg-deep text-slate-100 px-4 py-8 md:px-8 md:py-12 selection:bg-accent-primary/30 overflow-x-hidden">
       {/* Global Toast Notification */}
       {successMessage && (
-        <div className="fixed bottom-10 right-6 md:right-10 z-[9999] flex items-center gap-3 px-5 py-4 rounded-xl bg-[#141E2B] border-l-4 border-l-[#1D9E75] border-y border-r border-white/10 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] animate-[slideIn_0.3s_ease-out_forwards]">
+        <div className="fixed bottom-10 right-6 md:right-10 z-[9999] flex items-center gap-3 px-5 py-4 rounded-xl bg-deep border-l-4 border-l-[#1D9E75] border-y border-r border-white/10 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] animate-[slideIn_0.3s_ease-out_forwards]">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1D9E75]/20 text-[#1D9E75] shrink-0">
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5">
               <polyline points="20 6 9 17 4 12" />
@@ -999,7 +1048,7 @@ export const ProfilePage: React.FC = () => {
             {/* ─── LEFT SIDEBAR ────────────────────────────────────────────── */}
             <aside className="w-full lg:w-80 shrink-0 flex flex-col gap-6">
               {/* Profile Main Info */}
-              <div className="bg-[#10111a] border border-white/[0.05] rounded-3xl p-6 flex flex-col items-center text-center shadow-[0_8px_30px_rgb(0,0,0,0.15)] relative overflow-hidden group">
+              <div className="bg-white/[0.03] border border-white/[0.05] rounded-3xl p-6 flex flex-col items-center text-center shadow-[0_8px_30px_rgb(0,0,0,0.15)] relative overflow-hidden group">
                 <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500/25 to-transparent" />
 
                 {/* Avatar Frame with Stars & Verified Check */}
@@ -1018,7 +1067,7 @@ export const ProfilePage: React.FC = () => {
                     )}
                   </div>
                   {/* Verified Check Badge */}
-                  <div className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-blue-500 border-2 border-[#10111a] flex items-center justify-center shadow-lg">
+                  <div className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-blue-500 border-2 border-deep flex items-center justify-center shadow-lg">
                     <CheckedVerifiedIcon />
                   </div>
 
@@ -1221,7 +1270,7 @@ export const ProfilePage: React.FC = () => {
                 {/* Wallet Balance Card */}
                 <div
                   onClick={() => setShowHistoryModal(true)}
-                  className="bg-gradient-to-br from-blue-600 to-indigo-900 border border-blue-400/20 rounded-3xl p-6 shadow-[0_12px_40px_-10px_rgba(37,99,235,0.35)] flex flex-col justify-between text-white relative overflow-hidden group cursor-pointer hover:shadow-[0_15px_45px_-5px_rgba(37,99,235,0.45)] transition duration-300"
+                  className="bg-gradient-to-br from-accent-primary/90 to-accent-secondary/90 border border-accent-primary/20 rounded-3xl p-6 shadow-lg flex flex-col justify-between text-white relative overflow-hidden group cursor-pointer hover:shadow-xl transition duration-300"
                 >
                   {/* Glowing background bubble */}
                   <div className="absolute -right-16 -top-16 w-48 h-48 rounded-full bg-sky-400/15 blur-3xl pointer-events-none group-hover:scale-110 transition duration-500" />
@@ -1298,7 +1347,7 @@ export const ProfilePage: React.FC = () => {
                         e.stopPropagation();
                         setShowDeposit(true);
                       }}
-                      className="flex-1 py-2.5 rounded-xl bg-white text-xs font-bold text-[#08090d] transition duration-200 hover:bg-slate-100 active:scale-95 shadow-md uppercase tracking-wider"
+                      className="flex-1 py-2.5 rounded-xl bg-white text-xs font-bold text-deep transition duration-200 hover:bg-slate-100 active:scale-95 shadow-md uppercase tracking-wider"
                     >
                       Nạp tiền
                     </button>
@@ -1316,7 +1365,7 @@ export const ProfilePage: React.FC = () => {
               </div>
 
               {/* Row 2: Performance Analytics Section (Skills list & management) */}
-              <div className="bg-[#10111a] border border-white/[0.05] rounded-3xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.15)] relative overflow-hidden group">
+              <div className="bg-white/[0.03] border border-white/[0.05] rounded-3xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.15)] relative overflow-hidden group">
                 <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-500/15 to-transparent" />
 
                 {/* Header */}
@@ -1344,32 +1393,57 @@ export const ProfilePage: React.FC = () => {
                       type="button"
                       onClick={handleStartSkillCreate}
                       disabled={!canAddNewSkill}
-                      className="px-4 py-1.5 rounded-xl bg-blue-500 hover:bg-blue-400 text-xs font-bold text-white transition disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                      className="px-4 py-1.5 rounded-xl bg-accent-primary hover:bg-accent-primary/80 text-xs font-bold text-deep transition disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
                     >
                       + Thêm kỹ năng
                     </button>
                   )}
                 </div>
 
-                {/* Inline Skill Edit/Create Form */}
+                {/* Skill edit/create modal */}
                 {editingSkillId !== null ? (
-                  <div className="bg-slate-950/40 border border-white/[0.04] rounded-2xl p-5 mb-6 space-y-4 shadow-inner">
-                    <div className="flex items-center justify-between border-b border-white/[0.04] pb-3 mb-1">
-                      <h4 className="text-xs font-extrabold tracking-wide uppercase text-slate-200">
-                        {editingSkillId === "new"
-                          ? "Thêm Kỹ Năng Mới"
-                          : `Sửa Kỹ Năng: ${skillForm.sport}`}
-                      </h4>
-                      <span className="text-[9px] uppercase font-bold text-slate-500 tracking-wider">
-                        Cấp độ 1 - 5
-                      </span>
-                    </div>
+                  <div
+                    className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 px-4 py-6 backdrop-blur-sm"
+                    onClick={handleCancelSkillEdit}
+                  >
+                    <div
+                      className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border border-white/[0.05] bg-[#10111a] p-6 shadow-[0_28px_70px_-35px_rgba(0,0,0,0.9)] relative overflow-hidden"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500/30 to-transparent" />
+                      <div className="flex items-center justify-between border-b border-white/[0.05] pb-4 mb-5">
+                        <div className="flex items-center gap-2.5">
+                          <svg
+                            viewBox="0 0 24 24"
+                            className="h-5 w-5 text-blue-400"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <rect x="3" y="3" width="7" height="9" rx="1" />
+                            <rect x="14" y="3" width="7" height="5" rx="1" />
+                            <rect x="14" y="12" width="7" height="9" rx="1" />
+                            <rect x="3" y="16" width="7" height="5" rx="1" />
+                          </svg>
+                          <h4 className="text-base font-bold text-white tracking-wide">
+                            {editingSkillId === "new"
+                              ? "Thêm kỹ năng mới"
+                              : `Sửa kỹ năng: ${skillForm.sport}`}
+                          </h4>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleCancelSkillEdit}
+                          className="h-8 w-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition text-lg font-bold"
+                        >
+                          ✕
+                        </button>
+                      </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Sport dropdown */}
+                      {/* Sport selector */}
                       {editingSkillId === "new" ? (
                         <div>
-                          <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">
+                          <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase mb-2 block">
                             Bộ môn
                           </label>
                           <select
@@ -1377,7 +1451,7 @@ export const ProfilePage: React.FC = () => {
                             onChange={(e) =>
                               handleSkillFormChange("sport", e.target.value)
                             }
-                            className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-xs font-semibold text-white outline-none focus:border-blue-500/50"
+                            className="h-10 w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-xs font-semibold text-white outline-none focus:border-blue-500/50"
                           >
                             {SKILL_SPORT_OPTIONS.map((sport) => (
                               <option
@@ -1393,63 +1467,144 @@ export const ProfilePage: React.FC = () => {
                         </div>
                       ) : (
                         <div>
-                          <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">
+                          <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase mb-1 block">
                             Bộ môn
                           </label>
-                          <div className="mt-2.5 text-sm font-bold text-white">
+                          <div className="text-sm font-bold text-white">
                             {skillForm.sport}
                           </div>
                         </div>
                       )}
 
-                      {/* Level */}
+                      {/* Level chips */}
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">
-                          Cấp độ
+                        <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase mb-2.5 block">
+                          Trình độ của bạn
                         </label>
-                        <select
-                          value={skillForm.level}
-                          onChange={(e) =>
-                            handleSkillFormChange("level", e.target.value)
-                          }
-                          className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-xs font-semibold text-white outline-none focus:border-blue-500/50"
-                        >
-                          <option value="">Chọn cấp độ</option>
-                          {SKILL_LEVEL_OPTIONS.map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="flex flex-col gap-2">
+                          {SKILL_LEVEL_OPTIONS.map((opt) => {
+                            const isActive = skillForm.level === opt.value;
+                            return (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() =>
+                                  handleSkillFormChange("level", opt.value)
+                                }
+                                className={`w-full text-left px-4 py-3 rounded-xl border transition-all duration-200 ${
+                                  isActive
+                                    ? "border-blue-500 bg-blue-500/15 ring-1 ring-blue-500/30"
+                                    : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10"
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div
+                                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                                      isActive
+                                        ? "border-blue-500 bg-blue-500"
+                                        : "border-slate-600"
+                                    }`}
+                                  >
+                                    {isActive && (
+                                      <svg
+                                        viewBox="0 0 24 24"
+                                        className="w-3 h-3 text-white"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="3"
+                                      >
+                                        <path d="M5 13l4 4L19 7" />
+                                      </svg>
+                                    )}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <span
+                                      className={`text-xs font-bold ${
+                                        isActive
+                                          ? "text-blue-400"
+                                          : "text-slate-300"
+                                      }`}
+                                    >
+                                      {opt.label}
+                                    </span>
+                                    <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                                      {opt.desc}
+                                    </p>
+                                  </div>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
 
-                      {/* Rating Score */}
+                      {/* Play frequency chips */}
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">
-                          Tự đánh giá
+                        <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase mb-2.5 block">
+                          Bạn chơi thường xuyên không
                         </label>
-                        <select
-                          value={skillForm.ratingScore}
-                          onChange={(e) =>
-                            handleSkillFormChange(
-                              "ratingScore",
-                              e.target.value,
-                            )
-                          }
-                          className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-xs font-semibold text-white outline-none focus:border-blue-500/50"
-                        >
-                          <option value="">Chọn tự đánh giá</option>
-                          {SKILL_RATING_OPTIONS.map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="grid grid-cols-3 gap-2">
+                          {PLAY_FREQUENCY_OPTIONS.map((opt) => {
+                            const isActive =
+                              skillForm.playFrequency === opt.value;
+                            return (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() =>
+                                  handleSkillFormChange(
+                                    "playFrequency",
+                                    opt.value,
+                                  )
+                                }
+                                className={`px-3 py-2.5 rounded-xl border text-center transition-all duration-200 ${
+                                  isActive
+                                    ? "border-blue-500 bg-blue-500/15 text-blue-400 ring-1 ring-blue-500/30"
+                                    : "border-white/[0.06] bg-white/[0.02] text-slate-400 hover:bg-white/[0.04] hover:border-white/10"
+                                }`}
+                              >
+                                <span className="text-[11px] font-bold leading-tight block">
+                                  {opt.label}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Play vibe chips */}
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase mb-2.5 block">
+                          Phong cách chơi
+                        </label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {PLAY_VIBE_OPTIONS.map((opt) => {
+                            const isActive = skillForm.playVibe === opt.value;
+                            return (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() =>
+                                  handleSkillFormChange("playVibe", opt.value)
+                                }
+                                className={`px-3 py-2.5 rounded-xl border text-center transition-all duration-200 ${
+                                  isActive
+                                    ? "border-blue-500 bg-blue-500/15 text-blue-400 ring-1 ring-blue-500/30"
+                                    : "border-white/[0.06] bg-white/[0.02] text-slate-400 hover:bg-white/[0.04] hover:border-white/10"
+                                }`}
+                              >
+                                <span className="text-[11px] font-bold leading-tight block">
+                                  {opt.label}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
 
                       {/* Note */}
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">
+                        <label className="text-[10px] font-bold text-slate-500 tracking-wider uppercase mb-1.5 block">
                           Ghi chú (không bắt buộc)
                         </label>
                         <input
@@ -1458,29 +1613,29 @@ export const ProfilePage: React.FC = () => {
                             handleSkillFormChange("note", e.target.value)
                           }
                           placeholder="Kinh nghiệm chơi, thời gian tham gia..."
-                          className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-xs font-semibold text-white outline-none focus:border-blue-500/50"
+                          className="h-10 w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-xs font-semibold text-white outline-none focus:border-blue-500/50"
                         />
                       </div>
-                    </div>
 
-                    {/* Form actions */}
-                    <div className="flex items-center justify-end gap-3.5 border-t border-white/[0.04] pt-4 mt-3">
-                      <button
-                        type="button"
-                        onClick={handleCancelSkillEdit}
-                        disabled={isSkillSubmitting}
-                        className="px-4 py-2 rounded-xl border border-white/10 bg-white/[0.01] text-xs font-bold text-slate-300 transition hover:bg-white/[0.05]"
-                      >
-                        Hủy
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSaveSkill}
-                        disabled={isSkillSubmitting}
-                        className="px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-400 text-xs font-bold text-white transition flex items-center gap-1.5 shadow-md"
-                      >
-                        {isSkillSubmitting ? "Đang lưu..." : "Lưu kỹ năng"}
-                      </button>
+                      {/* Form actions */}
+                      <div className="flex items-center justify-end gap-3.5 border-t border-white/[0.04] pt-4 mt-5">
+                        <button
+                          type="button"
+                          onClick={handleCancelSkillEdit}
+                          disabled={isSkillSubmitting}
+                          className="px-4 py-2 rounded-xl border border-white/10 bg-white/[0.01] text-xs font-bold text-slate-300 transition hover:bg-white/[0.05]"
+                        >
+                          Hủy
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSaveSkill}
+                          disabled={isSkillSubmitting}
+                          className="px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-400 text-xs font-bold text-white transition flex items-center gap-1.5 shadow-md"
+                        >
+                          {isSkillSubmitting ? "Đang lưu..." : "Lưu kỹ năng"}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ) : null}
@@ -1503,8 +1658,8 @@ export const ProfilePage: React.FC = () => {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                     {skills.map((skill) => {
-                      const percent = skill.level * 20; // 1-5 maps to 20-100%
-                      const { barClass, textClass } = getLevelColorInfo(skill.level);
+                      const percent = skill.rating_score * 20; // 1-5 maps to 20-100%
+                      const { barClass, textClass } = getLevelColorInfo(skill.rating_score);
                       return (
                         <div key={skill.id} className="group relative">
                           <div className="flex items-center justify-between mb-2">
@@ -1569,6 +1724,20 @@ export const ProfilePage: React.FC = () => {
                               "{skill.note.trim()}"
                             </p>
                           )}
+                          {(skill.play_frequency || skill.play_vibe) && (
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {skill.play_frequency && (
+                                <span className="inline-block px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.06] text-[10px] font-medium text-slate-400">
+                                  {getPlayFrequencyLabel(skill.play_frequency)}
+                                </span>
+                              )}
+                              {skill.play_vibe && (
+                                <span className="inline-block px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.06] text-[10px] font-medium text-slate-400">
+                                  {getPlayVibeLabel(skill.play_vibe)}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -1577,7 +1746,7 @@ export const ProfilePage: React.FC = () => {
               </div>
 
               {/* Row 3: Recent Bookings Section (Placeholder, developed later) */}
-              <div className="bg-[#10111a] border border-white/[0.05] rounded-3xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.15)] relative overflow-hidden group">
+              <div className="bg-white/[0.03] border border-white/[0.05] rounded-3xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.15)] relative overflow-hidden group">
                 <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-500/10 to-transparent" />
 
                 {/* Header */}
@@ -1602,7 +1771,7 @@ export const ProfilePage: React.FC = () => {
 
                   <button
                     onClick={() => { setShowAllBookingsModal(true); setBookingsCurrentPage(1); }}
-                    className="text-xs font-bold text-blue-400 hover:text-blue-300 transition"
+                    className="text-xs font-bold text-accent-primary hover:text-accent-primary/80 transition"
                   >
                     Xem tất cả
                   </button>

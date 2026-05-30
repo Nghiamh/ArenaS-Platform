@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import ChatMessage from "../models/chatMessageModel.js";
 import Match from "../models/matchModel.js";
+import { BookingModel } from "../models/bookingModel.js";
 
 /**
  * GET /api/chat/:matchId/history
@@ -67,6 +68,42 @@ export async function getChatHistory(req: Request, res: Response): Promise<void>
 			ChatMessage.countDocuments({ match_id: matchId }),
 		]);
 
+		// Check for pending deposit: a 'waiting_opponent' booking for this match
+		// where the current user is the unpaid participant
+		let pending_deposit: {
+			bookingId: string;
+			amount: number;
+			deadline: string;
+		} | undefined;
+
+		try {
+			const pendingBooking = await BookingModel.findOne({
+				match_id: matchId,
+				status: 'waiting_opponent',
+			});
+
+			if (pendingBooking && pendingBooking.participants) {
+				const unpaidEntry = pendingBooking.participants.find(
+					(p) => p.userId.toString() === userId && p.status === 'unpaid'
+				);
+
+				if (unpaidEntry) {
+					// Verify deadline hasn't passed
+					const deadline = pendingBooking.opponent_deadline;
+					if (deadline && new Date() < deadline) {
+						pending_deposit = {
+							bookingId: (pendingBooking._id as any).toString(),
+							amount: unpaidEntry.amount,
+							deadline: deadline.toISOString(),
+						};
+					}
+				}
+			}
+		} catch (depositErr) {
+			console.error("getChatHistory pending_deposit lookup error:", depositErr);
+			// Non-critical, continue without pending_deposit
+		}
+
 		res.status(200).json({
 			success: true,
 			messages,
@@ -75,6 +112,7 @@ export async function getChatHistory(req: Request, res: Response): Promise<void>
 			chat_deleted_by: match.chat_deleted_by.map((id: any) => id.toString()),
 			canVote: isParticipant, // only participants can vote, not the court owner
 			court_id: match.court_id ? (typeof match.court_id === 'object' && '_id' in match.court_id ? (match.court_id as any)._id.toString() : match.court_id.toString()) : undefined,
+			pending_deposit,
 			pagination: {
 				page,
 				limit,

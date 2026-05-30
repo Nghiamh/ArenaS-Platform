@@ -1,5 +1,5 @@
 import express from 'express';
-import { generateCourtSlots, getCourtSlots, getOwnerBookings, getOwnerListBookings, ownerCreateBooking, userBookCourt, opponentPayBooking, getMyBookings, cancelBooking, lockSlots, unlockSlots } from '../controllers/bookingController.js';
+import { generateCourtSlots, getCourtSlots, getOwnerBookings, getOwnerListBookings, ownerCreateBooking, userBookCourt, opponentPayBooking, getMyBookings, cancelBooking, lockSlots, unlockSlots, getMatchPendingDeposit } from '../controllers/bookingController.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -35,5 +35,8 @@ router.post('/:id/cancel', requireAuth, cancelBooking);
 
 // 9. API Đối thủ thanh toán 50% còn lại (matchmaking)
 router.post('/:id/opponent-pay', requireAuth, opponentPayBooking);
+
+// 10. API Lấy thông tin pending deposit cho match
+router.get('/match/:matchId/pending-deposit', requireAuth, getMatchPendingDeposit);
 
 export default router;

@@ -107,6 +107,8 @@ export type UserSkill = {
 	sport: string;
 	note?: string;
 	level: number;
+	play_frequency?: number;
+	play_vibe?: "casual" | "balanced" | "competitive";
 	rating_score: number;
 	createdAt?: string;
 	updatedAt?: string;
@@ -127,6 +129,8 @@ export type UserSkillPayload = {
 	note?: string;
 	level: number;
 	rating_score: number;
+	play_frequency?: number;
+	play_vibe?: string;
 };
 
 type ApiErrorPayload = {
@@ -1154,6 +1158,20 @@ export async function opponentPayBooking(bookingId: string): Promise<{
 }> {
 	try {
 		const { data } = await axiosClient.post(`/bookings/${bookingId}/opponent-pay`, {}, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function getMatchPendingDeposit(matchId: string): Promise<{
+	pending_deposit: { bookingId: string; amount: number; deadline: string | null } | null;
+	expired?: boolean;
+}> {
+	try {
+		const { data } = await axiosClient.get(`/bookings/match/${matchId}/pending-deposit`, {
 			headers: withAuthHeaders(),
 		});
 		return data;

@@ -219,7 +219,7 @@ export const OwnerDashboardScreen: React.FC = () => {
   }, [bookings, courts]);
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[#020B1F] text-slate-100">
+    <div className="relative min-h-screen overflow-x-hidden bg-[#0A0A0B] text-slate-100">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_18%,rgba(37,99,235,0.2),transparent_34%),radial-gradient(circle_at_75%_0%,rgba(14,165,233,0.12),transparent_28%),radial-gradient(circle_at_50%_100%,rgba(59,130,246,0.08),transparent_40%)]" />
       <div className="pointer-events-none absolute inset-0 opacity-[0.25] [background-image:linear-gradient(rgba(71,85,105,0.2)_1px,transparent_1px),linear-gradient(90deg,rgba(71,85,105,0.2)_1px,transparent_1px)] [background-size:70px_70px]" />
 
@@ -253,7 +253,7 @@ export const OwnerDashboardScreen: React.FC = () => {
                   key={card.title}
                   variants={fadeUp}
                   whileHover={{ y: -4, scale: 1.01 }}
-                  className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#071632]/85 p-5 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.8)]"
+                  className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#101011] p-5 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.8)]"
                 >
                   <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient}`} />
                   <div className="relative z-10">
@@ -269,7 +269,7 @@ export const OwnerDashboardScreen: React.FC = () => {
             <section className="grid gap-5 xl:grid-cols-[2.2fr_1.1fr]">
               <motion.article
                 variants={fadeUp}
-                className="rounded-3xl border border-white/10 bg-[#071632]/90 p-5 shadow-[0_26px_55px_-30px_rgba(0,0,0,0.8)]"
+                className="rounded-3xl border border-white/10 bg-[#101011] p-5 shadow-[0_26px_55px_-30px_rgba(0,0,0,0.8)]"
               >
                 <div className="mb-4 flex items-center justify-between">
                   <div>
@@ -279,7 +279,7 @@ export const OwnerDashboardScreen: React.FC = () => {
                   <button className="text-sm font-semibold text-blue-300 transition hover:text-blue-200">Xem chi tiết →</button>
                 </div>
 
-                <div className="relative h-[320px] rounded-2xl border border-white/5 bg-[#061127] p-4">
+                <div className="relative h-[320px] rounded-2xl border border-white/5 bg-[#0A0A0B] p-4">
                   <div className="pointer-events-none absolute inset-0 opacity-[0.22] [background-image:linear-gradient(rgba(51,65,85,0.45)_1px,transparent_1px),linear-gradient(90deg,rgba(51,65,85,0.25)_1px,transparent_1px)] [background-size:18%_20%]" />
 
                   <svg viewBox="0 0 700 300" className="relative z-10 h-full w-full">
@@ -329,7 +329,7 @@ export const OwnerDashboardScreen: React.FC = () => {
                 </div>
               </motion.article>
 
-              <motion.article variants={fadeUp} className="rounded-3xl border border-white/10 bg-[#071632]/90 p-5">
+              <motion.article variants={fadeUp} className="rounded-3xl border border-white/10 bg-[#101011] p-5">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-3xl font-black tracking-tight text-white">Sân Nổi Bật</h2>
                   <button className="text-sm font-semibold text-blue-300 transition hover:text-blue-200">Quản lý →</button>
@@ -342,7 +342,7 @@ export const OwnerDashboardScreen: React.FC = () => {
                       initial={{ opacity: 0, x: 16 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.35 + index * 0.11 }}
-                      className="rounded-2xl border border-white/8 bg-[#081A3D]/70 p-4"
+                      className="rounded-2xl border border-white/8 bg-[#0A0A0B] p-4"
                     >
                       <div className="mb-3 flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -373,7 +373,7 @@ export const OwnerDashboardScreen: React.FC = () => {
               </motion.article>
             </section>
 
-            <motion.section variants={fadeUp} className="rounded-3xl border border-white/10 bg-[#071632]/90 p-5">
+            <motion.section variants={fadeUp} className="rounded-3xl border border-white/10 bg-[#101011] p-5">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-3xl font-black tracking-tight text-white">Lượt Đặt Gần Đây</h2>
                 <button className="text-sm font-semibold text-blue-300 transition hover:text-blue-200">Xem tất cả →</button>
