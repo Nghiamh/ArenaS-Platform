@@ -92,6 +92,19 @@ export function DepositModal({ isOpen, onClose, onSuccess, initialAmount, autoCr
 		return `${minutes}:${String(seconds).padStart(2, '0')}`;
 	}, [countdown]);
 
+	useEffect(() => {
+		if (!isOpen || typeof document === 'undefined') {
+			return;
+		}
+
+		const previousOverflow = document.body.style.overflow;
+		document.body.style.overflow = 'hidden';
+
+		return () => {
+			document.body.style.overflow = previousOverflow;
+		};
+	}, [isOpen]);
+
 	const handleSelectAmount = (value: number) => {
 		setAmount(value);
 		setInputValue(value.toLocaleString('vi-VN'));

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-
+import { ThemeSwitcher } from './ThemeSwitcher';
 type StoredUser = {
   name?: string;
   userName?: string;
@@ -14,6 +14,7 @@ export const Header: React.FC = () => {
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const [currentUser, setCurrentUser] = useState<StoredUser | null>(null);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const syncUser = () => {
@@ -75,17 +76,17 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/5 bg-[#0A0A0B]/90 text-white shadow-lg backdrop-blur-md font-inter">
+    <header className="sticky top-0 z-50 border-b border-white/5 bg-deep/90 text-white shadow-lg backdrop-blur-md font-inter">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link to="/home" className="flex items-center gap-2 group">
-            <div className="bg-[#CCFF00] rounded-full w-10 h-10 flex items-center justify-center font-black text-[#0A0A0B] text-lg transition-transform group-hover:scale-105">
+            <div className="bg-accent-primary rounded-full w-10 h-10 flex items-center justify-center font-black text-[#0A0A0B] text-lg transition-transform group-hover:scale-105">
               <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
                 <path d="M13.49 5.48c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm-3.6 13.9l1-4.4 2.1 2v6h2v-7.5l-2.1-2 .6-3c1.3 1.5 3.3 2.5 5.5 2.5v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1l-5.2 2.2v4.7h2v-3.4l1.8-.7-1.6 8.1-4.9-1-.4 2 6.7 1.4 1.1-5.4z" />
               </svg>
             </div>
-            <span className="text-2xl font-black font-montserrat uppercase tracking-[0.2em] text-[#CCFF00]">ArenaS</span>
+            <span className="text-2xl font-black font-montserrat uppercase tracking-[0.2em] text-accent-primary">ArenaS</span>
           </Link>
 
           {/* Navigation Menu */}
@@ -127,14 +128,15 @@ export const Header: React.FC = () => {
 
           {/* Right Side Actions */}
           <div className="flex items-center gap-4">
+            <ThemeSwitcher />
             {isLoggedIn ? (
               <div className="relative" ref={profileMenuRef}>
                 <button
                   type="button"
                   onClick={() => setIsProfileMenuOpen((prev) => !prev)}
-                  className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-2 py-1.5 text-left transition hover:border-[#CCFF00]/50 hover:bg-[#CCFF00]/10"
+                  className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-2 py-1.5 text-left transition hover:border-accent-primary/50 hover:bg-accent-primary/10"
                 >
-                  <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-[#CCFF00] text-base font-black text-[#0A0A0B]">
+                  <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-accent-primary text-base font-black text-[#0A0A0B]">
                     {profileAvatarUrl ? (
                       <img src={profileAvatarUrl} alt="avatar" className="h-full w-full object-cover" />
                     ) : (
@@ -143,12 +145,12 @@ export const Header: React.FC = () => {
                   </span>
                   <span className="hidden pr-2 md:block">
                     <span className="block text-sm font-bold text-white tracking-tight">{currentUser?.name ?? currentUser?.userName ?? 'Tài khoản'}</span>
-                    <span className="block text-[10px] uppercase font-bold tracking-widest text-[#00F5FF]">Hồ sơ</span>
+                    <span className="block text-[10px] uppercase font-bold tracking-widest text-accent-secondary">Hồ sơ</span>
                   </span>
                 </button>
 
                 {isProfileMenuOpen && (
-                  <div className="absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-2xl border border-white/10 bg-[#0A0A0B]/95 p-1.5 shadow-[0_16px_40px_-20px_rgba(204,255,0,0.1)] backdrop-blur">
+                  <div className="absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-2xl border border-white/10 bg-deep/95 p-1.5 shadow-[0_16px_40px_-20px_rgba(var(--accent-primary-rgb),0.1)] backdrop-blur">
                     <button
                       type="button"
                       onClick={() => {
@@ -166,7 +168,7 @@ export const Header: React.FC = () => {
                           setIsProfileMenuOpen(false);
                           navigate('/profile');
                         }}
-                        className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-bold text-slate-300 transition hover:bg-white/10 hover:text-[#00F5FF]"
+                        className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-bold text-slate-300 transition hover:bg-white/10 hover:text-accent-secondary"
                       >
                         Trang cá nhân
                       </button>
@@ -183,20 +185,99 @@ export const Header: React.FC = () => {
               </div>
             ) : (
               <>
-                <Link to="/login" className="hidden md:flex items-center gap-2 hover:text-[#00F5FF] transition">
+                <Link to="/login" className="hidden md:flex items-center gap-2 hover:text-accent-secondary transition">
                   <span className="text-sm font-bold uppercase tracking-wider">Đăng Nhập</span>
                 </Link>
                 <Link
                   to="/register"
-                  className="bg-[#2A3317] border border-[#CCFF00]/30 text-[#CCFF00] shadow-[0_0_15px_rgba(204,255,0,0.15)] font-bold py-2.5 px-6 rounded-xl transition duration-300 hover:bg-[#CCFF00] hover:text-[#0A0A0B] uppercase text-xs tracking-widest"
+                  className="hidden md:flex bg-[#2A3317] border border-accent-primary/30 text-accent-primary shadow-[0_0_15px_rgba(204,255,0,0.15)] font-bold py-2.5 px-6 rounded-xl transition duration-300 hover:bg-accent-primary hover:text-[#0A0A0B] uppercase text-xs tracking-widest"
                 >
                   Đăng Ký Miễn Phí
                 </Link>
               </>
             )}
+
+            {/* Mobile Menu Toggle Button */}
+            <button
+              className="md:hidden flex items-center justify-center p-2 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:text-accent-secondary transition-colors"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Mobile Menu */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden absolute top-full left-0 w-full bg-deep/95 border-b border-white/10 shadow-lg backdrop-blur-md">
+          <nav className="flex flex-col px-6 py-6 space-y-4">
+            <Link
+              to="/tim-san"
+              className="text-white hover:text-accent-secondary transition duration-300 font-bold text-lg"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Tìm Sân
+            </Link>
+
+            {isPlayerAccount && (
+              <Link
+                to="/matchmaking"
+                className="text-white hover:text-accent-secondary transition duration-300 font-bold text-lg"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Tìm Đối Thủ
+              </Link>
+            )}
+            {!isManagementAccount && (
+              <Link
+                to="/cho-chu-san"
+                className="text-accent-primary hover:text-accent-light transition duration-300 font-bold text-lg"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Liên Hệ Chủ Sân
+              </Link>
+            )}
+            {!isPlayerAccount && (
+              <Link
+                to="/bang-gia"
+                className="text-white hover:text-accent-secondary transition duration-300 font-bold text-lg"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Bảng Giá
+              </Link>
+            )}
+            
+            {!isLoggedIn && (
+              <>
+                <div className="h-px bg-white/10 my-2" />
+                <Link
+                  to="/login"
+                  className="text-white hover:text-accent-secondary transition duration-300 font-bold uppercase text-sm tracking-wider"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Đăng Nhập
+                </Link>
+                <Link
+                  to="/register"
+                  className="text-accent-primary hover:text-accent-light transition duration-300 font-bold uppercase text-sm tracking-wider"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Đăng Ký Miễn Phí
+                </Link>
+              </>
+            )}
+          </nav>
+        </div>
+      )}
     </header>
   );
 };

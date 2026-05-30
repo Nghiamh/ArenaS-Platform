@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -65,26 +65,26 @@ const defaultSportCategories = [
   {
     name: 'Bóng Đá',
     image: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=400&auto=format&fit=crop',
-    glow: 'bg-[#CCFF00]/30',
-    border: 'border-[#CCFF00]/20 group-hover:border-[#CCFF00]/60',
+    glow: 'bg-accent-primary/30',
+    border: 'border-accent-primary/20 group-hover:border-accent-primary/60',
   },
   {
     name: 'Tennis',
     image: 'https://media.istockphoto.com/id/1223794261/photo/tennis-court-with-ball-and-net-close-up.jpg?s=612x612&w=0&k=20&c=kPQufmCwyiPQ6A1qEMZ62rucNgEIkDg5y_8f-qZcAN0=',
-    glow: 'bg-[#00F5FF]/30',
-    border: 'border-[#00F5FF]/20 group-hover:border-[#00F5FF]/60',
+    glow: 'bg-accent-secondary/30',
+    border: 'border-accent-secondary/20 group-hover:border-accent-secondary/60',
   },
   {
     name: 'Cầu Lông',
     image: 'https://maythongdich.com/uploads/images/vi/news/cau-long-tieng-anh-la-gi.jpg',
-    glow: 'bg-[#CCFF00]/30',
-    border: 'border-[#CCFF00]/20 group-hover:border-[#CCFF00]/60',
+    glow: 'bg-accent-primary/30',
+    border: 'border-accent-primary/20 group-hover:border-accent-primary/60',
   },
   {
     name: 'Pickleball',
     image: 'https://img.freepik.com/premium-photo/orange-pickleball-ball-with-paddle-closeup-pickleball-court-with-space-text_600978-7575.jpg',
-    glow: 'bg-[#00F5FF]/30',
-    border: 'border-[#00F5FF]/20 group-hover:border-[#00F5FF]/60',
+    glow: 'bg-accent-secondary/30',
+    border: 'border-accent-secondary/20 group-hover:border-accent-secondary/60',
   },
 ];
 
@@ -288,7 +288,7 @@ export const HomePage: React.FC = () => {
   };
 
   return (
-    <div className="relative overflow-x-clip bg-[#0A0A0B] text-slate-100 font-inter">
+    <div className="relative overflow-x-clip bg-deep text-slate-100">
       <AnimatePresence>
         {toastMessage && (
           <motion.div
@@ -296,22 +296,20 @@ export const HomePage: React.FC = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.96 }}
             transition={{ duration: 0.25 }}
-            className="fixed right-4 top-24 z-[70] rounded-2xl border border-[#CCFF00]/40 bg-[#CCFF00]/20 px-5 py-3 text-sm font-semibold text-[#CCFF00] shadow-[0_16px_42px_-20px_rgba(204,255,0,0.9)] backdrop-blur md:right-8"
+            className="fixed right-4 top-24 z-[70] rounded-2xl border border-accent-primary/40 bg-accent-primary/20 px-5 py-3 text-sm font-semibold text-accent-primary shadow-[0_16px_42px_-20px_rgba(var(--accent-primary-rgb),0.9)] backdrop-blur md:right-8"
           >
             {toastMessage}
           </motion.div>
         )}
       </AnimatePresence>
 
-      <section
-        className="relative overflow-hidden px-4 pb-14 pt-16 md:px-8 md:pt-24 border-b border-white/5"
-        style={{
-          backgroundImage:
-            'linear-gradient(180deg, rgba(10,10,11,0.6) 0%, rgba(10,10,11,0.9) 100%), url(https://images.unsplash.com/photo-1552674605-db6ffd4facb5?q=80&w=1600&auto=format&fit=crop)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
-      >
+      <section className="relative overflow-hidden px-4 pb-14 pt-16 md:px-8 md:pt-24 border-b border-white/5 force-dark-mode">
+        <div 
+          className="absolute inset-0 z-0 bg-cover bg-center" 
+          style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1552674605-db6ffd4facb5?q=80&w=1600&auto=format&fit=crop)' }}
+        />
+        <div className="absolute inset-0 z-0 bg-gradient-to-b from-[#0A0A0B]/60 to-[#0A0A0B]/95" />
+        
         <div className="mx-auto max-w-7xl relative z-10">
           <motion.div
             className="mb-10 text-center"
@@ -321,7 +319,7 @@ export const HomePage: React.FC = () => {
           >
             <motion.span
               variants={itemUp}
-              className="inline-flex items-center rounded-full border border-[#CCFF00]/30 bg-[#CCFF00]/10 px-5 py-2 text-sm font-bold tracking-widest uppercase text-[#CCFF00]"
+              className="inline-flex items-center rounded-full border border-accent-primary/30 bg-accent-primary/10 px-5 py-2 text-sm font-bold tracking-widest uppercase text-accent-primary"
             >
               Nền Tảng Đặt Sân ArenaS
             </motion.span>
@@ -340,10 +338,10 @@ export const HomePage: React.FC = () => {
                   animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
                   exit={{ opacity: 0, y: -16, filter: 'blur(8px)' }}
                   transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
-                  className="text-5xl font-black tracking-tight text-[#CCFF00] md:text-8xl font-montserrat"
+                  className="text-5xl font-black tracking-tight text-accent-primary md:text-8xl font-montserrat"
                 >
                   {heroRotatingWords[activeHeroWordIndex]}
-                  <span className="ml-1 inline-block animate-pulse text-[#CCFF00]">|</span>
+                  <span className="ml-1 inline-block animate-pulse text-accent-primary">|</span>
                 </motion.p>
               </AnimatePresence>
             </div>
@@ -365,7 +363,7 @@ export const HomePage: React.FC = () => {
           >
             {stats.map((stat) => (
               <motion.div key={stat.label} variants={itemUp} className="bg-white/5 border border-white/10 backdrop-blur-sm rounded-2xl px-4 py-5 text-center transition hover:bg-white/10">
-                <p className="text-[10px] font-bold tracking-[0.2em] text-[#00F5FF] uppercase mb-2">{stat.label}</p>
+                <p className="text-[10px] font-bold tracking-[0.2em] text-accent-secondary uppercase mb-2">{stat.label}</p>
                 <p className="text-3xl font-black text-white">{stat.value}</p>
               </motion.div>
             ))}
@@ -377,10 +375,10 @@ export const HomePage: React.FC = () => {
         <div className="mx-auto max-w-7xl">
           <div className="mb-10 flex items-end justify-between gap-4">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#CCFF00] mb-2">Nổi bật</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent-primary mb-2">Nổi bật</p>
               <h2 className={sectionTitleClass}>Sân được chọn lọc</h2>
             </div>
-            <button onClick={() => navigate('/tim-san')} className="text-sm font-bold text-[#00F5FF] transition hover:text-white">Xem tất cả sân →</button>
+            <button onClick={() => navigate('/tim-san')} className="text-sm font-bold text-accent-secondary transition hover:text-white">Xem tất cả sân →</button>
           </div>
 
           <motion.div
@@ -415,7 +413,7 @@ export const HomePage: React.FC = () => {
                 variants={itemUp}
                 whileHover={{ y: -8 }}
                 onClick={() => navigate(`/courts/${venue.id}`)}
-                className="group cursor-pointer overflow-hidden rounded-3xl border border-white/5 bg-[#101011] transition-all hover:border-[#CCFF00]/30 shadow-lg"
+                className="group cursor-pointer overflow-hidden rounded-3xl border border-white/5 bg-[#101011] transition-all hover:border-accent-primary/30 shadow-lg"
               >
                 <div className="relative h-56 overflow-hidden">
                   <img
@@ -423,11 +421,11 @@ export const HomePage: React.FC = () => {
                     alt={venue.name}
                     className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0B] via-[#0A0A0B]/20 to-transparent" />
-                  <span className="absolute left-4 top-4 rounded-full bg-[#CCFF00] px-3 py-1 text-xs font-bold text-[#0A0A0B]">
+                  <div className="absolute inset-0 bg-gradient-to-t from-deep via-deep/20 to-transparent" />
+                  <span className="absolute left-4 top-4 rounded-full bg-accent-primary px-3 py-1 text-xs font-bold text-deep">
                     {venue.tag}
                   </span>
-                  <span className="absolute right-4 top-4 rounded-full bg-[#0A0A0B]/80 px-3 py-1 text-xs font-semibold text-[#00F5FF]">
+                  <span className="absolute right-4 top-4 rounded-full bg-deep/80 px-3 py-1 text-xs font-semibold text-accent-secondary">
                     {venue.sport}
                   </span>
                 </div>
@@ -437,12 +435,12 @@ export const HomePage: React.FC = () => {
                     <div>
                       <h3 className="text-xl font-bold text-white tracking-tight">{venue.name}</h3>
                       <p className="mt-1 text-sm text-slate-400">
-                        {Number(venue.rating) > 0 ? <span className="text-[#CCFF00]">★ {Number(venue.rating).toFixed(1)}</span> : <span className="italic opacity-60">Chưa có đánh giá</span>}
+                        {Number(venue.rating) > 0 ? <span className="text-accent-primary">★ {Number(venue.rating).toFixed(1)}</span> : <span className="italic opacity-60">Chưa có đánh giá</span>}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] uppercase tracking-widest text-slate-500">từ</p>
-                      <p className="text-2xl font-black leading-none text-[#CCFF00]">{venue.price}</p>
+                      <p className="text-2xl font-black leading-none text-accent-primary">{venue.price}</p>
                       <p className="text-[11px] text-slate-400 uppercase mt-1">/ giờ</p>
                     </div>
                   </div>
@@ -461,7 +459,7 @@ export const HomePage: React.FC = () => {
                     )}
                   </div>
 
-                  <button className="w-full rounded-xl bg-[#2A3317] border border-[#CCFF00]/30 py-3 text-sm font-bold uppercase tracking-[0.08em] text-[#CCFF00] shadow-[0_0_15px_rgba(204,255,0,0.05)] transition hover:bg-[#CCFF00] hover:text-[#0A0A0B] hover:shadow-[0_0_20px_rgba(204,255,0,0.2)] mt-2">
+                  <button className="w-full rounded-xl bg-[#2A3317] border border-accent-primary/30 py-3 text-sm font-bold uppercase tracking-[0.08em] text-accent-primary shadow-[0_0_15px_rgba(var(--accent-primary-rgb),0.05)] transition hover:bg-accent-primary hover:text-[#0A0A0B] hover:shadow-[0_0_20px_rgba(var(--accent-primary-rgb),0.2)] mt-2">
                     Đặt ngay →
                   </button>
                 </div>
@@ -471,10 +469,10 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      <section className="relative px-4 py-16 md:px-8 md:py-24 border-t border-white/5 bg-[#0C0C0E]">
+      <section className="relative px-4 py-16 md:px-8 md:py-24 border-t border-white/5 bg-deep">
         <div className="mx-auto max-w-7xl">
           <div className="mb-12 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#00F5FF] mb-2">Tại sao chọn ArenaS</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent-secondary mb-2">Tại sao chọn ArenaS</p>
             <h2 className={sectionTitleClass}>Tất cả những gì bạn cần để chơi nhiều hơn</h2>
           </div>
 
@@ -490,9 +488,9 @@ export const HomePage: React.FC = () => {
                 key={feature.title}
                 variants={itemUp}
                 whileHover={{ y: -6 }}
-                className="bg-white/5 border border-white/5 rounded-2xl p-6 transition hover:border-[#CCFF00]/30 hover:bg-white/10"
+                className="bg-white/5 border border-white/5 rounded-2xl p-6 transition hover:border-accent-primary/30 hover:bg-white/10"
               >
-                <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[#CCFF00]/10 text-[#CCFF00] text-2xl border border-[#CCFF00]/20">
+                <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-accent-primary/10 text-accent-primary text-2xl border border-accent-primary/20">
                   {feature.icon}
                 </div>
                 <h3 className="text-lg font-bold text-white tracking-tight">{feature.title}</h3>
@@ -504,10 +502,10 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* ── Owner Contact Section ─────────────────────────────────────── */}
-      <section className="relative px-4 py-16 md:px-8 md:py-24 border-t border-white/5 bg-[#0C0C0E] overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:linear-gradient(rgba(0,245,255,0.2)_1px,transparent_1px),linear-gradient(90deg,rgba(0,245,255,0.2)_1px,transparent_1px)] [background-size:56px_56px]" />
-        <div className="pointer-events-none absolute -top-40 right-0 h-96 w-96 rounded-full bg-[#00F5FF]/6 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 left-0 h-72 w-72 rounded-full bg-[#CCFF00]/4 blur-3xl" />
+      <section className="relative px-4 py-16 md:px-8 md:py-24 border-t border-white/5 bg-deep overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:linear-gradient(rgba(var(--accent-secondary-rgb),0.2)_1px,transparent_1px),linear-gradient(90deg,rgba(var(--accent-secondary-rgb),0.2)_1px,transparent_1px)] [background-size:56px_56px]" />
+        <div className="pointer-events-none absolute -top-40 right-0 h-96 w-96 rounded-full bg-accent-secondary/6 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-20 left-0 h-72 w-72 rounded-full bg-accent-primary/4 blur-3xl" />
 
         <div className="relative z-10 mx-auto max-w-7xl">
           <div className="grid items-start gap-12 lg:grid-cols-[1fr_1.1fr]">
@@ -520,14 +518,14 @@ export const HomePage: React.FC = () => {
               variants={container}
               className="space-y-8 lg:pt-4"
             >
-              <motion.span variants={itemUp} className="inline-flex items-center gap-2 rounded-full border border-[#00F5FF]/30 bg-[#00F5FF]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#00F5FF]">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#00F5FF]" />
+              <motion.span variants={itemUp} className="inline-flex items-center gap-2 rounded-full border border-accent-secondary/30 bg-accent-secondary/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-accent-secondary">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent-secondary" />
                 Dành cho Chủ Sân
               </motion.span>
 
               <motion.h2 variants={itemUp} className="text-4xl font-black leading-tight tracking-tight text-white md:text-5xl font-montserrat">
                 Bạn có sân thể thao?<br />
-                <span className="text-[#00F5FF]">Hợp tác cùng ArenaS</span>
+                <span className="text-accent-secondary">Hợp tác cùng ArenaS</span>
               </motion.h2>
 
               <motion.p variants={itemUp} className="text-base leading-relaxed text-slate-400">
@@ -553,7 +551,7 @@ export const HomePage: React.FC = () => {
               <motion.div variants={itemUp} className="flex items-center gap-4 pt-2">
                 <a
                   href="tel:+84123456789"
-                  className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-slate-200 transition hover:border-[#00F5FF]/40 hover:bg-[#00F5FF]/5 hover:text-[#00F5FF]"
+                  className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-slate-200 transition hover:border-accent-secondary/40 hover:bg-accent-secondary/5 hover:text-accent-secondary"
                 >
                   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.36 2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.6a16 16 0 0 0 5.49 5.49l.96-.96a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
@@ -562,7 +560,7 @@ export const HomePage: React.FC = () => {
                 </a>
                 <a
                   href="mailto:contact@arenas.vn"
-                  className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-slate-200 transition hover:border-[#CCFF00]/40 hover:bg-[#CCFF00]/5 hover:text-[#CCFF00]"
+                  className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-slate-200 transition hover:border-accent-primary/40 hover:bg-accent-primary/5 hover:text-accent-primary"
                 >
                   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
                     <rect x="2" y="4" width="20" height="16" rx="2" />
@@ -597,8 +595,8 @@ export const HomePage: React.FC = () => {
                         transition={{ duration: 0.35 }}
                         className="flex flex-col items-center py-8 text-center"
                       >
-                        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-[#CCFF00]/30 bg-[#CCFF00]/10">
-                          <svg viewBox="0 0 24 24" className="h-8 w-8 text-[#CCFF00]" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-accent-primary/30 bg-accent-primary/10">
+                          <svg viewBox="0 0 24 24" className="h-8 w-8 text-accent-primary" fill="none" stroke="currentColor" strokeWidth="2.5">
                             <path d="m5 12 5 5L20 7" strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
                         </div>
@@ -608,7 +606,7 @@ export const HomePage: React.FC = () => {
                         </p>
                         <button
                           onClick={() => navigate('/register')}
-                          className="mt-7 rounded-2xl bg-[#CCFF00] px-7 py-3 text-sm font-bold text-[#0A0A0B] transition hover:bg-[#d4ff1a]"
+                          className="mt-7 rounded-2xl bg-accent-primary px-7 py-3 text-sm font-bold text-[#0A0A0B] transition hover:bg-accent-light"
                         >
                           Tạo tài khoản ngay →
                         </button>
@@ -630,7 +628,7 @@ export const HomePage: React.FC = () => {
                               placeholder="Nguyễn Văn A"
                               value={ownerForm.name}
                               onChange={(e) => setOwnerForm((f) => ({ ...f, name: e.target.value }))}
-                              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition focus:border-[#00F5FF]/50 focus:bg-white/8 focus:ring-1 focus:ring-[#00F5FF]/30"
+                              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition focus:border-accent-secondary/50 focus:bg-white/8 focus:ring-1 focus:ring-accent-secondary/30"
                             />
                           </div>
                           <div>
@@ -643,7 +641,7 @@ export const HomePage: React.FC = () => {
                               placeholder="0901 234 567"
                               value={ownerForm.phone}
                               onChange={(e) => setOwnerForm((f) => ({ ...f, phone: e.target.value }))}
-                              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition focus:border-[#00F5FF]/50 focus:bg-white/8 focus:ring-1 focus:ring-[#00F5FF]/30"
+                              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition focus:border-accent-secondary/50 focus:bg-white/8 focus:ring-1 focus:ring-accent-secondary/30"
                             />
                           </div>
                         </div>
@@ -655,7 +653,7 @@ export const HomePage: React.FC = () => {
                             placeholder="email@example.com"
                             value={ownerForm.email}
                             onChange={(e) => setOwnerForm((f) => ({ ...f, email: e.target.value }))}
-                            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition focus:border-[#00F5FF]/50 focus:bg-white/8 focus:ring-1 focus:ring-[#00F5FF]/30"
+                            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition focus:border-accent-secondary/50 focus:bg-white/8 focus:ring-1 focus:ring-accent-secondary/30"
                           />
                         </div>
 
@@ -668,7 +666,7 @@ export const HomePage: React.FC = () => {
                             placeholder="Sân Bóng Đá Tân Bình, Cụm Cầu Lông..."
                             value={ownerForm.venueName}
                             onChange={(e) => setOwnerForm((f) => ({ ...f, venueName: e.target.value }))}
-                            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition focus:border-[#00F5FF]/50 focus:bg-white/8 focus:ring-1 focus:ring-[#00F5FF]/30"
+                            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition focus:border-accent-secondary/50 focus:bg-white/8 focus:ring-1 focus:ring-accent-secondary/30"
                           />
                         </div>
 
@@ -677,7 +675,7 @@ export const HomePage: React.FC = () => {
                           disabled={ownerFormSubmitting}
                           whileHover={{ scale: ownerFormSubmitting ? 1 : 1.02 }}
                           whileTap={{ scale: ownerFormSubmitting ? 1 : 0.97 }}
-                          className="relative w-full overflow-hidden rounded-2xl bg-[#CCFF00] py-4 text-sm font-black uppercase tracking-[0.06em] text-[#0A0A0B] shadow-[0_0_20px_rgba(204,255,0,0.15)] transition hover:bg-[#d4ff1a] hover:shadow-[0_0_28px_rgba(204,255,0,0.3)] disabled:cursor-not-allowed disabled:opacity-60"
+                          className="relative w-full overflow-hidden rounded-2xl bg-accent-primary py-4 text-sm font-black uppercase tracking-[0.06em] text-[#0A0A0B] shadow-[0_0_20px_rgba(var(--accent-primary-rgb),0.15)] transition hover:bg-accent-light hover:shadow-[0_0_28px_rgba(var(--accent-primary-rgb),0.3)] disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {ownerFormSubmitting ? (
                             <span className="flex items-center justify-center gap-2">
@@ -696,7 +694,7 @@ export const HomePage: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => navigate('/register')}
-                            className="font-semibold text-[#00F5FF] transition hover:text-white"
+                            className="font-semibold text-accent-secondary transition hover:text-white"
                           >
                             tự tạo tài khoản ngay
                           </button>
@@ -715,7 +713,7 @@ export const HomePage: React.FC = () => {
       <section className="relative px-4 py-16 md:px-8 md:py-24">
         <div className="mx-auto max-w-7xl">
           <div className="mb-12 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#CCFF00] mb-2">Quy trình đơn giản</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent-primary mb-2">Quy trình đơn giản</p>
             <h2 className={sectionTitleClass}>Đặt sân trong 60 giây</h2>
           </div>
 
@@ -727,9 +725,9 @@ export const HomePage: React.FC = () => {
             viewport={{ once: true, amount: 0.25 }}
           >
             {processSteps.map((step) => (
-              <motion.div key={step.id} variants={itemUp} className="bg-[#101011] border border-white/5 rounded-[2rem] p-8 text-center relative overflow-hidden group hover:border-[#00F5FF]/30 transition-colors">
-                <div className="absolute inset-0 bg-gradient-to-b from-[#00F5FF]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                <span className="relative z-10 inline-flex h-12 min-w-[48px] items-center justify-center rounded-full border border-[#00F5FF]/30 bg-[#00F5FF]/10 px-3 text-sm font-bold text-[#00F5FF] shadow-[0_0_15px_rgba(0,245,255,0.2)]">
+              <motion.div key={step.id} variants={itemUp} className="bg-[#101011] border border-white/5 rounded-[2rem] p-8 text-center relative overflow-hidden group hover:border-accent-secondary/30 transition-colors">
+                <div className="absolute inset-0 bg-gradient-to-b from-accent-secondary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span className="relative z-10 inline-flex h-12 min-w-[48px] items-center justify-center rounded-full border border-accent-secondary/30 bg-accent-secondary/10 px-3 text-sm font-bold text-accent-secondary shadow-[0_0_15px_rgba(var(--accent-secondary-rgb),0.2)]">
                   {step.id}
                 </span>
                 <h3 className="relative z-10 mt-6 text-xl font-bold text-white tracking-tight">{step.title}</h3>
@@ -740,14 +738,14 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      <section className="relative px-4 py-16 md:px-8 md:py-24 border-t border-white/5 bg-[#0C0C0E]">
+      <section className="relative px-4 py-16 md:px-8 md:py-24 border-t border-white/5 bg-deep">
         <div className="mx-auto max-w-7xl">
           <div className="mb-12 flex items-end justify-between gap-4">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#00F5FF] mb-2">Khám phá</p>
-              <h2 className={sectionTitleClass}>Tìm theo môn thể thao</h2>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent-secondary mb-2">Khám phá</p>
+              <h2 className={sectionTitleClass}>Các môn thể thao</h2>
             </div>
-            <button className="text-sm font-bold text-[#CCFF00] transition hover:text-white">Xem tất cả môn →</button>
+            
           </div>
 
           <motion.div
@@ -774,7 +772,7 @@ export const HomePage: React.FC = () => {
 
                   <div className="relative z-10 flex w-full flex-col items-start mt-auto">
                     <h3 className="text-xl font-bold text-white tracking-tight">{sport.name}</h3>
-                    <p className="mt-1 text-xs font-bold uppercase tracking-widest text-[#CCFF00]">
+                    <p className="mt-1 text-xs font-bold uppercase tracking-widest text-accent-primary">
                       {count > 0 ? `${count} sân` : '1 sân'}
                     </p>
                   </div>
@@ -788,7 +786,7 @@ export const HomePage: React.FC = () => {
       <section className="relative px-4 pt-16 md:px-8 md:pt-24 border-t border-white/5">
         <div className="mx-auto max-w-7xl">
           <div className="mb-12 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#CCFF00] mb-2">Đánh giá</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent-primary mb-2">Đánh giá</p>
             <h2 className={sectionTitleClass}>Được yêu thích bởi người chơi</h2>
           </div>
 
@@ -803,13 +801,13 @@ export const HomePage: React.FC = () => {
               <motion.blockquote
                 key={review.name}
                 variants={itemUp}
-                className="bg-white/5 rounded-3xl border border-white/10 p-8 transition hover:bg-white/10 hover:border-[#00F5FF]/30"
+                className="bg-white/5 rounded-3xl border border-white/10 p-8 transition hover:bg-white/10 hover:border-accent-secondary/30"
               >
-                <div className="text-[#CCFF00] mb-4 text-xl">★★★★★</div>
+                <div className="text-accent-primary mb-4 text-xl">★★★★★</div>
                 <p className="text-sm leading-relaxed text-slate-300 italic">“{review.quote}”</p>
                 <footer className="mt-6 border-t border-white/10 pt-4">
                   <p className="font-bold text-white">{review.name}</p>
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-[#00F5FF] mt-1">{review.role}</p>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-accent-secondary mt-1">{review.role}</p>
                 </footer>
               </motion.blockquote>
             ))}
@@ -822,13 +820,13 @@ export const HomePage: React.FC = () => {
         initial={{ opacity: 0, y: 18 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.35 }}
-        className="relative mt-12 overflow-hidden border-t border-[#CCFF00]/20 bg-[#0A0A0B] px-4 py-12 md:px-10 md:py-20"
+        className="relative mt-12 overflow-hidden border-t border-accent-primary/20 bg-[#0A0A0B] px-4 py-12 md:px-10 md:py-20"
       >
-        <div className="absolute inset-0 bg-gradient-to-t from-[#CCFF00]/5 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-accent-primary/5 to-transparent pointer-events-none" />
 
         <div className="relative z-10 mx-auto grid w-full max-w-7xl items-center gap-10 lg:grid-cols-[1.15fr_0.85fr]">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#00F5FF]/30 bg-[#00F5FF]/10 px-4 py-2 text-xs font-bold uppercase tracking-widest text-[#00F5FF]">
+            <div className="inline-flex items-center gap-2 rounded-full border border-accent-secondary/30 bg-accent-secondary/10 px-4 py-2 text-xs font-bold uppercase tracking-widest text-accent-secondary">
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="7" y="2" width="10" height="20" rx="2" />
                 <path d="M11 18h2" />
@@ -838,7 +836,7 @@ export const HomePage: React.FC = () => {
 
             <h3 className="mt-6 text-4xl font-black leading-tight text-white md:text-6xl font-montserrat tracking-tight">
               Chơi nhiều hơn.<br />
-              <span className="text-[#CCFF00]">Đặt sân thông minh hơn.</span>
+              <span className="text-accent-primary">Đặt sân thông minh hơn.</span>
             </h3>
 
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-400">
@@ -846,7 +844,7 @@ export const HomePage: React.FC = () => {
             </p>
 
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-              <button className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#101011] px-6 py-4 text-left transition hover:border-[#CCFF00]/50 hover:bg-[#1A1A1C]">
+              <button className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#101011] px-6 py-4 text-left transition hover:border-accent-primary/50 hover:bg-[#1A1A1C]">
                 <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white text-[#0A0A0B]">
                   <svg viewBox="0 0 24 24" className="h-7 w-7" fill="currentColor">
                     <path d="M16.2 12.8c0-2.2 1.8-3.3 1.9-3.4-1-1.5-2.6-1.7-3.2-1.8-1.4-.1-2.7.8-3.4.8-.7 0-1.8-.8-2.9-.8-1.5 0-2.9.9-3.7 2.2-1.6 2.8-.4 6.9 1.1 9 .8 1 1.7 2.1 2.9 2 .9 0 1.3-.6 2.5-.6 1.2 0 1.5.6 2.5.5 1-.1 1.7-1 2.4-2 .8-1.1 1.1-2.1 1.1-2.2-.1 0-2.2-.8-2.2-3.6z" />
@@ -859,7 +857,7 @@ export const HomePage: React.FC = () => {
                 </span>
               </button>
 
-              <button className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#101011] px-6 py-4 text-left transition hover:border-[#00F5FF]/50 hover:bg-[#1A1A1C]">
+              <button className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#101011] px-6 py-4 text-left transition hover:border-accent-secondary/50 hover:bg-[#1A1A1C]">
                 <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white text-[#0A0A0B]">
                   <svg viewBox="0 0 24 24" className="h-7 w-7" fill="currentColor">
                     <path d="M3.5 2.3l11.2 9.5-3.2 3.2L3.5 2.3zm0 19.4l8.1-12.2 3.2 3.2-11.3 9zm12.4-7.6l2.8-2.1c1-.8 1-1.9 0-2.7L16 7.2l-3.4 3.4 3.3 3.5z" />
@@ -886,12 +884,12 @@ export const HomePage: React.FC = () => {
             }}
           >
             <motion.div
-              className="absolute -inset-5 rounded-[2.5rem] border border-[#CCFF00]/20 opacity-40"
+              className="absolute -inset-5 rounded-[2.5rem] border border-accent-primary/20 opacity-40"
               animate={{ opacity: [0.2, 0.45, 0.2], scale: [0.98, 1.02, 0.98] }}
               transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
             />
 
-            <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#101011] p-3 shadow-[0_30px_70px_-30px_rgba(204,255,0,0.15)]">
+            <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#101011] p-3 shadow-[0_30px_70px_-30px_rgba(var(--accent-primary-rgb),0.15)]">
               <img
                 src="https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=900&auto=format&fit=crop"
                 alt="ArenaS Mobile App"
@@ -903,7 +901,7 @@ export const HomePage: React.FC = () => {
                 animate={{ y: [0, -4, 0] }}
                 transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
               >
-                <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#CCFF00]">⚡ Đặt Sân Tiếp Theo</p>
+                <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-accent-primary">⚡ Đặt Sân Tiếp Theo</p>
                 <p className="mt-2 text-2xl font-black leading-none text-white tracking-tight">Champions Arena</p>
                 <p className="mt-2 text-sm text-slate-400">Hôm nay, 18:00 · Cách 1.2 km</p>
               </motion.div>

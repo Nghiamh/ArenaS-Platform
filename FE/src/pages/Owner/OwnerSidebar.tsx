@@ -91,6 +91,7 @@ const secondaryItems: Array<{ key: OwnerSidebarKey | 'home' | 'logout'; label: s
 
 export const OwnerSidebar: React.FC<OwnerSidebarProps> = ({ activeKey, collapsed, onToggleCollapse }) => {
   const [logoSpinTurns, setLogoSpinTurns] = useState(0);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [activeSubscription, setActiveSubscription] = useState<FESubscription | null>(null);
 
@@ -166,7 +167,7 @@ export const OwnerSidebar: React.FC<OwnerSidebarProps> = ({ activeKey, collapsed
 
   const displayName = currentUser?.name?.trim() || currentUser?.userName?.trim() || 'Tài khoản';
   const displayEmail = currentUser?.email?.trim() || 'Chưa có email';
-  
+
   const profileInitial = useMemo(() => {
     const sourceName = currentUser?.name?.trim() || currentUser?.userName?.trim() || 'U';
     return sourceName.charAt(0).toUpperCase();
@@ -175,7 +176,7 @@ export const OwnerSidebar: React.FC<OwnerSidebarProps> = ({ activeKey, collapsed
   const profileBadgeLabel = useMemo(() => {
     if (currentUser?.role === 'admin') return 'Admin';
     if (currentUser?.role === 'user') return 'User';
-    
+
     // For owner, show their plan name or 'Free Plan'
     if (activeSubscription?.status === 'active' && activeSubscription.plan) {
       return activeSubscription.plan.displayName || activeSubscription.plan.name;
@@ -195,131 +196,155 @@ export const OwnerSidebar: React.FC<OwnerSidebarProps> = ({ activeKey, collapsed
       initial={{ x: -20, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.72, ease: [0.22, 1, 0.36, 1] }}
-      style={{ width: collapsed ? '92px' : '300px' }}
-      className={`arena-scroll relative border-b border-white/10 bg-gradient-to-b from-[#020A1B]/95 to-[#010819]/95 px-3 py-6 backdrop-blur-xl transition-[padding] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto lg:border-b-0 lg:border-r ${collapsed ? 'lg:px-2.5' : 'lg:px-5'
-        }`}
+      className={`arena-scroll relative z-50 border-b border-white/10 bg-gradient-to-b from-deep/95 to-black/95 px-3 py-4 xl:py-6 backdrop-blur-xl transition-[padding] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] xl:sticky xl:top-0 xl:h-screen xl:overflow-y-auto xl:border-b-0 xl:border-r w-full ${collapsed ? 'xl:px-2.5' : 'xl:px-5'}`}
     >
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-blue-300/35 to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-accent-primary/35 to-transparent" />
 
-      <div className="flex h-full flex-col">
-        <div className={`mb-8 rounded-2xl border border-blue-200/15 bg-[#081734]/75 py-3 shadow-[0_18px_45px_-28px_rgba(59,130,246,0.65)] ${collapsed ? 'px-2' : 'px-3'}`}>
-          <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'}`}>
-            <motion.button
-              type="button"
-              whileTap={{ scale: 0.9 }}
-              whileHover={{ scale: 1.03 }}
-              onClick={handleLogoToggle}
-              className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-blue-600 font-extrabold text-white shadow-[0_10px_30px_-16px_rgba(37,99,235,1)]"
-              aria-label="Thu gọn hoặc mở rộng thanh điều hướng"
-            >
-              <motion.span
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0 rounded-xl border border-blue-200/35"
-                animate={{ scale: [1, 1.07, 1], opacity: [0.28, 0.62, 0.28] }}
-                transition={{ duration: 2.4, ease: 'easeInOut', repeat: Infinity }}
-              />
-              <motion.span
-                className="relative z-10 inline-block origin-center transform-gpu"
-                animate={{ rotate: logoSpinTurns * 360, y: [0, -1.2, 0] }}
-                transition={{
-                  rotate: { duration: 0.72, ease: [0.22, 1, 0.36, 1] },
-                  y: { duration: 2.8, ease: 'easeInOut', repeat: Infinity },
-                }}
+      <div className="flex xl:h-full flex-col relative">
+        <div className={`mb-2 xl:mb-8 rounded-2xl border border-accent-primary/15 bg-accent-primary/5 py-3 shadow-[0_18px_45px_-28px_rgba(var(--accent-primary-rgb),0.65)] ${collapsed ? 'xl:px-2 px-3' : 'px-3'}`}>
+          <div className={`flex items-center justify-between xl:justify-start ${collapsed ? 'xl:justify-center' : 'xl:gap-3'}`}>
+            <div className="flex items-center gap-3">
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.9 }}
+                whileHover={{ scale: 1.03 }}
+                onClick={handleLogoToggle}
+                className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-accent-primary font-extrabold text-white shadow-[0_10px_30px_-16px_rgba(var(--accent-primary-rgb),1)]"
+                aria-label="Thu gọn hoặc mở rộng thanh điều hướng"
               >
-                A
-              </motion.span>
-            </motion.button>
-            <AnimatePresence initial={false}>
-              {!collapsed && (
-                <motion.div
-                  initial={{ opacity: 0, x: -10, filter: 'blur(2px)' }}
-                  animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                  exit={{ opacity: 0, x: -8, filter: 'blur(2px)' }}
-                  transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+                <motion.span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 rounded-xl border border-accent-primary/35"
+                  animate={{ scale: [1, 1.07, 1], opacity: [0.28, 0.62, 0.28] }}
+                  transition={{ duration: 2.4, ease: 'easeInOut', repeat: Infinity }}
+                />
+                <motion.span
+                  className="relative z-10 inline-block origin-center transform-gpu"
+                  animate={{ rotate: logoSpinTurns * 360, y: [0, -1.2, 0] }}
+                  transition={{
+                    rotate: { duration: 0.72, ease: [0.22, 1, 0.36, 1] },
+                    y: { duration: 2.8, ease: 'easeInOut', repeat: Infinity },
+                  }}
                 >
-                  <p className="text-[1.35rem] font-extrabold leading-none tracking-tight text-white">ArenaS</p>
-                  <p className="mt-1 text-xs font-medium text-blue-300">Dashboard Chủ Sân</p>
-                </motion.div>
+                  A
+                </motion.span>
+              </motion.button>
+
+              <AnimatePresence initial={false}>
+                {!collapsed && (
+                  <motion.div
+                    className="hidden xl:block"
+                    initial={{ opacity: 0, x: -10, filter: 'blur(2px)' }}
+                    animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                    exit={{ opacity: 0, x: -8, filter: 'blur(2px)' }}
+                    transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    <p className="text-[1.35rem] font-extrabold leading-none tracking-tight text-white">ArenaS</p>
+                    <p className="mt-1 text-xs font-medium text-accent-primary">Dashboard Chủ Sân</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="xl:hidden">
+                <p className="text-[1.35rem] font-extrabold leading-none tracking-tight text-white">ArenaS</p>
+                <p className="mt-0.5 text-xs font-medium text-accent-primary">Dashboard</p>
+              </div>
+            </div>
+
+            <button
+              className="xl:hidden flex items-center justify-center p-2 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              ) : (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
               )}
-            </AnimatePresence>
+            </button>
           </div>
         </div>
 
-        {!collapsed && <p className="mb-3 px-2 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Quản Lý</p>}
-        <nav className="space-y-2">
-          {menuItems.map((item) => {
-            const isActive = activeKey === item.key;
-
-            return (
-              <NavLink
-                key={item.key}
-                to={item.to}
-                className={`group flex w-full items-center rounded-xl py-3 text-left transition ${isActive
-                    ? 'border border-blue-200/65 bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-[0_12px_34px_-18px_rgba(59,130,246,0.95)]'
-                    : 'border border-transparent text-slate-300 hover:border-white/10 hover:bg-white/5 hover:text-white'
-                  } ${collapsed ? 'justify-center px-2' : 'justify-between px-3'}`}
-              >
-                <span className={`flex items-center font-semibold ${collapsed ? 'justify-center' : 'gap-2.5'}`}>
-                  <span className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-blue-300'}>{item.icon}</span>
-                  {!collapsed && item.label}
-                </span>
-                {!collapsed && typeof item.count === 'number' ? (
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${isActive ? 'bg-white/20 text-white' : 'bg-white/10 text-slate-200'}`}>
-                    {item.count}
-                  </span>
-                ) : !collapsed ? (
-                  <span className="text-sm opacity-80 transition group-hover:translate-x-0.5">›</span>
-                ) : null}
-              </NavLink>
-            );
-          })}
-        </nav>
-
-        <div className="mt-8 border-t border-white/10 pt-6">
-          {!collapsed && <p className="mb-4 px-2 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Hệ Thống</p>}
-          <div className="space-y-1 px-2 text-slate-300">
-            {secondaryItems.map((item) => {
+        <div className={`${isMobileMenuOpen ? 'absolute top-full left-0 right-0 mt-2 z-50 bg-deep/95 p-4 border border-white/10 rounded-2xl backdrop-blur-2xl shadow-2xl flex flex-col' : 'hidden'} xl:static xl:flex xl:flex-col xl:bg-transparent xl:p-0 xl:border-none xl:shadow-none`}>
+          <div className="xl:hidden flex items-center justify-between mb-4 pb-4 border-b border-white/10">
+            <span className="text-sm font-bold text-slate-300">Quản lý ArenaS</span>
+          </div>
+          {!collapsed && <p className="hidden xl:block mb-3 px-2 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Quản Lý</p>}
+          <nav className="space-y-2">
+            {menuItems.map((item) => {
               const isActive = activeKey === item.key;
-
               return (
                 <NavLink
                   key={item.key}
                   to={item.to}
-                  className={`flex items-center rounded-lg px-2 py-2 transition ${item.key === 'logout'
-                      ? 'text-red-300 hover:bg-red-500/10'
-                      : isActive
-                        ? 'bg-blue-500/20 text-blue-200'
-                        : 'hover:bg-white/5'
-                    } ${collapsed ? 'justify-center' : 'gap-2'}`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`group flex w-full items-center rounded-xl py-3 text-left transition ${isActive
+                    ? 'border border-accent-primary/65 bg-gradient-to-r from-accent-primary to-accent-secondary text-white shadow-[0_12px_34px_-18px_rgba(var(--accent-primary-rgb),0.95)]'
+                    : 'border border-transparent text-slate-300 hover:border-white/10 hover:bg-white/5 hover:text-white'
+                    } ${collapsed ? 'xl:justify-center px-2' : 'justify-between px-3'}`}
                 >
-                  <span className="text-current">{item.icon}</span>
-                  {!collapsed && item.label}
+                  <span className={`flex items-center font-semibold ${collapsed ? 'justify-center' : 'gap-2.5'}`}>
+                    <span className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-accent-primary'}>{item.icon}</span>
+                    {!collapsed && item.label}
+                  </span>
+                  {!collapsed && typeof item.count === 'number' ? (
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${isActive ? 'bg-white/20 text-white' : 'bg-white/10 text-slate-200'}`}>
+                      {item.count}
+                    </span>
+                  ) : !collapsed ? (
+                    <span className="text-sm opacity-80 transition group-hover:translate-x-0.5">›</span>
+                  ) : null}
                 </NavLink>
               );
             })}
-          </div>
-        </div>
+          </nav>
 
-        {!collapsed && (
-          <div className="mt-auto pt-8">
-            <div className="rounded-2xl border border-white/10 bg-[#0A1B3E]/75 p-3 shadow-[0_20px_45px_-30px_rgba(2,6,23,1)]">
-              <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-blue-600 font-black text-white">
-                  {profileAvatarUrl ? (
-                    <img src={profileAvatarUrl} alt="avatar" className="h-full w-full object-cover" />
-                  ) : (
-                    profileInitial
-                  )}
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-white">{displayName}</p>
-                  <p className="text-xs text-slate-300">{displayEmail}</p>
-                </div>
-                <span className="ml-auto rounded-lg bg-blue-500/25 px-2 py-1 text-xs font-bold text-blue-200">{profileBadgeLabel}</span>
-              </div>
+          <div className="mt-8 border-t border-white/10 pt-6">
+            {!collapsed && <p className="mb-4 px-2 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Hệ Thống</p>}
+            <div className="space-y-1 px-2 text-slate-300">
+              {secondaryItems.map((item) => {
+                const isActive = activeKey === item.key;
+
+                return (
+                  <NavLink
+                    key={item.key}
+                    to={item.to}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`flex items-center rounded-lg px-2 py-2 transition ${item.key === 'logout'
+                      ? 'text-red-300 hover:bg-red-500/10'
+                      : isActive
+                        ? 'bg-accent-primary/20 text-accent-light'
+                        : 'hover:bg-white/5'
+                      } ${collapsed ? 'xl:justify-center' : 'gap-2'}`}
+                  >
+                    <span className="text-current">{item.icon}</span>
+                    {!collapsed && item.label}
+                  </NavLink>
+                );
+              })}
             </div>
           </div>
-        )}
+
+          {!collapsed && (
+            <div className="mt-auto pt-8">
+              <div className="rounded-2xl border border-white/10 bg-accent-primary/5 p-3 shadow-lg">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-accent-primary font-black text-white">
+                    {profileAvatarUrl ? (
+                      <img src={profileAvatarUrl} alt="avatar" className="h-full w-full object-cover" />
+                    ) : (
+                      profileInitial
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white">{displayName}</p>
+                    <p className="text-xs text-slate-300">{displayEmail}</p>
+                  </div>
+                  <span className="ml-auto rounded-lg bg-accent-primary/25 px-2 py-1 text-xs font-bold text-accent-light">{profileBadgeLabel}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </motion.aside>
   );

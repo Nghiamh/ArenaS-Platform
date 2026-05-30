@@ -261,7 +261,7 @@ export const LoginPage: React.FC = () => {
           <div className="mb-20">
             <h1 className="text-[3.5rem] font-black leading-[1.1] tracking-tight text-white mb-6 font-montserrat">
               Đặt Sân,<br />
-              <span className="text-[#CCFF00]">Nhanh Chống</span>
+              <span className="text-[#CCFF00]">Nhanh Chóng</span>
             </h1>
             <p className="text-lg text-slate-400 leading-relaxed max-w-md">
               ArenaS - Nền tảng đặt sân thể thao hàng đầu, mang đến trải nghiệm liền mạch và tiện lợi cho người dùng.
@@ -286,6 +286,16 @@ export const LoginPage: React.FC = () => {
 
       {/* RIGHT SECTION (FORM) */}
       <section className="relative flex w-full lg:w-1/2 min-h-screen items-center justify-center p-6 sm:p-12">
+        <button 
+          type="button"
+          onClick={() => navigate(-1)} 
+          className="absolute top-6 left-6 lg:hidden flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-[#CCFF00] transition-colors z-10"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+          Trở về
+        </button>
         <div className="absolute top-8 right-8 opacity-40">
           <PatternIcon />
         </div>

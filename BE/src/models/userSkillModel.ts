@@ -5,6 +5,8 @@ export interface IUserSkill extends Document {
 	sport: string;
 	note?: string;
 	level: number;
+	play_frequency?: number;
+	play_vibe?: "casual" | "balanced" | "competitive";
 	rating_score: number;
 	confidence_score?: number;
 	survey_count?: number;
@@ -34,6 +36,16 @@ const userSkillSchema = new Schema<IUserSkill, IUserSkillModel>(
 		level: {
 			type: Number,
 			required: true,
+		},
+		play_frequency: {
+			type: Number,
+			enum: [1, 2, 3],
+			default: 2,
+		},
+		play_vibe: {
+			type: String,
+			enum: ["casual", "balanced", "competitive"],
+			default: "balanced",
 		},
 		rating_score: {
 			type: Number,

@@ -94,9 +94,6 @@ const BENEFITS = [
     ),
     title: 'Xây Dựng Uy Tín',
     desc: 'Hệ thống đánh giá xác thực từ người dùng thực giúp sân bạn nổi bật. Rating cao đồng nghĩa với nhiều lượt đặt hơn mỗi ngày.',
-    accent: '#FB923C',
-    bg: 'rgba(251,146,60,0.08)',
-    border: 'rgba(251,146,60,0.2)',
   },
 ];
 
@@ -177,16 +174,16 @@ export function OwnerContactPage() {
   };
 
   return (
-    <div className="relative overflow-hidden bg-[#0A0A0B] text-white min-h-screen selection:bg-[#CCFF00]/30 font-inter">
+    <div className="relative overflow-hidden bg-deep text-white min-h-screen selection:bg-accent-primary/30 font-inter">
 
       {/* ── Background decorations ── */}
       <div
         className="pointer-events-none fixed inset-0 z-0"
         style={{
           background: `
-            radial-gradient(circle at 10% 10%, rgba(204,255,0,0.07) 0%, transparent 50%),
-            radial-gradient(circle at 90% 20%, rgba(0,245,255,0.06) 0%, transparent 45%),
-            radial-gradient(circle at 50% 80%, rgba(167,139,250,0.05) 0%, transparent 40%)
+            radial-gradient(circle at 10% 10%, rgba(var(--accent-primary-rgb),0.07) 0%, transparent 50%),
+            radial-gradient(circle at 90% 20%, rgba(var(--accent-secondary-rgb),0.06) 0%, transparent 45%),
+            radial-gradient(circle at 50% 80%, rgba(var(--accent-light-rgb),0.05) 0%, transparent 40%)
           `,
         }}
       />
@@ -212,8 +209,8 @@ export function OwnerContactPage() {
             animate="show"
           >
             <motion.div variants={fadeUp}>
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#CCFF00]/30 bg-[#CCFF00]/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#CCFF00]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#CCFF00] animate-pulse" />
+              <span className="inline-flex items-center gap-2 rounded-full border border-accent-primary/30 bg-accent-primary/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-accent-primary">
+                <span className="h-1.5 w-1.5 rounded-full bg-accent-primary animate-pulse" />
                 Dành Cho Chủ Sân
               </span>
             </motion.div>
@@ -221,13 +218,9 @@ export function OwnerContactPage() {
             <motion.h1
               variants={fadeUp}
               className="mt-6 text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl"
-              style={{ fontFamily: 'Montserrat, sans-serif' }}
             >
               Biến Sân Thể Thao Của Bạn&nbsp;
-              <span
-                className="bg-clip-text text-transparent"
-                style={{ backgroundImage: 'linear-gradient(135deg, #CCFF00 0%, #00F5FF 100%)' }}
-              >
+              <span className="bg-gradient-to-br from-accent-primary to-accent-secondary bg-clip-text text-transparent">
                 Thành Nguồn Thu Nhập Ổn Định
               </span>
             </motion.h1>
@@ -243,14 +236,13 @@ export function OwnerContactPage() {
             <motion.div variants={fadeUp} className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <button
                 onClick={scrollToForm}
-                className="rounded-full px-7 py-3 text-sm font-bold transition-all duration-200 hover:scale-[1.03] active:scale-[0.98]"
-                style={{ background: '#CCFF00', color: '#0A0A0B' }}
+                className="rounded-full px-7 py-3 text-sm font-bold transition-all duration-200 hover:scale-[1.03] active:scale-[0.98] bg-accent-primary text-deep"
               >
                 Đăng Ký Ngay
               </button>
               <button
                 onClick={() => navigate('/bang-gia')}
-                className="rounded-full border border-[#00F5FF]/30 bg-[#00F5FF]/10 px-7 py-3 text-sm font-semibold text-[#00F5FF] transition-all duration-200 hover:bg-[#00F5FF]/20"
+                className="rounded-full border border-accent-secondary/30 bg-accent-secondary/10 px-7 py-3 text-sm font-semibold text-accent-secondary transition-all duration-200 hover:bg-accent-secondary/20"
               >
                 Xem Bảng Giá
               </button>
@@ -272,7 +264,7 @@ export function OwnerContactPage() {
             <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
               {STATS.map(s => (
                 <div key={s.label} className="text-center">
-                  <p className="text-2xl font-black text-[#CCFF00] sm:text-3xl">{s.value}</p>
+                  <p className="text-2xl font-black text-accent-primary sm:text-3xl">{s.value}</p>
                   <p className="mt-1 text-xs text-white/50">{s.label}</p>
                 </div>
               ))}
@@ -294,7 +286,6 @@ export function OwnerContactPage() {
             <motion.div variants={fadeUp} className="mb-12 text-center">
               <h2
                 className="text-2xl font-black tracking-tight sm:text-3xl"
-                style={{ fontFamily: 'Montserrat, sans-serif' }}
               >
                 Tại Sao Chủ Sân Chọn ArenaS?
               </h2>
@@ -304,23 +295,26 @@ export function OwnerContactPage() {
             </motion.div>
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {BENEFITS.map(b => (
-                <motion.div
-                  key={b.title}
-                  variants={cardVariants}
-                  className="group rounded-2xl border p-5 transition-all duration-300 hover:scale-[1.02]"
-                  style={{
-                    borderColor: b.border,
-                    background: b.bg,
-                  }}
-                >
-                  <div className="mb-3 inline-flex rounded-xl p-2.5" style={{ background: b.bg, color: b.accent }}>
-                    {b.icon}
-                  </div>
-                  <h3 className="mb-1.5 text-sm font-bold text-white">{b.title}</h3>
-                  <p className="text-xs leading-relaxed text-white/55">{b.desc}</p>
-                </motion.div>
-              ))}
+              {BENEFITS.map((b, i) => {
+                const colorConfig = [
+                  { text: 'text-accent-primary', bg: 'bg-accent-primary/10', border: 'border-accent-primary/20' },
+                  { text: 'text-accent-secondary', bg: 'bg-accent-secondary/10', border: 'border-accent-secondary/20' },
+                  { text: 'text-accent-light', bg: 'bg-accent-light/10', border: 'border-accent-light/20' }
+                ][i % 3];
+                return (
+                  <motion.div
+                    key={b.title}
+                    variants={cardVariants}
+                    className={`group rounded-2xl border p-5 transition-all duration-300 hover:scale-[1.02] ${colorConfig.border} ${colorConfig.bg}`}
+                  >
+                    <div className={`mb-3 inline-flex rounded-xl p-2.5 ${colorConfig.bg} ${colorConfig.text}`}>
+                      {b.icon}
+                    </div>
+                    <h3 className="mb-1.5 text-sm font-bold text-white">{b.title}</h3>
+                    <p className="text-xs leading-relaxed text-white/55">{b.desc}</p>
+                  </motion.div>
+                );
+              })}
             </div>
           </motion.div>
         </section>
@@ -339,7 +333,6 @@ export function OwnerContactPage() {
             <motion.div variants={fadeUp} className="mb-12 text-center">
               <h2
                 className="text-2xl font-black tracking-tight sm:text-3xl"
-                style={{ fontFamily: 'Montserrat, sans-serif' }}
               >
                 Quy Trình Đơn Giản, 3 Bước
               </h2>
@@ -348,32 +341,30 @@ export function OwnerContactPage() {
 
             <div className="relative grid gap-6 sm:grid-cols-3">
               {/* connector line desktop */}
-              <div className="pointer-events-none absolute left-0 right-0 top-8 hidden h-px sm:block" style={{ background: 'linear-gradient(to right, transparent, rgba(204,255,0,0.3), rgba(0,245,255,0.3), transparent)' }} />
+              <div className="pointer-events-none absolute left-0 right-0 top-8 hidden h-px sm:block bg-gradient-to-r from-transparent via-accent-primary/30 to-transparent" />
 
-              {STEPS.map((s, i) => (
-                <motion.div
-                  key={s.num}
-                  variants={cardVariants}
-                  className="relative rounded-[2rem] border border-white/8 bg-[#101011] p-6 text-center"
-                >
-                  <div
-                    className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full text-xl font-black"
-                    style={{
-                      background: i === 0
-                        ? 'linear-gradient(135deg, rgba(204,255,0,0.2), rgba(204,255,0,0.05))'
-                        : i === 1
-                          ? 'linear-gradient(135deg, rgba(0,245,255,0.2), rgba(0,245,255,0.05))'
-                          : 'linear-gradient(135deg, rgba(167,139,250,0.2), rgba(167,139,250,0.05))',
-                      color: i === 0 ? '#CCFF00' : i === 1 ? '#00F5FF' : '#A78BFA',
-                      border: `1px solid ${i === 0 ? 'rgba(204,255,0,0.3)' : i === 1 ? 'rgba(0,245,255,0.3)' : 'rgba(167,139,250,0.3)'}`,
-                    }}
+              {STEPS.map((s, i) => {
+                const colorConfig = [
+                  { text: 'text-accent-primary', bg: 'bg-accent-primary/10', border: 'border-accent-primary/30' },
+                  { text: 'text-accent-secondary', bg: 'bg-accent-secondary/10', border: 'border-accent-secondary/30' },
+                  { text: 'text-accent-light', bg: 'bg-accent-light/10', border: 'border-accent-light/30' }
+                ][i % 3];
+                return (
+                  <motion.div
+                    key={s.num}
+                    variants={cardVariants}
+                    className="relative rounded-[2rem] border border-white/8 bg-[#101011] p-6 text-center"
                   >
-                    {s.num}
-                  </div>
-                  <h3 className="mb-2 text-sm font-bold text-white">{s.title}</h3>
-                  <p className="text-xs leading-relaxed text-white/55">{s.desc}</p>
-                </motion.div>
-              ))}
+                    <div
+                      className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full text-xl font-black border ${colorConfig.bg} ${colorConfig.text} ${colorConfig.border}`}
+                    >
+                      {s.num}
+                    </div>
+                    <h3 className="mb-2 text-sm font-bold text-white">{s.title}</h3>
+                    <p className="text-xs leading-relaxed text-white/55">{s.desc}</p>
+                  </motion.div>
+                );
+              })}
             </div>
           </motion.div>
         </section>
@@ -392,7 +383,6 @@ export function OwnerContactPage() {
               <motion.div variants={fadeUp} className="mb-10 text-center">
                 <h2
                   className="text-2xl font-black tracking-tight sm:text-3xl"
-                  style={{ fontFamily: 'Montserrat, sans-serif' }}
                 >
                   Đăng Ký Hợp Tác
                 </h2>
@@ -416,20 +406,19 @@ export function OwnerContactPage() {
                       className="flex flex-col items-center gap-5 py-10 text-center"
                     >
                       <div
-                        className="flex h-20 w-20 items-center justify-center rounded-full"
-                        style={{ background: 'rgba(204,255,0,0.12)', border: '2px solid rgba(204,255,0,0.4)' }}
+                        className="flex h-20 w-20 items-center justify-center rounded-full bg-accent-primary/10 border-2 border-accent-primary/40"
                       >
-                        <svg viewBox="0 0 24 24" className="h-9 w-9 text-[#CCFF00]" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <svg viewBox="0 0 24 24" className="h-9 w-9 text-accent-primary" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M20 6L9 17l-5-5" />
                         </svg>
                       </div>
                       <div>
                         <h3 className="text-xl font-black text-white">Đã Nhận Thông Tin!</h3>
                         <p className="mt-2 text-sm text-white/60">
-                          Cảm ơn <span className="text-[#CCFF00] font-semibold">{form.name || 'bạn'}</span> đã đăng ký.
+                          Cảm ơn <span className="text-accent-primary font-semibold">{form.name || 'bạn'}</span> đã đăng ký.
                           Đội ngũ ArenaS sẽ liên hệ{' '}
                           {form.phone ? (
-                            <span className="text-[#00F5FF]">qua số {form.phone}</span>
+                            <span className="text-accent-secondary">qua số {form.phone}</span>
                           ) : 'với bạn'}{' '}
                           trong thời gian sớm nhất.
                         </p>
@@ -437,8 +426,7 @@ export function OwnerContactPage() {
                       <div className="flex flex-wrap gap-3 justify-center">
                         <button
                           onClick={() => navigate('/register')}
-                          className="rounded-full px-6 py-2.5 text-sm font-bold transition-all hover:scale-[1.03]"
-                          style={{ background: '#CCFF00', color: '#0A0A0B' }}
+                          className="rounded-full px-6 py-2.5 text-sm font-bold transition-all hover:scale-[1.03] bg-accent-primary text-deep"
                         >
                           Tạo tài khoản ngay →
                         </button>
@@ -462,7 +450,7 @@ export function OwnerContactPage() {
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div>
                           <label className="mb-1.5 block text-xs font-semibold text-white/70">
-                            Họ và tên <span className="text-[#CCFF00]">*</span>
+                            Họ và tên <span className="text-accent-primary">*</span>
                           </label>
                           <input
                             name="name"
@@ -470,12 +458,12 @@ export function OwnerContactPage() {
                             onChange={handleChange}
                             required
                             placeholder="Nguyễn Văn A"
-                            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:border-[#CCFF00]/50 focus:ring-1 focus:ring-[#CCFF00]/20"
+                            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20"
                           />
                         </div>
                         <div>
                           <label className="mb-1.5 block text-xs font-semibold text-white/70">
-                            Số điện thoại <span className="text-[#CCFF00]">*</span>
+                            Số điện thoại <span className="text-accent-primary">*</span>
                           </label>
                           <input
                             name="phone"
@@ -484,7 +472,7 @@ export function OwnerContactPage() {
                             required
                             type="tel"
                             placeholder="0909 123 456"
-                            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:border-[#CCFF00]/50 focus:ring-1 focus:ring-[#CCFF00]/20"
+                            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20"
                           />
                         </div>
                       </div>
@@ -497,7 +485,7 @@ export function OwnerContactPage() {
                           onChange={handleChange}
                           type="email"
                           placeholder="example@email.com"
-                          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:border-[#00F5FF]/50 focus:ring-1 focus:ring-[#00F5FF]/20"
+                          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:border-accent-secondary/50 focus:ring-1 focus:ring-accent-secondary/20"
                         />
                       </div>
 
@@ -509,7 +497,7 @@ export function OwnerContactPage() {
                             value={form.venueName}
                             onChange={handleChange}
                             placeholder="Sân Bóng Thành Công"
-                            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:border-[#00F5FF]/50 focus:ring-1 focus:ring-[#00F5FF]/20"
+                            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:border-accent-secondary/50 focus:ring-1 focus:ring-accent-secondary/20"
                           />
                         </div>
                         <div>
@@ -518,7 +506,7 @@ export function OwnerContactPage() {
                             name="sport"
                             value={form.sport}
                             onChange={handleChange}
-                            className="w-full rounded-xl border border-white/10 bg-[#101011] px-4 py-2.5 text-sm text-white/80 outline-none transition-all focus:border-[#00F5FF]/50 focus:ring-1 focus:ring-[#00F5FF]/20"
+                            className="w-full rounded-xl border border-white/10 bg-[#101011] px-4 py-2.5 text-sm text-white/80 outline-none transition-all focus:border-accent-secondary/50 focus:ring-1 focus:ring-accent-secondary/20"
                           >
                             <option value="">Chọn môn...</option>
                             <option value="Bóng đá">Bóng đá</option>
@@ -540,15 +528,14 @@ export function OwnerContactPage() {
                           onChange={handleChange}
                           rows={3}
                           placeholder="Số lượng sân, địa chỉ, câu hỏi cụ thể..."
-                          className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:border-[#00F5FF]/50 focus:ring-1 focus:ring-[#00F5FF]/20"
+                          className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:border-accent-secondary/50 focus:ring-1 focus:ring-accent-secondary/20"
                         />
                       </div>
 
                       <button
                         type="submit"
                         disabled={submitting}
-                        className="mt-2 w-full rounded-full py-3 text-sm font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-                        style={{ background: '#CCFF00', color: '#0A0A0B' }}
+                        className="mt-2 w-full rounded-full py-3 text-sm font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed bg-accent-primary text-deep"
                       >
                         {submitting ? (
                           <span className="flex items-center justify-center gap-2">
@@ -575,23 +562,23 @@ export function OwnerContactPage() {
                 className="mt-6 flex flex-wrap items-center justify-center gap-4"
               >
                 <a
-                  href="tel:1900xxxx"
-                  className="inline-flex items-center gap-2 rounded-full border border-[#00F5FF]/25 bg-[#00F5FF]/8 px-5 py-2 text-xs font-semibold text-[#00F5FF] transition-all hover:bg-[#00F5FF]/15"
+                  href="tel:0337095968"
+                  className="inline-flex items-center gap-2 rounded-full border border-accent-secondary/25 bg-accent-secondary/10 px-5 py-2 text-xs font-semibold text-accent-secondary transition-all hover:bg-accent-secondary/15"
                 >
                   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.68A2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" />
                   </svg>
-                  Gọi ngay: 1900 xxxx
+                  Gọi ngay: 0337095968
                 </a>
                 <a
-                  href="mailto:owner@arenas.vn"
+                  href="mailto:ArenaSport2605@gmail.com"
                   className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 py-2 text-xs font-semibold text-white/60 transition-all hover:bg-white/10"
                 >
                   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                     <path d="M22 6l-10 7L2 6" />
                   </svg>
-                  owner@arenas.vn
+                  ArenaSport2605@gmail.com
                 </a>
               </motion.div>
             </motion.div>
@@ -612,7 +599,6 @@ export function OwnerContactPage() {
             <motion.div variants={fadeUp} className="mb-10 text-center">
               <h2
                 className="text-2xl font-black tracking-tight sm:text-3xl"
-                style={{ fontFamily: 'Montserrat, sans-serif' }}
               >
                 Câu Hỏi Thường Gặp
               </h2>
@@ -631,8 +617,8 @@ export function OwnerContactPage() {
                   >
                     <span className="text-sm font-semibold text-white">{faq.q}</span>
                     <span
-                      className="flex-shrink-0 transition-transform duration-300"
-                      style={{ transform: openFaq === i ? 'rotate(45deg)' : 'rotate(0deg)', color: '#CCFF00' }}
+                      className="flex-shrink-0 transition-transform duration-300 text-accent-primary"
+                      style={{ transform: openFaq === i ? 'rotate(45deg)' : 'rotate(0deg)' }}
                     >
                       <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M12 5v14M5 12h14" />
@@ -658,8 +644,7 @@ export function OwnerContactPage() {
         ══════════════════════════════════════════════════════════════ */}
         <section className="px-6 pb-20">
           <motion.div
-            className="mx-auto max-w-3xl rounded-[2.5rem] border border-[#CCFF00]/20 p-10 text-center"
-            style={{ background: 'linear-gradient(135deg, rgba(204,255,0,0.07) 0%, rgba(0,245,255,0.05) 100%)' }}
+            className="mx-auto max-w-3xl rounded-[2.5rem] border border-accent-primary/20 p-10 text-center bg-gradient-to-br from-accent-primary/10 to-accent-secondary/5"
             initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -667,7 +652,6 @@ export function OwnerContactPage() {
           >
             <h2
               className="text-2xl font-black tracking-tight sm:text-3xl"
-              style={{ fontFamily: 'Montserrat, sans-serif' }}
             >
               Sẵn Sàng Bắt Đầu?
             </h2>
@@ -677,8 +661,7 @@ export function OwnerContactPage() {
             <div className="mt-7 flex flex-wrap justify-center gap-3">
               <button
                 onClick={scrollToForm}
-                className="rounded-full px-8 py-3 text-sm font-bold transition-all hover:scale-[1.03] active:scale-[0.98]"
-                style={{ background: '#CCFF00', color: '#0A0A0B' }}
+                className="rounded-full px-8 py-3 text-sm font-bold transition-all hover:scale-[1.03] active:scale-[0.98] bg-accent-primary text-deep"
               >
                 Đăng Ký Hợp Tác
               </button>

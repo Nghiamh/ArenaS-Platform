@@ -204,7 +204,7 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
   }, [bookingsData]);
 
   return (
-    <div className="relative min-h-screen bg-[#080B11] text-slate-100 selection:bg-cyan-500/35 overflow-x-hidden font-sans">
+    <div className="relative min-h-screen bg-[#0A0A0B] text-slate-100 selection:bg-cyan-500/35 overflow-x-hidden font-sans">
       
       {/* Background glow effects matching mockup */}
       <div
@@ -254,7 +254,7 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
                   placeholder="Tìm cơ sở, lịch đặt sân..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full rounded-2xl border border-white/[0.08] bg-[#0E1524] py-2.5 pl-11 pr-4 text-sm text-slate-200 outline-none transition focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30"
+                  className="w-full rounded-2xl border border-white/[0.08] bg-[#101011] py-2.5 pl-11 pr-4 text-sm text-slate-200 outline-none transition focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30"
                 />
               </div>
 
@@ -272,7 +272,7 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
                 <div className="flex items-center gap-2.5 border-l border-white/[0.08] pl-5">
                   <button
                     type="button"
-                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-[#0E1524] text-slate-400 transition hover:border-white/20 hover:text-white"
+                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-[#101011] text-slate-400 transition hover:border-white/20 hover:text-white"
                     aria-label="Thông báo"
                   >
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -288,7 +288,7 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
                       onChange={(e) => setCurrentDate(e.target.value)}
                       className="absolute inset-0 opacity-0 cursor-pointer z-20"
                     />
-                    <button className="flex h-10 items-center gap-2 rounded-xl border border-white/[0.08] bg-[#0E1524] px-4 py-2 text-sm font-semibold text-slate-300 hover:border-white/20 hover:text-white">
+                    <button className="flex h-10 items-center gap-2 rounded-xl border border-white/[0.08] bg-[#101011] px-4 py-2 text-sm font-semibold text-slate-300 hover:border-white/20 hover:text-white">
                       Lịch: {getVNDateLabel(currentDate)}
                     </button>
                   </div>
@@ -302,7 +302,7 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               
               {/* Card 1: TODAY'S BOOKINGS */}
-              <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-[#0E1524]/60 p-5 shadow-[0_12px_36px_-15px_rgba(0,176,116,0.12)]">
+              <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-[#101011] p-5 shadow-[0_12px_36px_-15px_rgba(0,176,116,0.12)]">
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Lượt đặt hôm nay</p>
@@ -318,7 +318,7 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
               </div>
 
               {/* Card 2: ACTIVE MATCHES */}
-              <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-[#0E1524]/60 p-5 shadow-[0_12px_36px_-15px_rgba(6,182,212,0.12)]">
+              <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-[#101011] p-5 shadow-[0_12px_36px_-15px_rgba(6,182,212,0.12)]">
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Sân đang hoạt động</p>
@@ -334,7 +334,7 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
               </div>
 
               {/* Card 3: DAILY REVENUE */}
-              <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-[#0E1524]/60 p-5 shadow-[0_12px_36px_-15px_rgba(99,102,241,0.12)]">
+              <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-[#101011] p-5 shadow-[0_12px_36px_-15px_rgba(99,102,241,0.12)]">
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Doanh thu hôm nay</p>
@@ -352,13 +352,13 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
             </div>
 
             {/* ── Active Filter Bar & View tabs ── */}
-            <div className="flex flex-wrap items-center justify-between gap-3 bg-[#0E1524]/40 border border-white/[0.05] rounded-2xl p-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-[#0A0A0B] border border-white/[0.05] rounded-2xl p-3">
               {/* Select filters */}
               <div className="flex flex-wrap items-center gap-2.5">
-                <select
+                  <select
                   value={selectedFacility}
                   onChange={(e) => setSelectedFacility(e.target.value)}
-                  className="rounded-xl border border-white/[0.08] bg-[#0E1524] px-4 py-2 text-sm font-bold text-slate-300 hover:border-white/20 hover:text-white outline-none cursor-pointer"
+                  className="rounded-xl border border-white/[0.08] bg-[#101011] px-4 py-2 text-sm font-bold text-slate-300 hover:border-white/20 hover:text-white outline-none cursor-pointer"
                 >
                   <option value="all">Tất cả cơ sở</option>
                   {courtsData.map(c => (
@@ -369,7 +369,7 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
                 <select
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value)}
-                  className="rounded-xl border border-white/[0.08] bg-[#0E1524] px-4 py-2 text-sm font-bold text-slate-300 hover:border-white/20 hover:text-white outline-none cursor-pointer"
+                  className="rounded-xl border border-white/[0.08] bg-[#101011] px-4 py-2 text-sm font-bold text-slate-300 hover:border-white/20 hover:text-white outline-none cursor-pointer"
                 >
                   <option value="all">Tất cả trạng thái</option>
                   <option value="confirmed">Đã thanh toán</option>
@@ -389,7 +389,7 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
               </div>
 
               {/* Switch View tabs */}
-              <div className="flex items-center overflow-hidden rounded-xl border border-white/[0.08] bg-[#0E1524] p-1">
+              <div className="flex items-center overflow-hidden rounded-xl border border-white/[0.08] bg-[#101011] p-1">
                 {VIEW_TABS.map(tab => (
                   <button
                     key={tab.key}
@@ -426,7 +426,7 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
               
               {/* Widget 1: Popular Times */}
-              <div className="lg:col-span-2 rounded-2xl border border-white/[0.06] bg-[#0E1524]/40 p-6 shadow-sm">
+              <div className="lg:col-span-2 rounded-2xl border border-white/[0.06] bg-[#0A0A0B] p-6 shadow-sm">
                 <div className="flex items-center justify-between pb-6">
                   <div>
                     <h3 className="text-base font-bold text-white">Khung Giờ Cao Điểm</h3>
@@ -463,7 +463,7 @@ export const OwnerBookingScheduleScreen: React.FC = () => {
               </div>
 
               {/* Widget 2: Live Activity Logs */}
-              <div className="rounded-2xl border border-white/[0.06] bg-[#0E1524]/40 p-6 shadow-sm">
+              <div className="rounded-2xl border border-white/[0.06] bg-[#0A0A0B] p-6 shadow-sm">
                 <div className="pb-6">
                   <h3 className="text-base font-bold text-white">Nhật Ký Hoạt Động</h3>
                   <p className="text-xs text-slate-500 mt-0.5">Các giao dịch đặt sân mới nhất</p>

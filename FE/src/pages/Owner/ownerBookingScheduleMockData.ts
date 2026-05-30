@@ -36,7 +36,7 @@ export type WeekFacilitySchedule = Omit<FacilitySchedule, 'courts'> & {
   courts: WeekCourtSchedule[];
 };
 
-export const bookingHours = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
+export const bookingHours = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
 
 export const bookingFilters = {
   facilities: ['Tất cả cơ sở', 'Champions Arena', 'Elite Football Complex', 'Victory Stadium'],
