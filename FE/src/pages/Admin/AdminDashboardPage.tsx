@@ -1,6 +1,16 @@
-import React, { useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { AdminLayout } from '../../components';
+import {
+  adminGetAllCourts,
+  adminGetIncome,
+  adminApproveCourt,
+  adminRejectCourt,
+  getCurrentUserProfile,
+  AdminCourt,
+  AdminIncomeSummary,
+  AdminIncomeEntry,
+} from '../../Axios/Axios';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
@@ -72,7 +82,7 @@ const ArrowUpIcon = () => (
 interface StatCard {
   label: string;
   value: string | number;
-  change: number;
+  change: number | null;
   subLabel: string;
   icon: React.ReactNode;
   accentColor: string;
@@ -80,37 +90,20 @@ interface StatCard {
   borderColor: string;
 }
 
-interface BookingItem {
-  id: string;
-  courtName: string;
-  sportType: string;
-  date: string;
-  time: string;
-  customer: string;
-  revenue: number;
-  status: 'completed' | 'pending' | 'cancelled';
-}
-
 // ─── Static data ──────────────────────────────────────────────────────────────
-
-const mockBookings: BookingItem[] = [
-  { id: '001', courtName: 'Sân Bóng Đá A1', sportType: 'Bóng Đá', date: '2026-04-28', time: '18:00 - 20:00', customer: 'Nguyễn Văn A', revenue: 250000, status: 'completed' },
-  { id: '002', courtName: 'Sân Cầu Lông B2', sportType: 'Cầu Lông', date: '2026-04-29', time: '19:00 - 21:00', customer: 'Trần Thị B', revenue: 180000, status: 'completed' },
-  { id: '003', courtName: 'Sân Pickleball C1', sportType: 'Pickleball', date: '2026-04-30', time: '10:00 - 11:30', customer: 'Lê Văn C', revenue: 150000, status: 'pending' },
-  { id: '004', courtName: 'Sân Bóng Đá A2', sportType: 'Bóng Đá', date: '2026-04-30', time: '20:00 - 22:00', customer: 'Phạm Minh D', revenue: 250000, status: 'pending' },
-  { id: '005', courtName: 'Sân Cầu Lông B1', sportType: 'Cầu Lông', date: '2026-04-25', time: '17:00 - 19:00', customer: 'Vũ Anh E', revenue: 180000, status: 'cancelled' },
-];
-
-const STATUS_CONFIG = {
-  completed: { label: 'Hoàn thành', className: 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/25' },
-  pending:   { label: 'Chờ xác nhận', className: 'bg-amber-500/15 text-amber-300 border border-amber-500/25' },
-  cancelled: { label: 'Đã hủy', className: 'bg-red-500/15 text-red-300 border border-red-500/25' },
-} as const;
 
 const SPORT_BADGE: Record<string, string> = {
   'Bóng Đá':   'bg-blue-500/15 text-blue-300 border border-blue-500/25',
   'Cầu Lông':  'bg-yellow-500/15 text-yellow-300 border border-yellow-500/25',
   Pickleball:  'bg-pink-500/15 text-pink-300 border border-pink-500/25',
+  Tennis:      'bg-orange-500/15 text-orange-300 border border-orange-500/25',
+};
+
+const SPORT_BAR: Record<string, string> = {
+  'Bóng Đá':  'bg-blue-500',
+  'Cầu Lông': 'bg-yellow-500',
+  Pickleball: 'bg-pink-500',
+  Tennis:     'bg-orange-500',
 };
 
 const chartData = [
@@ -123,71 +116,146 @@ const chartData = [
   { day: 'CN', revenue: 3.9 },
 ];
 
-const sportStats = [
-  { sport: 'Bóng Đá',  count: 12, bar: 'bg-blue-500',   pct: 45 },
-  { sport: 'Cầu Lông', count: 8,  bar: 'bg-yellow-500', pct: 30 },
-  { sport: 'Pickleball', count: 7, bar: 'bg-pink-500',  pct: 25 },
-];
-
 const quickActions = [
   { label: 'Quản lý sân',    desc: 'Duyệt và cập nhật sân',  icon: <StadiumIcon />,   color: 'from-cyan-600 to-blue-700',    to: '/admin/manage-stadiums' },
-  { label: 'Quản lý booking', desc: 'Xem và xử lý đơn đặt', icon: <ClipboardIcon />, color: 'from-emerald-600 to-teal-700',  to: '#' },
+  { label: 'Thu nhập',       desc: 'Xem giao dịch hệ thống', icon: <ClipboardIcon />, color: 'from-emerald-600 to-teal-700',  to: '/admin/income' },
   { label: 'Người dùng',     desc: 'Quản lý tài khoản',     icon: <UsersIcon />,     color: 'from-purple-600 to-violet-700', to: '/admin/manage-users' },
   { label: 'Báo cáo',        desc: 'Thống kê doanh thu',    icon: <BarChartIcon />,  color: 'from-orange-600 to-amber-700',  to: '#' },
 ];
 
+function formatDate(dateStr: string) {
+  try {
+    return new Date(dateStr).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  } catch {
+    return dateStr;
+  }
+}
+
+function incomeTypeBadge(type: string) {
+  return type === 'deposit'
+    ? 'bg-blue-500/15 text-blue-300 border border-blue-500/25'
+    : 'bg-purple-500/15 text-purple-300 border border-purple-500/25';
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export const AdminDashboardPage: React.FC = () => {
-  const stats = useMemo<StatCard[]>(() => {
-    const total = mockBookings.length;
-    const completed = mockBookings.filter(b => b.status === 'completed').length;
-    const totalRevenue = mockBookings.reduce((s, b) => s + b.revenue, 0);
-    const avgRevenue = Math.round(totalRevenue / total);
+  const [courts, setCourts] = useState<AdminCourt[]>([]);
+  const [totalCourts, setTotalCourts] = useState(0);
+  const [incomeSummary, setIncomeSummary] = useState<AdminIncomeSummary | null>(null);
+  const [incomeItems, setIncomeItems] = useState<AdminIncomeEntry[]>([]);
+  const [adminName, setAdminName] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [approving, setApproving] = useState<string | null>(null);
 
-    return [
-      {
-        label: 'Tổng booking',
-        value: total,
-        change: 12.5,
-        subLabel: 'trong tháng này',
-        icon: <CalendarIcon />,
-        accentColor: 'text-cyan-400',
-        bgColor: 'bg-cyan-500/10',
-        borderColor: 'border-cyan-500/20',
-      },
-      {
-        label: 'Hoàn thành',
-        value: completed,
-        change: 8.2,
-        subLabel: `tỉ lệ ${Math.round((completed / total) * 100)}%`,
-        icon: <CheckCircleIcon />,
-        accentColor: 'text-emerald-400',
-        bgColor: 'bg-emerald-500/10',
-        borderColor: 'border-emerald-500/20',
-      },
-      {
-        label: 'Tổng doanh thu',
-        value: `${(totalRevenue / 1_000_000).toFixed(1)}M₫`,
-        change: 15.3,
-        subLabel: 'tháng 04/2026',
-        icon: <CurrencyIcon />,
-        accentColor: 'text-blue-400',
-        bgColor: 'bg-blue-500/10',
-        borderColor: 'border-blue-500/20',
-      },
-      {
-        label: 'Trung bình/booking',
-        value: `${Math.round(avgRevenue / 1000)}K₫`,
-        change: 5.1,
-        subLabel: 'so với tuần trước',
-        icon: <TrendingUpIcon />,
-        accentColor: 'text-purple-400',
-        bgColor: 'bg-purple-500/10',
-        borderColor: 'border-purple-500/20',
-      },
-    ];
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [courtsRes, incomeRes, profileRes] = await Promise.all([
+        adminGetAllCourts({ limit: 200 }),
+        adminGetIncome({ limit: 5 }),
+        getCurrentUserProfile().catch(() => null),
+      ]);
+      setCourts(courtsRes.courts);
+      setTotalCourts(courtsRes.total);
+      setIncomeSummary(incomeRes.summary);
+      setIncomeItems(incomeRes.items);
+      if (profileRes) setAdminName(profileRes.user.name);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Lỗi tải dữ liệu');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleApprove = async (courtId: string) => {
+    setApproving(courtId);
+    try {
+      await adminApproveCourt(courtId);
+      setCourts(prev => prev.map(c => c.id === courtId ? { ...c, status: 'available' } : c));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Lỗi phê duyệt sân');
+    } finally {
+      setApproving(null);
+    }
+  };
+
+  const handleReject = async (courtId: string) => {
+    setApproving(courtId);
+    try {
+      await adminRejectCourt(courtId);
+      setCourts(prev => prev.map(c => c.id === courtId ? { ...c, status: 'closed' } : c));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Lỗi từ chối sân');
+    } finally {
+      setApproving(null);
+    }
+  };
+
+  const pendingCourts = useMemo(() => courts.filter(c => c.status === 'pending'), [courts]);
+
+  const courtTypeStats = useMemo(() => {
+    const counts: Record<string, number> = {};
+    courts.forEach(court => court.sports.forEach(sport => { counts[sport] = (counts[sport] || 0) + 1; }));
+    const total = Math.max(Object.values(counts).reduce((s, c) => s + c, 0), 1);
+    return Object.entries(counts).map(([sport, count]) => ({
+      sport, count,
+      bar: SPORT_BAR[sport] ?? 'bg-slate-500',
+      pct: Math.round((count / total) * 100),
+    }));
+  }, [courts]);
+
+  const revenueTrend = useMemo(() => {
+    if (!incomeSummary?.lastMonthRevenue) return null;
+    return Math.round(((incomeSummary.thisMonthRevenue - incomeSummary.lastMonthRevenue) / incomeSummary.lastMonthRevenue) * 100);
+  }, [incomeSummary]);
+
+  const stats = useMemo<StatCard[]>(() => [
+    {
+      label: 'Tổng số sân',
+      value: loading ? '...' : totalCourts,
+      change: null,
+      subLabel: 'trong toàn hệ thống',
+      icon: <CalendarIcon />,
+      accentColor: 'text-cyan-400',
+      bgColor: 'bg-cyan-500/10',
+      borderColor: 'border-cyan-500/20',
+    },
+    {
+      label: 'Sân chờ duyệt',
+      value: loading ? '...' : pendingCourts.length,
+      change: null,
+      subLabel: pendingCourts.length > 0 ? 'cần xem xét ngay' : 'không có sân chờ',
+      icon: <CheckCircleIcon />,
+      accentColor: pendingCourts.length > 0 ? 'text-amber-400' : 'text-emerald-400',
+      bgColor: pendingCourts.length > 0 ? 'bg-amber-500/10' : 'bg-emerald-500/10',
+      borderColor: pendingCourts.length > 0 ? 'border-amber-500/20' : 'border-emerald-500/20',
+    },
+    {
+      label: 'Tổng doanh thu',
+      value: loading ? '...' : incomeSummary ? `${(incomeSummary.totalRevenue / 1_000_000).toFixed(1)}M₫` : '—',
+      change: revenueTrend,
+      subLabel: incomeSummary ? `${incomeSummary.depositCount + incomeSummary.subscriptionCount} giao dịch` : '—',
+      icon: <CurrencyIcon />,
+      accentColor: 'text-blue-400',
+      bgColor: 'bg-blue-500/10',
+      borderColor: 'border-blue-500/20',
+    },
+    {
+      label: 'Doanh thu tháng này',
+      value: loading ? '...' : incomeSummary ? `${(incomeSummary.thisMonthRevenue / 1_000_000).toFixed(1)}M₫` : '—',
+      change: revenueTrend,
+      subLabel: incomeSummary ? `tháng trước: ${(incomeSummary.lastMonthRevenue / 1_000_000).toFixed(1)}M₫` : '—',
+      icon: <TrendingUpIcon />,
+      accentColor: 'text-purple-400',
+      bgColor: 'bg-purple-500/10',
+      borderColor: 'border-purple-500/20',
+    },
+  ], [loading, totalCourts, pendingCourts.length, incomeSummary, revenueTrend]);
 
   const maxRevenue = Math.max(...chartData.map(d => d.revenue));
   const yAxisLabels = [6, 4, 2, 0];
@@ -205,14 +273,30 @@ export const AdminDashboardPage: React.FC = () => {
               </p>
               <h1 className="mt-2 text-3xl font-black tracking-tight">Tổng quan hệ thống</h1>
               <p className="mt-1.5 text-sm text-slate-400">
-                Theo dõi hoạt động sân thể thao — Tháng 04/2026
+                {adminName ? `Xin chào, ${adminName}! ` : ''}Theo dõi hoạt động sân thể thao
               </p>
             </div>
-            <div className="hidden sm:flex shrink-0 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs font-semibold text-slate-300">Hệ thống hoạt động bình thường</span>
+            <div className="flex shrink-0 items-center gap-3">
+              <button
+                onClick={fetchData}
+                disabled={loading}
+                className="hidden sm:flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs font-semibold text-slate-300 hover:bg-white/[0.08] transition-colors disabled:opacity-50"
+              >
+                {loading ? '⟳ Đang tải...' : '⟳ Làm mới'}
+              </button>
+              <div className="hidden sm:flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-xs font-semibold text-slate-300">Hệ thống hoạt động bình thường</span>
+              </div>
             </div>
           </div>
+
+          {/* ── Error ── */}
+          {error && (
+            <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-sm text-red-400">
+              {error}
+            </div>
+          )}
 
           {/* ── Stat Cards ── */}
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -224,105 +308,144 @@ export const AdminDashboardPage: React.FC = () => {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium text-slate-400">{stat.label}</p>
-                    <p className="mt-2 text-2xl font-black tracking-tight">{stat.value}</p>
+                    {loading ? (
+                      <div className="mt-2 h-7 w-20 animate-pulse rounded-lg bg-white/[0.08]" />
+                    ) : (
+                      <p className="mt-2 text-2xl font-black tracking-tight">{stat.value}</p>
+                    )}
                     <p className="mt-1 text-[11px] text-slate-500">{stat.subLabel}</p>
                   </div>
                   <div className={`rounded-xl p-2.5 ${stat.bgColor} ${stat.accentColor} shrink-0`}>
                     {stat.icon}
                   </div>
                 </div>
-                <div className="mt-4 flex items-center gap-1.5">
-                  <span className="flex items-center gap-0.5 text-xs font-bold text-emerald-400">
-                    <ArrowUpIcon />
-                    {stat.change}%
-                  </span>
-                  <span className="text-[11px] text-slate-500">so với tuần trước</span>
-                </div>
+                {stat.change !== null && !loading && (
+                  <div className="mt-4 flex items-center gap-1.5">
+                    <span className={`flex items-center gap-0.5 text-xs font-bold ${stat.change >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      <ArrowUpIcon />
+                      {Math.abs(stat.change)}%
+                    </span>
+                    <span className="text-[11px] text-slate-500">so với tháng trước</span>
+                  </div>
+                )}
               </div>
             ))}
           </div>
 
           {/* ── Charts Row ── */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Bar chart */}
+            {/* Revenue breakdown from API */}
             <div className="lg:col-span-2 rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-sm">
               <div className="mb-6 flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-base font-bold">Doanh thu hàng tuần</h2>
-                  <p className="mt-0.5 text-xs text-slate-400">Tổng doanh thu theo ngày (triệu đồng)</p>
+                  <h2 className="text-base font-bold">Tổng quan doanh thu</h2>
+                  <p className="mt-0.5 text-xs text-slate-400">Phân loại theo hình thức giao dịch</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="h-2 w-2 rounded-full bg-cyan-400" />
-                  <span className="text-xs text-slate-400">Tuần này</span>
+                  <span className="text-xs text-slate-400">Toàn thời gian</span>
                 </div>
               </div>
 
-              <div className="flex gap-3 h-52">
-                {/* Y-axis */}
-                <div className="flex flex-col justify-between pb-7 text-right">
-                  {yAxisLabels.map(v => (
-                    <span key={v} className="text-[10px] text-slate-500 w-5">{v}M</span>
-                  ))}
+              {loading ? (
+                <div className="h-40 flex items-center justify-center">
+                  <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
                 </div>
-
-                {/* Bars + X labels */}
-                <div className="flex-1 flex flex-col gap-2">
-                  <div className="flex-1 flex items-end gap-2 border-b border-white/[0.06]">
-                    {chartData.map((item, idx) => (
-                      <div key={idx} className="group relative flex flex-col items-center flex-1">
-                        {/* Tooltip */}
-                        <span className="absolute -top-7 left-1/2 -translate-x-1/2 rounded-lg border border-white/10 bg-slate-800 px-2 py-1 text-[11px] font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-xl">
-                          {item.revenue}M₫
-                        </span>
-                        {/* Bar background track */}
-                        <div className="relative w-full rounded-t-lg overflow-hidden bg-white/[0.04]" style={{ height: '140px' }}>
-                          <div
-                            className="absolute bottom-0 w-full rounded-t-lg bg-gradient-to-t from-cyan-600 via-cyan-500 to-blue-400 transition-all duration-700 group-hover:from-cyan-500 group-hover:to-blue-300"
-                            style={{ height: `${(item.revenue / maxRevenue) * 140}px` }}
-                          />
+              ) : incomeSummary ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 p-4">
+                    <p className="text-xs text-slate-400 mb-1">Nạp Tiền (Deposit)</p>
+                    <p className="text-2xl font-black text-blue-300">{(incomeSummary.depositTotal / 1_000_000).toFixed(1)}M₫</p>
+                    <p className="text-[11px] text-slate-500 mt-1">{incomeSummary.depositCount} giao dịch</p>
+                  </div>
+                  <div className="rounded-xl border border-purple-500/20 bg-purple-500/10 p-4">
+                    <p className="text-xs text-slate-400 mb-1">Đăng Ký Gói (Subscription)</p>
+                    <p className="text-2xl font-black text-purple-300">{(incomeSummary.subscriptionTotal / 1_000_000).toFixed(1)}M₫</p>
+                    <p className="text-[11px] text-slate-500 mt-1">{incomeSummary.subscriptionCount} giao dịch</p>
+                  </div>
+                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+                    <p className="text-xs text-slate-400 mb-1">Tháng Này</p>
+                    <p className="text-2xl font-black text-emerald-300">{(incomeSummary.thisMonthRevenue / 1_000_000).toFixed(1)}M₫</p>
+                  </div>
+                  <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+                    <p className="text-xs text-slate-400 mb-1">Tháng Trước</p>
+                    <p className="text-2xl font-black text-slate-300">{(incomeSummary.lastMonthRevenue / 1_000_000).toFixed(1)}M₫</p>
+                    {revenueTrend !== null && (
+                      <p className={`text-[11px] mt-1 font-bold ${revenueTrend >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {revenueTrend >= 0 ? '↑' : '↓'} {Math.abs(revenueTrend)}%
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* Fallback chart when no income data */
+                <div className="flex gap-3 h-52">
+                  <div className="flex flex-col justify-between pb-7 text-right">
+                    {yAxisLabels.map(v => (
+                      <span key={v} className="text-[10px] text-slate-500 w-5">{v}M</span>
+                    ))}
+                  </div>
+                  <div className="flex-1 flex flex-col gap-2">
+                    <div className="flex-1 flex items-end gap-2 border-b border-white/[0.06]">
+                      {chartData.map((item, i) => (
+                        <div key={i} className="group relative flex flex-col items-center flex-1">
+                          <span className="absolute -top-7 left-1/2 -translate-x-1/2 rounded-lg border border-white/10 bg-slate-800 px-2 py-1 text-[11px] font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-xl">
+                            {item.revenue}M₫
+                          </span>
+                          <div className="relative w-full rounded-t-lg overflow-hidden bg-white/[0.04]" style={{ height: '140px' }}>
+                            <div
+                              className="absolute bottom-0 w-full rounded-t-lg bg-gradient-to-t from-cyan-600 via-cyan-500 to-blue-400 transition-all duration-700"
+                              style={{ height: `${(item.revenue / maxRevenue) * 140}px` }}
+                            />
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                  {/* X-axis labels */}
-                  <div className="flex gap-2">
-                    {chartData.map((item, idx) => (
-                      <div key={idx} className="flex-1 text-center">
-                        <span className="text-[11px] text-slate-400">{item.day}</span>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      {chartData.map((item, i) => (
+                        <div key={i} className="flex-1 text-center">
+                          <span className="text-[11px] text-slate-400">{item.day}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
-            {/* Sport breakdown */}
+            {/* Sport breakdown — real data from API */}
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-sm flex flex-col">
               <h2 className="text-base font-bold">Phân loại sân</h2>
               <p className="mt-0.5 text-xs text-slate-400 mb-6">Tổng số sân theo môn thể thao</p>
 
               <div className="space-y-5 flex-1">
-                {sportStats.map((item, idx) => (
-                  <div key={idx}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-semibold">{item.sport}</span>
-                      <span className="text-xs font-bold">{item.count} sân</span>
+                {loading ? (
+                  [1, 2, 3].map(i => <div key={i} className="h-8 animate-pulse rounded-lg bg-white/[0.06]" />)
+                ) : courtTypeStats.length > 0 ? (
+                  courtTypeStats.map((item, idx) => (
+                    <div key={idx}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold">{item.sport}</span>
+                        <span className="text-xs font-bold">{item.count} sân</span>
+                      </div>
+                      <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                        <div
+                          className={`h-full ${item.bar} rounded-full transition-all duration-700`}
+                          style={{ width: `${item.pct}%` }}
+                        />
+                      </div>
+                      <p className="mt-1 text-right text-[10px] text-slate-500">{item.pct}%</p>
                     </div>
-                    <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-                      <div
-                        className={`h-full ${item.bar} rounded-full transition-all duration-700`}
-                        style={{ width: `${item.pct}%` }}
-                      />
-                    </div>
-                    <p className="mt-1 text-right text-[10px] text-slate-500">{item.pct}%</p>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-sm text-slate-400">Chưa có sân nào trong hệ thống</p>
+                )}
               </div>
 
               <div className="mt-6 pt-5 border-t border-white/[0.08]">
                 <div className="flex items-center justify-between mb-4">
                   <p className="text-sm font-medium text-slate-400">Tổng số sân</p>
-                  <span className="text-2xl font-black">27</span>
+                  <span className="text-2xl font-black">{loading ? '...' : totalCourts}</span>
                 </div>
                 <Link
                   to="/admin/manage-stadiums"
@@ -335,28 +458,95 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* ── Bookings Table ── */}
+          {/* ── Pending Courts ── */}
+          {!loading && pendingCourts.length > 0 && (
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/[0.05] overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-5 border-b border-amber-500/20">
+                <div>
+                  <h2 className="text-base font-bold text-amber-300">Sân chờ phê duyệt</h2>
+                  <p className="mt-0.5 text-xs text-slate-400">{pendingCourts.length} sân đang chờ xét duyệt</p>
+                </div>
+                <Link to="/admin/manage-stadiums" className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition-colors">
+                  Xem tất cả →
+                </Link>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-white/[0.06]">
+                      {['Tên sân', 'Môn thể thao', 'Địa chỉ', 'Giá/giờ', 'Thao tác'].map((h, i) => (
+                        <th
+                          key={h}
+                          className={`px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500 ${
+                            i === 3 ? 'text-right' : i === 4 ? 'text-center' : 'text-left'
+                          } ${i === 2 ? 'hidden md:table-cell' : ''}`}
+                        >
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/[0.04]">
+                    {pendingCourts.slice(0, 5).map(court => (
+                      <tr key={court.id} className="hover:bg-white/[0.025] transition-colors duration-150">
+                        <td className="px-5 py-4 font-semibold text-white">{court.name}</td>
+                        <td className="px-5 py-4">
+                          {court.sports.map(sport => (
+                            <span key={sport} className={`mr-1 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${SPORT_BADGE[sport] ?? 'bg-slate-500/15 text-slate-300 border border-slate-500/25'}`}>
+                              {sport}
+                            </span>
+                          ))}
+                        </td>
+                        <td className="px-5 py-4 text-slate-400 text-xs hidden md:table-cell max-w-[180px] truncate">{court.location}</td>
+                        <td className="px-5 py-4 text-right font-bold text-emerald-400">{court.price_per_hour.toLocaleString('vi-VN')}₫</td>
+                        <td className="px-5 py-4 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleApprove(court.id)}
+                              disabled={approving === court.id}
+                              className="rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3 py-1 text-xs font-semibold text-white transition-colors disabled:opacity-50"
+                            >
+                              {approving === court.id ? '...' : 'Duyệt'}
+                            </button>
+                            <button
+                              onClick={() => handleReject(court.id)}
+                              disabled={approving === court.id}
+                              className="rounded-lg bg-red-600 hover:bg-red-500 px-3 py-1 text-xs font-semibold text-white transition-colors disabled:opacity-50"
+                            >
+                              {approving === court.id ? '...' : 'Từ chối'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* ── Recent Income Transactions ── */}
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm overflow-hidden">
             <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.08]">
               <div>
-                <h2 className="text-base font-bold">Booking gần đây</h2>
-                <p className="mt-0.5 text-xs text-slate-400">5 booking mới nhất trong hệ thống</p>
+                <h2 className="text-base font-bold">Giao dịch gần đây</h2>
+                <p className="mt-0.5 text-xs text-slate-400">5 giao dịch thu nhập mới nhất trong hệ thống</p>
               </div>
-              <button className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition-colors duration-200">
+              <Link to="/admin/income" className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition-colors duration-200">
                 Xem tất cả →
-              </button>
+              </Link>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-white/[0.06]">
-                    {['Sân', 'Môn', 'Khách hàng', 'Thời gian', 'Doanh thu', 'Trạng thái'].map((h, i) => (
+                    {['Loại', 'Người dùng', 'Mô tả', 'Ngày', 'Số tiền'].map((h, i) => (
                       <th
                         key={h}
                         className={`px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500 ${
-                          i === 4 ? 'text-right' : i === 5 ? 'text-center' : 'text-left'
-                        }`}
+                          i === 4 ? 'text-right' : 'text-left'
+                        } ${i === 2 ? 'hidden md:table-cell' : ''} ${i === 3 ? 'hidden sm:table-cell' : ''}`}
                       >
                         {h}
                       </th>
@@ -364,47 +554,42 @@ export const AdminDashboardPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.04]">
-                  {mockBookings.map(booking => {
-                    const statusCfg = STATUS_CONFIG[booking.status];
-                    const sportClass = SPORT_BADGE[booking.sportType] ?? 'bg-slate-500/15 text-slate-300 border border-slate-500/25';
-                    return (
-                      <tr key={booking.id} className="hover:bg-white/[0.025] transition-colors duration-150">
-                        <td className="px-5 py-4 font-semibold text-white">{booking.courtName}</td>
-                        <td className="px-5 py-4">
-                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${sportClass}`}>
-                            {booking.sportType}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4 text-slate-300">{booking.customer}</td>
-                        <td className="px-5 py-4">
-                          <p className="text-xs font-medium text-slate-300">{booking.date}</p>
-                          <p className="text-[11px] text-slate-500">{booking.time}</p>
-                        </td>
-                        <td className="px-5 py-4 text-right font-bold text-emerald-400">
-                          {booking.revenue.toLocaleString('vi-VN')}₫
-                        </td>
-                        <td className="px-5 py-4 text-center">
-                          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${statusCfg.className}`}>
-                            {statusCfg.label}
-                          </span>
+                  {loading ? (
+                    [1, 2, 3, 4, 5].map(i => (
+                      <tr key={i}>
+                        <td colSpan={5} className="px-5 py-4">
+                          <div className="h-8 animate-pulse rounded-lg bg-white/[0.06]" />
                         </td>
                       </tr>
-                    );
-                  })}
+                    ))
+                  ) : incomeItems.length > 0 ? (
+                    incomeItems.map(item => (
+                      <tr key={item.id} className="hover:bg-white/[0.025] transition-colors duration-150">
+                        <td className="px-5 py-4">
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${incomeTypeBadge(item.type)}`}>
+                            {item.type === 'deposit' ? 'Nạp tiền' : 'Đăng ký'}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <p className="font-semibold text-white">{item.userName}</p>
+                          <p className="text-[11px] text-slate-500">{item.userEmail}</p>
+                        </td>
+                        <td className="px-5 py-4 text-slate-400 text-xs hidden md:table-cell max-w-[200px] truncate">{item.description}</td>
+                        <td className="px-5 py-4 text-xs text-slate-400 hidden sm:table-cell">{formatDate(item.createdAt)}</td>
+                        <td className="px-5 py-4 text-right font-bold text-emerald-400">
+                          {item.amount.toLocaleString('vi-VN')}₫
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="px-5 py-12 text-center text-sm text-slate-500">
+                        Chưa có giao dịch nào
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
-            </div>
-
-            <div className="flex items-center justify-between px-6 py-4 border-t border-white/[0.06]">
-              <p className="text-xs text-slate-500">Hiển thị 1–5 trong tổng số 128 booking</p>
-              <div className="flex gap-1.5">
-                <button className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-slate-400 hover:bg-white/[0.08] hover:text-white transition-colors duration-200">
-                  ← Trước
-                </button>
-                <button className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-slate-400 hover:bg-white/[0.08] hover:text-white transition-colors duration-200">
-                  Sau →
-                </button>
-              </div>
             </div>
           </div>
 
