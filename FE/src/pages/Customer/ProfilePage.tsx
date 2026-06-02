@@ -11,10 +11,14 @@ import {
   cancelBooking,
   getMyReports,
   appealReport,
+  getMyOwnerApplication,
+  submitOwnerApplication,
   type AuthUser,
   type UserSkill,
   type UserBooking,
   type FEReport,
+  type OwnerApplication,
+  type OwnerApplicationPayload,
 } from "../../Axios/Axios";
 import { useWallet } from "../../hooks/useWallet";
 import { DepositModal } from "../WalletPage/DepositModal";
@@ -428,6 +432,15 @@ export const ProfilePage: React.FC = () => {
   const [showAllBookingsModal, setShowAllBookingsModal] = useState(false);
   const [bookingsCurrentPage, setBookingsCurrentPage] = useState(1);
 
+  // Owner application state
+  const [ownerApplication, setOwnerApplication] = useState<OwnerApplication | null>(null);
+  const [ownerAppLoading, setOwnerAppLoading] = useState(false);
+  const [showOwnerAppForm, setShowOwnerAppForm] = useState(false);
+  const [ownerAppForm, setOwnerAppForm] = useState<OwnerApplicationPayload>({
+    businessName: '', businessAddress: '', phone: '', identityCard: '', bankAccount: '', description: '',
+  });
+  const [ownerAppSubmitting, setOwnerAppSubmitting] = useState(false);
+
   // Reports state & handlers
   const [reports, setReports] = useState<FEReport[]>([]);
   const [reportsLoading, setReportsLoading] = useState(true);
@@ -443,10 +456,43 @@ export const ProfilePage: React.FC = () => {
     showHistoryModal ||
     showAllBookingsModal ||
     showReportsModal ||
+    showOwnerAppForm ||
     Boolean(bookingToCancel) ||
     Boolean(selectedReportForAppeal) ||
     Boolean(popupErrorMessage) ||
     Boolean(editingSkillId);
+
+  const fetchOwnerApplication = async () => {
+    try {
+      setOwnerAppLoading(true);
+      const res = await getMyOwnerApplication();
+      setOwnerApplication(res.application);
+    } catch {
+      // silently ignore
+    } finally {
+      setOwnerAppLoading(false);
+    }
+  };
+
+  const handleOwnerAppSubmit = async () => {
+    const { businessName, businessAddress, phone, identityCard } = ownerAppForm;
+    if (!businessName.trim() || !businessAddress.trim() || !phone.trim() || !identityCard.trim()) {
+      showErrorPopup('Vui lòng điền đầy đủ các trường bắt buộc.');
+      return;
+    }
+    try {
+      setOwnerAppSubmitting(true);
+      const res = await submitOwnerApplication(ownerAppForm);
+      setOwnerApplication(res.application);
+      setShowOwnerAppForm(false);
+      setSuccessMessage('Nộp hồ sơ thành công! Đang chờ admin xét duyệt.');
+      setTimeout(() => setSuccessMessage(''), 5000);
+    } catch (e: unknown) {
+      showErrorPopup(e instanceof Error ? e.message : 'Không thể nộp hồ sơ.');
+    } finally {
+      setOwnerAppSubmitting(false);
+    }
+  };
 
   const fetchReports = async () => {
     try {
@@ -589,6 +635,7 @@ export const ProfilePage: React.FC = () => {
   useEffect(() => {
     fetchBookings();
     fetchReports();
+    fetchOwnerApplication();
   }, []);
 
   const handleDepositSuccess = () => {
@@ -1156,6 +1203,72 @@ export const ProfilePage: React.FC = () => {
                     <p className="text-sm font-semibold text-slate-300">Không có tố cáo</p>
                   </div>
                 </div>
+              )}
+
+              {/* Owner Application Status Widget — only for role=user */}
+              {currentUser?.role === 'user' && (
+                ownerAppLoading ? (
+                  <div className="bg-[#10111a] border border-white/[0.05] rounded-3xl p-4 flex items-center justify-center min-h-[74px]">
+                    <div className="w-4 h-4 rounded-full border-2 border-slate-500 border-t-transparent animate-spin" />
+                  </div>
+                ) : ownerApplication?.status === 'approved' ? (
+                  <div className="bg-[#10111a] border border-emerald-500/30 rounded-3xl p-4 flex items-center gap-3 relative overflow-hidden">
+                    <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent" />
+                    <div className="h-10 w-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2"><path d="m5 12 5 5L20 7" /></svg>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-emerald-400 tracking-wider uppercase mb-0.5">Chủ sân</p>
+                      <p className="text-sm font-semibold text-slate-300">Hồ sơ đã được duyệt</p>
+                    </div>
+                  </div>
+                ) : ownerApplication?.status === 'pending' ? (
+                  <div className="bg-[#10111a] border border-amber-500/30 rounded-3xl p-4 flex items-center gap-3 relative overflow-hidden">
+                    <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-amber-500/40 to-transparent" />
+                    <div className="h-10 w-10 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+                      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-amber-400 tracking-wider uppercase mb-0.5">Đăng ký chủ sân</p>
+                      <p className="text-sm font-semibold text-slate-300">Đang chờ duyệt</p>
+                    </div>
+                  </div>
+                ) : ownerApplication?.status === 'rejected' ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowOwnerAppForm(true)}
+                    className="w-full bg-[#10111a] border border-rose-500/30 rounded-3xl p-4 flex items-center gap-3 relative overflow-hidden hover:border-rose-500/55 transition text-left"
+                  >
+                    <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-rose-500/40 to-transparent" />
+                    <div className="h-10 w-10 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 shrink-0">
+                      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-rose-400 tracking-wider uppercase mb-0.5">Bị từ chối</p>
+                      <p className="text-sm font-semibold text-slate-300">Nhấn để nộp lại</p>
+                    </div>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowOwnerAppForm(true)}
+                    className="w-full bg-gradient-to-br from-[#10111a] to-[#111824] border border-violet-500/25 rounded-3xl p-4 flex items-center justify-between cursor-pointer hover:border-violet-500/50 transition-all group relative overflow-hidden text-left"
+                  >
+                    <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-violet-500/35 to-transparent" />
+                    <div className="flex items-center gap-3 relative z-10">
+                      <div className="h-10 w-10 rounded-full bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 group-hover:bg-violet-500/20 transition-colors shrink-0">
+                        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-violet-400 tracking-wider uppercase mb-0.5">Đăng ký chủ sân</p>
+                        <p className="text-sm font-semibold text-slate-300">Nộp hồ sơ ngay</p>
+                      </div>
+                    </div>
+                    <svg viewBox="0 0 24 24" className="h-4 w-4 text-violet-400 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all relative z-10" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </button>
+                )
               )}
 
             </aside>
@@ -2118,6 +2231,88 @@ export const ProfilePage: React.FC = () => {
                       Đang gửi...
                     </>
                   ) : "Gửi kháng cáo"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Owner Application Form Modal */}
+        {showOwnerAppForm && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm">
+            <div className="w-full max-w-xl rounded-2xl border border-white/[0.07] bg-[#121320] p-6 shadow-[0_28px_70px_-35px_rgba(0,0,0,0.9)] relative overflow-hidden">
+              <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-violet-500/50 to-transparent" />
+
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-3">
+                  <svg viewBox="0 0 24 24" className="h-5 w-5 text-violet-400" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+                  </svg>
+                  <h3 className="text-lg font-bold text-white">
+                    {ownerApplication?.status === 'rejected' ? 'Nộp lại hồ sơ chủ sân' : 'Đăng ký làm chủ sân'}
+                  </h3>
+                </div>
+                <button type="button" onClick={() => setShowOwnerAppForm(false)} className="h-8 w-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition text-lg font-bold">✕</button>
+              </div>
+
+              {ownerApplication?.status === 'rejected' && ownerApplication.rejectionReason && (
+                <div className="mb-4 rounded-xl border border-rose-500/20 bg-rose-500/10 p-3">
+                  <p className="text-[10px] font-bold text-rose-400 tracking-wider uppercase mb-1">Lý do bị từ chối trước đó</p>
+                  <p className="text-sm text-rose-200">{ownerApplication.rejectionReason}</p>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {([
+                  { key: 'businessName', label: 'Tên sân / Doanh nghiệp', placeholder: 'VD: Sân bóng Thành Công', required: true },
+                  { key: 'businessAddress', label: 'Địa chỉ kinh doanh', placeholder: 'VD: 123 Nguyễn Văn Linh, Q7, TP.HCM', required: true },
+                  { key: 'phone', label: 'Số điện thoại liên hệ', placeholder: 'VD: 0901234567', required: true },
+                  { key: 'identityCard', label: 'CMND / CCCD', placeholder: 'VD: 079201234567', required: true },
+                  { key: 'bankAccount', label: 'Số tài khoản ngân hàng', placeholder: 'Không bắt buộc', required: false },
+                ] as { key: keyof OwnerApplicationPayload; label: string; placeholder: string; required: boolean }[]).map(({ key, label, placeholder, required }) => (
+                  <div key={key}>
+                    <label className="block text-[10px] font-bold text-slate-500 tracking-wider uppercase mb-1.5">
+                      {label} {required && <span className="text-rose-400">*</span>}
+                    </label>
+                    <input
+                      type="text"
+                      value={ownerAppForm[key] ?? ''}
+                      onChange={(e) => setOwnerAppForm((prev) => ({ ...prev, [key]: e.target.value }))}
+                      placeholder={placeholder}
+                      className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-violet-500/50 placeholder:text-slate-600"
+                    />
+                  </div>
+                ))}
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 tracking-wider uppercase mb-1.5">Mô tả thêm</label>
+                  <textarea
+                    rows={3}
+                    value={ownerAppForm.description ?? ''}
+                    onChange={(e) => setOwnerAppForm((prev) => ({ ...prev, description: e.target.value }))}
+                    placeholder="Giới thiệu thêm về sân / doanh nghiệp của bạn..."
+                    className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-violet-500/50 placeholder:text-slate-600 resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowOwnerAppForm(false)}
+                  disabled={ownerAppSubmitting}
+                  className="px-5 py-2.5 rounded-xl border border-white/10 bg-transparent hover:bg-white/5 text-slate-300 text-sm font-semibold transition disabled:opacity-50"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleOwnerAppSubmit}
+                  disabled={ownerAppSubmitting}
+                  className="px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-bold shadow-lg shadow-violet-500/20 transition disabled:opacity-50 flex items-center gap-2"
+                >
+                  {ownerAppSubmitting ? (
+                    <><div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />Đang gửi...</>
+                  ) : 'Nộp hồ sơ'}
                 </button>
               </div>
             </div>

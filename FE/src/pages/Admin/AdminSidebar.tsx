@@ -2,7 +2,7 @@ import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { NavLink } from 'react-router-dom';
 
-export type AdminSectionKey = 'dashboard' | 'stadiums' | 'users' | 'moderation' | 'vouchers' | 'income';
+export type AdminSectionKey = 'dashboard' | 'stadiums' | 'users' | 'moderation' | 'vouchers' | 'income' | 'owner-applications';
 
 type AdminSidebarProps = {
   activeKey: AdminSectionKey;
@@ -79,6 +79,16 @@ const IncomeIcon = () => (
   </svg>
 );
 
+const OwnerApplyIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="9" y1="13" x2="15" y2="13" />
+    <line x1="9" y1="17" x2="11" y2="17" />
+    <path d="m13 17 2-2 2 2" />
+  </svg>
+);
+
 const LogoutIcon = () => (
   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
     <path d="M10 7V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2v-1" />
@@ -130,6 +140,13 @@ const sidebarItems: SidebarItem[] = [
     description: 'Nạp ví & mua gói',
     to: '/admin/income',
     icon: <IncomeIcon />,
+  },
+  {
+    key: 'owner-applications',
+    label: 'Duyệt chủ sân',
+    description: 'Hồ sơ đăng ký chủ sân',
+    to: '/admin/owner-applications',
+    icon: <OwnerApplyIcon />,
   },
 ];
 

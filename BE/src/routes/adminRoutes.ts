@@ -7,6 +7,11 @@ import {
 	adminRejectCourt,
 } from "../controllers/adminCourtController.js";
 import { adminGetIncome } from "../controllers/adminIncomeController.js";
+import {
+	adminGetAllOwnerApplications,
+	adminApproveOwnerApplication,
+	adminRejectOwnerApplication,
+} from "../controllers/ownerApplicationController.js";
 
 const adminRoutes = Router();
 
@@ -30,5 +35,12 @@ adminRoutes.put("/courts/:id/status",   ...adminOnly, adminUpdateCourtStatus);
 
 // GET  /api/admin/income  — all "+"-direction revenue (deposits + subscriptions)
 adminRoutes.get("/income", ...adminOnly, adminGetIncome);
+
+// GET  /api/admin/owner-applications         — list all owner registration applications
+// POST /api/admin/owner-applications/:id/approve — approve application → upgrade user to owner
+// POST /api/admin/owner-applications/:id/reject  — reject application with reason
+adminRoutes.get("/owner-applications", ...adminOnly, adminGetAllOwnerApplications);
+adminRoutes.post("/owner-applications/:id/approve", ...adminOnly, adminApproveOwnerApplication);
+adminRoutes.post("/owner-applications/:id/reject",  ...adminOnly, adminRejectOwnerApplication);
 
 export default adminRoutes;
