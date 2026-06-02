@@ -36,8 +36,8 @@ const FEATURES = [
     title: 'Lịch Đặt Thời Gian Thực',
     desc: 'Quản lý mọi lượt đặt sân từ online lẫn trực tiếp trong một giao diện duy nhất. Cập nhật tức thì, không bao giờ bỏ lỡ khách hàng.',
     gradient: 'from-blue-600/20 via-blue-500/8 to-transparent',
-    border: 'border-blue-500/20 hover:border-blue-400/40',
-    accent: 'text-blue-400',
+    border: 'border-accent-primary/20 hover:border-accent-primary/40',
+    accent: 'text-accent-primary',
     glow: 'shadow-[0_0_40px_-20px_rgba(59,130,246,0.5)]',
   },
   {
@@ -63,8 +63,8 @@ const FEATURES = [
     title: 'Quản Lý Đa Sân Con',
     desc: 'Tạo và cấu hình nhiều sân con với giá riêng, loại mặt sân, và lịch hoạt động độc lập. Hoàn hảo cho các cơ sở nhiều sân.',
     gradient: 'from-cyan-600/20 via-cyan-500/8 to-transparent',
-    border: 'border-cyan-500/20 hover:border-cyan-400/40',
-    accent: 'text-cyan-400',
+    border: 'border-accent-primary/20 hover:border-accent-primary/40',
+    accent: 'text-accent-primary',
     glow: 'shadow-[0_0_40px_-20px_rgba(6,182,212,0.5)]',
   },
   {
@@ -223,13 +223,13 @@ const PricingCard: React.FC<PricingCardProps> = ({ plan, billingCycle, isPopular
       whileHover={{ y: -6, scale: 1.01 }}
       className={`relative flex flex-col overflow-hidden rounded-3xl border p-6 transition-all ${
         isPopular
-          ? 'border-blue-400/50 bg-gradient-to-b from-[#0d2250]/90 to-[#071632]/90 shadow-[0_0_60px_-20px_rgba(59,130,246,0.5)]'
+          ? 'border-accent-primary/50 bg-gradient-to-b from-[#0d2250]/90 to-[#071632]/90 shadow-[0_0_60px_-20px_rgba(59,130,246,0.5)]'
           : 'border-white/10 bg-[#071632]/80'
       }`}
     >
       {isPopular && (
         <div className="absolute right-0 top-0 overflow-hidden rounded-bl-2xl rounded-tr-3xl">
-          <div className="bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-1.5 text-xs font-bold text-white">
+          <div className="bg-gradient-to-r from-blue-600 to-accent-primary px-4 py-1.5 text-xs font-bold text-white">
             Phổ biến nhất
           </div>
         </div>
@@ -343,7 +343,7 @@ export const OwnerLandingPage: React.FC = () => {
   };
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[#0A0A0B] text-slate-100">
+    <div className="relative min-h-screen overflow-x-hidden bg-deep text-slate-100">
 
       {/* ── Fixed background effects ─────────────────────────────────────── */}
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_80%_50%_at_20%_-10%,rgba(37,99,235,0.18),transparent),radial-gradient(ellipse_60%_40%_at_80%_5%,rgba(14,165,233,0.1),transparent),radial-gradient(ellipse_60%_50%_at_50%_90%,rgba(59,130,246,0.06),transparent)]" />
@@ -359,8 +359,8 @@ export const OwnerLandingPage: React.FC = () => {
             {/* ── Left content ─────────────────────────────────────────── */}
             <motion.div initial="hidden" animate="visible" variants={stagger} className="space-y-8">
               <motion.div variants={fadeUp}>
-                <span className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-4 py-1.5 text-sm font-semibold text-blue-300">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-400" />
+                <span className="inline-flex items-center gap-2 rounded-full border border-accent-primary/30 bg-accent-primary/10 px-4 py-1.5 text-sm font-semibold text-blue-300">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent-primary" />
                   Dành cho Chủ Sân Thể Thao
                 </span>
               </motion.div>
@@ -519,7 +519,7 @@ export const OwnerLandingPage: React.FC = () => {
               <motion.div
                 animate={{ y: [0, 10, 0] }}
                 transition={{ duration: 4, ease: 'easeInOut', repeat: Infinity, delay: 1.2 }}
-                className="absolute -left-8 bottom-16 rounded-2xl border border-blue-500/20 bg-[#071632]/95 px-4 py-3 shadow-[0_20px_40px_-16px_rgba(0,0,0,0.8)] backdrop-blur-xl"
+                className="absolute -left-8 bottom-16 rounded-2xl border border-accent-primary/20 bg-[#071632]/95 px-4 py-3 shadow-[0_20px_40px_-16px_rgba(0,0,0,0.8)] backdrop-blur-xl"
               >
                 <p className="text-xs text-slate-400">Doanh thu tháng này</p>
                 <p className="text-2xl font-black text-blue-300">↗ +24%</p>
@@ -566,7 +566,7 @@ export const OwnerLandingPage: React.FC = () => {
             variants={stagger}
             className="mb-14 text-center"
           >
-            <motion.p variants={fadeUp} className="mb-3 text-sm font-semibold uppercase tracking-widest text-blue-400">
+            <motion.p variants={fadeUp} className="mb-3 text-sm font-semibold uppercase tracking-widest text-accent-primary">
               Tính Năng
             </motion.p>
             <motion.h2 variants={fadeUp} className="text-4xl font-black tracking-tight text-white md:text-5xl">
@@ -621,7 +621,7 @@ export const OwnerLandingPage: React.FC = () => {
             variants={stagger}
             className="mb-14 text-center"
           >
-            <motion.p variants={fadeUp} className="mb-3 text-sm font-semibold uppercase tracking-widest text-cyan-400">
+            <motion.p variants={fadeUp} className="mb-3 text-sm font-semibold uppercase tracking-widest text-accent-primary">
               Quy Trình
             </motion.p>
             <motion.h2 variants={fadeUp} className="text-4xl font-black tracking-tight text-white md:text-5xl">
@@ -640,7 +640,7 @@ export const OwnerLandingPage: React.FC = () => {
             className="relative grid gap-8 lg:grid-cols-3"
           >
             {/* Connector line */}
-            <div className="pointer-events-none absolute left-0 right-0 top-[3.5rem] hidden h-px bg-gradient-to-r from-transparent via-blue-500/30 to-transparent lg:block" />
+            <div className="pointer-events-none absolute left-0 right-0 top-[3.5rem] hidden h-px bg-gradient-to-r from-transparent via-accent-primary/30 to-transparent lg:block" />
 
             {STEPS.map((step, index) => (
               <motion.div
@@ -649,7 +649,7 @@ export const OwnerLandingPage: React.FC = () => {
                 className="relative flex flex-col items-center text-center"
               >
                 <div className="relative mb-6">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-blue-500/30 bg-gradient-to-br from-blue-600/25 to-blue-500/10 text-blue-300 shadow-[0_0_30px_-10px_rgba(59,130,246,0.5)]">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-accent-primary/30 bg-gradient-to-br from-blue-600/25 to-blue-500/10 text-blue-300 shadow-[0_0_30px_-10px_rgba(59,130,246,0.5)]">
                     {step.icon}
                   </div>
                   <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-black text-white">
@@ -757,7 +757,7 @@ export const OwnerLandingPage: React.FC = () => {
             className="mt-8 text-center text-sm text-slate-500"
           >
             Cần gói doanh nghiệp với tính năng tùy chỉnh?{' '}
-            <button className="font-semibold text-blue-400 hover:text-blue-300 transition">
+            <button className="font-semibold text-accent-primary hover:text-blue-300 transition">
               Liên hệ với chúng tôi →
             </button>
           </motion.p>
@@ -830,7 +830,7 @@ export const OwnerLandingPage: React.FC = () => {
             whileInView="visible"
             viewport={{ once: true, margin: '-60px' }}
             variants={stagger}
-            className="relative overflow-hidden rounded-[2rem] border border-blue-500/25 bg-gradient-to-br from-[#0d1f4a] via-[#071632] to-[#0a1835] p-12 text-center shadow-[0_40px_80px_-30px_rgba(37,99,235,0.4)]"
+            className="relative overflow-hidden rounded-[2rem] border border-accent-primary/25 bg-gradient-to-br from-[#0d1f4a] via-[#071632] to-[#0a1835] p-12 text-center shadow-[0_40px_80px_-30px_rgba(37,99,235,0.4)]"
           >
             {/* Decorative glows */}
             <div className="pointer-events-none absolute -left-20 -top-20 h-64 w-64 rounded-full bg-blue-600/15 blur-3xl" />

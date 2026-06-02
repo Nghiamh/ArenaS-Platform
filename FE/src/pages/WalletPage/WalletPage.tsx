@@ -61,7 +61,7 @@ export function WalletPage() {
 		return (
 			<div className="min-h-screen flex items-center justify-center">
 				<div className="flex flex-col items-center gap-4">
-					<div className="w-12 h-12 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
+					<div className="w-12 h-12 border-4 border-accent-primary/30 border-t-accent-primary rounded-full animate-spin" />
 					<p className="text-slate-400 font-medium">Đang tải ví...</p>
 				</div>
 			</div>
@@ -76,7 +76,7 @@ export function WalletPage() {
 					<p className="text-red-400">{error}</p>
 					<button
 						onClick={() => navigate('/login')}
-						className="px-6 py-2 rounded-xl text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-500 transition-colors"
+						className="px-6 py-2 rounded-xl text-sm font-medium text-white bg-accent-primary hover:bg-accent-primary/80 transition-colors"
 					>
 						Đăng nhập
 					</button>
@@ -93,7 +93,7 @@ export function WalletPage() {
 					className="absolute inset-0 opacity-30"
 					style={{
 						background:
-							'radial-gradient(ellipse at 30% 0%, rgba(16, 185, 129, 0.15) 0%, transparent 60%), radial-gradient(ellipse at 70% 100%, rgba(59, 130, 246, 0.1) 0%, transparent 50%)',
+							'radial-gradient(ellipse at 30% 0%, rgba(var(--accent-primary-rgb), 0.15) 0%, transparent 60%), radial-gradient(ellipse at 70% 100%, rgba(var(--accent-secondary-rgb), 0.1) 0%, transparent 50%)',
 					}}
 				/>
 				<div className="relative max-w-3xl mx-auto px-4 pt-10 pb-8">
@@ -102,7 +102,7 @@ export function WalletPage() {
 						className="rounded-2xl p-6 border border-slate-700/40"
 						style={{
 							background:
-								'linear-gradient(145deg, rgba(16, 185, 129, 0.08) 0%, rgba(15, 23, 42, 0.9) 40%, rgba(15, 23, 42, 0.85) 100%)',
+								'linear-gradient(145deg, rgba(var(--accent-primary-rgb), 0.08) 0%, rgba(15, 23, 42, 0.9) 40%, rgba(15, 23, 42, 0.85) 100%)',
 							backdropFilter: 'blur(16px)',
 							boxShadow:
 								'0 20px 40px -12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
@@ -113,8 +113,8 @@ export function WalletPage() {
 								<div
 									className="w-10 h-10 rounded-xl flex items-center justify-center text-lg"
 									style={{
-										background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-										boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+										background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-dark) 100%)',
+										boxShadow: '0 4px 12px rgba(var(--accent-primary-rgb), 0.3)',
 									}}
 								>
 									💎
@@ -131,8 +131,8 @@ export function WalletPage() {
 								onClick={() => setShowDeposit(true)}
 								className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:scale-105 active:scale-95"
 								style={{
-									background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-									boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+									background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-dark) 100%)',
+									boxShadow: '0 4px 14px rgba(var(--accent-primary-rgb), 0.35)',
 								}}
 							>
 								+ Nạp tiền
@@ -144,7 +144,7 @@ export function WalletPage() {
 							<p
 								className="text-4xl font-extrabold tracking-tight"
 								style={{
-									background: 'linear-gradient(135deg, #ffffff 0%, #a7f3d0 100%)',
+									background: 'linear-gradient(135deg, #ffffff 0%, var(--accent-primary-light) 100%)',
 									WebkitBackgroundClip: 'text',
 									WebkitTextFillColor: 'transparent',
 								}}
@@ -165,7 +165,7 @@ export function WalletPage() {
 					</h2>
 					<button
 						onClick={() => void fetchWallet()}
-						className="text-xs text-slate-400 hover:text-emerald-400 transition-colors flex items-center gap-1"
+						className="text-xs text-slate-400 hover:text-accent-primary transition-colors flex items-center gap-1"
 					>
 						Làm mới
 					</button>

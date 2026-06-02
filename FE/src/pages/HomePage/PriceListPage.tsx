@@ -139,10 +139,10 @@ const compareRows: CompareRow[] = [
 ];
 
 const stats = [
-  { value: '2.000+', label: 'Cơ sở đang dùng ArenaS', tone: 'from-[#00F5FF]/80 to-[#00F5FF]' },
-  { value: '98%', label: 'Chủ sân hài lòng', tone: 'from-[#CCFF00]/80 to-[#CCFF00]' },
-  { value: '40%', label: 'Tăng doanh thu trung bình', tone: 'from-[#00F5FF]/80 to-[#00F5FF]' },
-  { value: '24/7', label: 'Hỗ trợ kỹ thuật', tone: 'from-[#CCFF00]/80 to-[#CCFF00]' },
+  { value: '2.000+', label: 'Cơ sở đang dùng ArenaS', tone: 'from-accent-secondary/80 to-accent-secondary' },
+  { value: '98%', label: 'Chủ sân hài lòng', tone: 'from-accent-primary/80 to-accent-primary' },
+  { value: '40%', label: 'Tăng doanh thu trung bình', tone: 'from-accent-secondary/80 to-accent-secondary' },
+  { value: '24/7', label: 'Hỗ trợ kỹ thuật', tone: 'from-accent-primary/80 to-accent-primary' },
 ];
 
 const faqs: FaqItem[] = [
@@ -272,17 +272,17 @@ export const PriceListPage: React.FC = () => {
           } else if (isBasic) {
             iconName = 'basic';
             iconTone = 'blue';
-            accent = 'from-[#CCFF00]/50 to-[#CCFF00]';
+            accent = 'from-accent-primary/50 to-accent-primary';
           } else if (isPro || nameSlug.includes('professional') || nameSlug.includes('pro')) {
             iconName = 'pro';
             iconTone = 'gold';
-            accent = 'from-[#00F5FF]/50 to-[#00F5FF]';
+            accent = 'from-accent-secondary/50 to-accent-secondary';
             tag = 'PHỔ BIẾN NHẤT';
             tagTone = 'gold';
           } else if (isEnterprise || plan.isCustom) {
             iconName = 'enterprise';
             iconTone = 'violet';
-            accent = 'from-[#CCFF00]/80 to-[#CCFF00]';
+            accent = 'from-accent-primary/80 to-accent-primary';
             tag = 'TÙY CHỈNH';
             tagTone = 'violet';
           }
