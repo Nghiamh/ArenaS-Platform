@@ -1361,3 +1361,139 @@ export async function appealReport(reportId: string, appealDescription: string):
 	}
 }
 
+// ---------------------------------------------------------------------------
+// OWNER REGISTRATION APPLICATION
+// ---------------------------------------------------------------------------
+
+export type OwnerApplicationStatus = 'pending' | 'approved' | 'rejected';
+
+export type OwnerApplicationUser = {
+	_id: string;
+	name?: string;
+	userName: string;
+	email: string;
+	phone?: string;
+	avatarUrl?: string;
+	address?: string;
+	createdAt?: string;
+};
+
+export type OwnerApplication = {
+	_id: string;
+	userId: OwnerApplicationUser | string;
+	businessName: string;
+	businessAddress: string;
+	phone: string;
+	identityCard: string;
+	bankAccount?: string;
+	description?: string;
+	largeCourts?: number;
+	smallCourts?: number;
+	status: OwnerApplicationStatus;
+	rejectionReason?: string;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export type OwnerApplicationPayload = {
+	businessName: string;
+	businessAddress: string;
+	phone: string;
+	identityCard: string;
+	bankAccount?: string;
+	description?: string;
+	largeCourts?: number;
+	smallCourts?: number;
+};
+
+export type MyOwnerApplicationResponse = {
+	message: string;
+	application: OwnerApplication | null;
+};
+
+export type AdminOwnerApplicationsResponse = {
+	message: string;
+	applications: OwnerApplication[];
+	total: number;
+	page: number;
+	limit: number;
+	totalPages: number;
+};
+
+export type OwnerApplicationActionResponse = {
+	message: string;
+	application: OwnerApplication;
+};
+
+export async function submitOwnerApplication(
+	payload: OwnerApplicationPayload,
+): Promise<OwnerApplicationActionResponse> {
+	try {
+		const { data } = await axiosClient.post<OwnerApplicationActionResponse>(
+			'/profile/me/owner-application',
+			payload,
+			{ headers: withAuthHeaders() },
+		);
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function getMyOwnerApplication(): Promise<MyOwnerApplicationResponse> {
+	try {
+		const { data } = await axiosClient.get<MyOwnerApplicationResponse>(
+			'/profile/me/owner-application',
+			{ headers: withAuthHeaders() },
+		);
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function adminGetOwnerApplications(params?: {
+	status?: 'all' | OwnerApplicationStatus;
+	page?: number;
+	limit?: number;
+}): Promise<AdminOwnerApplicationsResponse> {
+	try {
+		const { data } = await axiosClient.get<AdminOwnerApplicationsResponse>(
+			'/admin/owner-applications',
+			{ params },
+		);
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function adminApproveOwnerApplication(
+	applicationId: string,
+): Promise<OwnerApplicationActionResponse> {
+	try {
+		const { data } = await axiosClient.post<OwnerApplicationActionResponse>(
+			`/admin/owner-applications/${applicationId}/approve`,
+			{},
+		);
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function adminRejectOwnerApplication(
+	applicationId: string,
+	reason?: string,
+): Promise<OwnerApplicationActionResponse> {
+	try {
+		const { data } = await axiosClient.post<OwnerApplicationActionResponse>(
+			`/admin/owner-applications/${applicationId}/reject`,
+			{ reason },
+		);
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+

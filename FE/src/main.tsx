@@ -22,6 +22,7 @@ import { AdminManageUsersPage } from './pages/Admin/AdminManageUsersPage';
 import { AdminModerationPage } from './pages/Admin/AdminModerationPage';
 import { AdminVoucherPage } from './pages/Admin/AdminVoucherPage';
 import { AdminIncomePage } from './pages/Admin/AdminIncomePage';
+import { AdminManageOwnerApplicationPage } from './pages/Admin/AdminManageOwnerApplicationPage';
 import { PriceListPage } from './pages/HomePage/PriceListPage';
 import CourtDetailPage from './pages/CourtDetailPage/CourtDetailPage';
 import { WalletPage } from './pages/WalletPage/WalletPage';
@@ -80,6 +81,7 @@ function App() {
         <Route path="/admin/moderation" element={<AdminModerationPage />} />
         <Route path="/admin/vouchers" element={<AdminVoucherPage />} />
         <Route path="/admin/income" element={<AdminIncomePage />} />
+        <Route path="/admin/owner-applications" element={<AdminManageOwnerApplicationPage />} />
         <Route
           path="/profile"
           element={

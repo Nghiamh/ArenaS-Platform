@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { submitOwnerApplication } from '../../Axios/Axios';
 
 // ─── Animation variants ──────────────────────────────────────────────────────
 
@@ -151,22 +152,55 @@ export function OwnerContactPage() {
   const navigate = useNavigate();
   const formRef = useRef<HTMLDivElement>(null);
 
-  const [form, setForm] = useState({ name: '', phone: '', email: '', venueName: '', sport: '', message: '' });
+  const [form, setForm] = useState({
+    name: '', phone: '', email: '', venueName: '', address: '',
+    identityCard: '', bankAccount: '', sport: '', largeCourts: '', smallCourts: '', message: '',
+  });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    setSubmitError('');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError('');
+
+    const token = localStorage.getItem('accessToken')?.trim();
+    if (!token || token === 'undefined' || token === 'null') {
+      setSubmitError('Bạn cần đăng nhập để gửi hồ sơ. Vui lòng đăng nhập hoặc tạo tài khoản trước.');
+      return;
+    }
+
+    if (!form.venueName.trim() || !form.address.trim() || !form.phone.trim() || !form.identityCard.trim()) {
+      setSubmitError('Vui lòng điền đầy đủ các trường bắt buộc (*).');
+      return;
+    }
+
     setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
+    try {
+      const sportDesc = form.sport ? `Môn thể thao: ${form.sport}.` : '';
+      const msgDesc = form.message.trim() ? ` ${form.message.trim()}` : '';
+      await submitOwnerApplication({
+        businessName: form.venueName.trim(),
+        businessAddress: form.address.trim(),
+        phone: form.phone.trim(),
+        identityCard: form.identityCard.trim(),
+        bankAccount: form.bankAccount.trim() || undefined,
+        description: `${sportDesc}${msgDesc}`.trim() || undefined,
+        largeCourts: form.largeCourts ? Number(form.largeCourts) : undefined,
+        smallCourts: form.smallCourts ? Number(form.smallCourts) : undefined,
+      });
       setSubmitted(true);
-    }, 1400);
+    } catch (err: unknown) {
+      setSubmitError(err instanceof Error ? err.message : 'Không thể gửi hồ sơ. Vui lòng thử lại.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const scrollToForm = () => {
@@ -416,11 +450,10 @@ export function OwnerContactPage() {
                         <h3 className="text-xl font-black text-white">Đã Nhận Thông Tin!</h3>
                         <p className="mt-2 text-sm text-white/60">
                           Cảm ơn <span className="text-accent-primary font-semibold">{form.name || 'bạn'}</span> đã đăng ký.
-                          Đội ngũ ArenaS sẽ liên hệ{' '}
+                          Hồ sơ của bạn đã được gửi đến admin ArenaS để xét duyệt.{' '}
                           {form.phone ? (
-                            <span className="text-accent-secondary">qua số {form.phone}</span>
-                          ) : 'với bạn'}{' '}
-                          trong thời gian sớm nhất.
+                            <><br />Chúng tôi sẽ liên hệ qua số <span className="text-accent-secondary">{form.phone}</span> sớm nhất.</>
+                          ) : ''}
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-3 justify-center">
@@ -431,7 +464,7 @@ export function OwnerContactPage() {
                           Tạo tài khoản ngay →
                         </button>
                         <button
-                          onClick={() => { setSubmitted(false); setForm({ name: '', phone: '', email: '', venueName: '', sport: '', message: '' }); }}
+                          onClick={() => { setSubmitted(false); setSubmitError(''); setForm({ name: '', phone: '', email: '', venueName: '', address: '', identityCard: '', bankAccount: '', sport: '', largeCourts: '', smallCourts: '', message: '' }); }}
                           className="rounded-full border border-white/15 bg-white/5 px-6 py-2.5 text-sm text-white/70 transition-all hover:bg-white/10"
                         >
                           Gửi lại
@@ -447,67 +480,44 @@ export function OwnerContactPage() {
                       onSubmit={handleSubmit}
                       className="space-y-4"
                     >
+                      {/* Row 1: Họ tên + SĐT */}
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div>
                           <label className="mb-1.5 block text-xs font-semibold text-white/70">
                             Họ và tên <span className="text-accent-primary">*</span>
                           </label>
-                          <input
-                            name="name"
-                            value={form.name}
-                            onChange={handleChange}
-                            required
-                            placeholder="Nguyễn Văn A"
-                            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20"
-                          />
+                          <input name="name" value={form.name} onChange={handleChange} required placeholder="Nguyễn Văn A"
+                            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20" />
                         </div>
                         <div>
                           <label className="mb-1.5 block text-xs font-semibold text-white/70">
                             Số điện thoại <span className="text-accent-primary">*</span>
                           </label>
-                          <input
-                            name="phone"
-                            value={form.phone}
-                            onChange={handleChange}
-                            required
-                            type="tel"
-                            placeholder="0909 123 456"
-                            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20"
-                          />
+                          <input name="phone" value={form.phone} onChange={handleChange} required type="tel" placeholder="0909 123 456"
+                            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20" />
                         </div>
                       </div>
 
+                      {/* Row 2: Email */}
                       <div>
                         <label className="mb-1.5 block text-xs font-semibold text-white/70">Email</label>
-                        <input
-                          name="email"
-                          value={form.email}
-                          onChange={handleChange}
-                          type="email"
-                          placeholder="example@email.com"
-                          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:border-accent-secondary/50 focus:ring-1 focus:ring-accent-secondary/20"
-                        />
+                        <input name="email" value={form.email} onChange={handleChange} type="email" placeholder="example@email.com"
+                          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:border-accent-secondary/50 focus:ring-1 focus:ring-accent-secondary/20" />
                       </div>
 
+                      {/* Row 3: Tên sân + Môn */}
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div>
-                          <label className="mb-1.5 block text-xs font-semibold text-white/70">Tên sân / cơ sở</label>
-                          <input
-                            name="venueName"
-                            value={form.venueName}
-                            onChange={handleChange}
-                            placeholder="Sân Bóng Thành Công"
-                            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:border-accent-secondary/50 focus:ring-1 focus:ring-accent-secondary/20"
-                          />
+                          <label className="mb-1.5 block text-xs font-semibold text-white/70">
+                            Tên sân / cơ sở <span className="text-accent-primary">*</span>
+                          </label>
+                          <input name="venueName" value={form.venueName} onChange={handleChange} required placeholder="Sân Bóng Thành Công"
+                            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:border-accent-secondary/50 focus:ring-1 focus:ring-accent-secondary/20" />
                         </div>
                         <div>
                           <label className="mb-1.5 block text-xs font-semibold text-white/70">Môn thể thao</label>
-                          <select
-                            name="sport"
-                            value={form.sport}
-                            onChange={handleChange}
-                            className="w-full rounded-xl border border-white/10 bg-[#101011] px-4 py-2.5 text-sm text-white/80 outline-none transition-all focus:border-accent-secondary/50 focus:ring-1 focus:ring-accent-secondary/20"
-                          >
+                          <select name="sport" value={form.sport} onChange={handleChange}
+                            className="w-full rounded-xl border border-white/10 bg-[#101011] px-4 py-2.5 text-sm text-white/80 outline-none transition-all focus:border-accent-secondary/50 focus:ring-1 focus:ring-accent-secondary/20">
                             <option value="">Chọn môn...</option>
                             <option value="Bóng đá">Bóng đá</option>
                             <option value="Cầu lông">Cầu lông</option>
@@ -520,17 +530,71 @@ export function OwnerContactPage() {
                         </div>
                       </div>
 
+                      {/* Row 4: Địa chỉ kinh doanh */}
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold text-white/70">
+                          Địa chỉ kinh doanh <span className="text-accent-primary">*</span>
+                        </label>
+                        <input name="address" value={form.address} onChange={handleChange} required placeholder="123 Nguyễn Văn Linh, Q.7, TP.HCM"
+                          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:border-accent-secondary/50 focus:ring-1 focus:ring-accent-secondary/20" />
+                      </div>
+
+                      {/* Row 5: CMND + Tài khoản NH */}
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <label className="mb-1.5 block text-xs font-semibold text-white/70">
+                            CMND / CCCD <span className="text-accent-primary">*</span>
+                          </label>
+                          <input name="identityCard" value={form.identityCard} onChange={handleChange} required placeholder="079201234567"
+                            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20" />
+                        </div>
+                        <div>
+                          <label className="mb-1.5 block text-xs font-semibold text-white/70">Số tài khoản ngân hàng</label>
+                          <input name="bankAccount" value={form.bankAccount} onChange={handleChange} placeholder="Không bắt buộc"
+                            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:border-accent-secondary/50 focus:ring-1 focus:ring-accent-secondary/20" />
+                        </div>
+                      </div>
+
+                      {/* Row 6: Số lượng sân lớn + sân nhỏ */}
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <label className="mb-1.5 block text-xs font-semibold text-white/70">Số lượng sân lớn</label>
+                          <input name="largeCourts" value={form.largeCourts} onChange={handleChange} type="number" min="0" placeholder="VD: 3"
+                            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:border-accent-secondary/50 focus:ring-1 focus:ring-accent-secondary/20" />
+                        </div>
+                        <div>
+                          <label className="mb-1.5 block text-xs font-semibold text-white/70">Số lượng sân nhỏ</label>
+                          <input name="smallCourts" value={form.smallCourts} onChange={handleChange} type="number" min="0" placeholder="VD: 5"
+                            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:border-accent-secondary/50 focus:ring-1 focus:ring-accent-secondary/20" />
+                        </div>
+                      </div>
+
+                      {/* Row 7: Tin nhắn thêm */}
                       <div>
                         <label className="mb-1.5 block text-xs font-semibold text-white/70">Tin nhắn thêm</label>
-                        <textarea
-                          name="message"
-                          value={form.message}
-                          onChange={handleChange}
-                          rows={3}
-                          placeholder="Số lượng sân, địa chỉ, câu hỏi cụ thể..."
-                          className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:border-accent-secondary/50 focus:ring-1 focus:ring-accent-secondary/20"
-                        />
+                        <textarea name="message" value={form.message} onChange={handleChange} rows={3}
+                          placeholder="Câu hỏi, yêu cầu cụ thể..."
+                          className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus:border-accent-secondary/50 focus:ring-1 focus:ring-accent-secondary/20" />
                       </div>
+
+                      {/* Error message */}
+                      {submitError && (
+                        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+                          {submitError}
+                          {submitError.includes('đăng nhập') && (
+                            <div className="mt-2 flex gap-2">
+                              <button type="button" onClick={() => navigate('/login')}
+                                className="rounded-lg bg-accent-primary px-3 py-1 text-xs font-bold text-deep">
+                                Đăng nhập
+                              </button>
+                              <button type="button" onClick={() => navigate('/register')}
+                                className="rounded-lg border border-white/20 px-3 py-1 text-xs font-semibold text-white/70">
+                                Tạo tài khoản
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       <button
                         type="submit"
