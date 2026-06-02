@@ -1024,7 +1024,10 @@ export async function validateSubscriptionAction(
 		return data;
 	} catch (error: unknown) {
 		if (axios.isAxiosError(error) && error.response?.data) {
-			return error.response.data as ValidateSubscriptionActionResponse;
+			const data = error.response.data as any;
+			if (data.action === 'downgrade') {
+				return data as ValidateSubscriptionActionResponse;
+			}
 		}
 		throw new Error(toErrorMessage(error));
 	}
