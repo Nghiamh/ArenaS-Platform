@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { createSubscriptionCheckout } from '../../Axios/Axios';
+import { motion, AnimatePresence } from 'framer-motion';
 import serverRackImg from '../../assets/server_rack.png';
 
 export const CheckoutPage: React.FC = () => {
@@ -19,6 +20,7 @@ export const CheckoutPage: React.FC = () => {
   };
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const formik = useFormik({
     initialValues: {
@@ -34,6 +36,24 @@ export const CheckoutPage: React.FC = () => {
         .required('Vui lòng nhập số điện thoại'),
     }),
     onSubmit: async () => {
+      const token = localStorage.getItem('accessToken');
+      const currentUserStr = localStorage.getItem('currentUser');
+      
+      if (!token || !currentUserStr) {
+        setAuthError('Vui lòng đăng nhập để mua gói dịch vụ.');
+        return;
+      }
+
+      try {
+        const currentUser = JSON.parse(currentUserStr);
+        if (currentUser?.role !== 'owner') {
+          setAuthError('Chỉ tài khoản chủ sân (Owner) mới có thể mua gói dịch vụ.');
+          return;
+        }
+      } catch (e) {
+        // ignore
+      }
+
       try {
         setIsProcessing(true);
         const billingCycle = plan.period.includes('năm') ? 'yearly' : 'monthly';
@@ -53,7 +73,11 @@ export const CheckoutPage: React.FC = () => {
           });
         }
       } catch (err: any) {
-        alert(err.message || 'Không thể tạo phiên thanh toán. Vui lòng kiểm tra lại cấu hình.');
+        if (err.message === 'missing_token' || err.message === 'unauthorized') {
+          setAuthError('Vui lòng đăng nhập để mua gói dịch vụ.');
+          return;
+        }
+        setAuthError(err.message || 'Không thể tạo phiên thanh toán. Vui lòng kiểm tra lại cấu hình.');
       } finally {
         setIsProcessing(false);
       }
@@ -307,6 +331,58 @@ export const CheckoutPage: React.FC = () => {
           Hệ thống mã hóa SSL 256-bit bảo mật cao. © 2024. All rights reserved.
         </p>
       </footer>
+
+      {/* Auth Error Modal */}
+      <AnimatePresence>
+        {authError && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 280 }}
+              className="relative w-full max-w-lg overflow-hidden rounded-[2.5rem] border border-white/10 bg-[#101011] p-6 shadow-[0_30px_70px_rgba(0,0,0,0.7)] text-white backdrop-blur-2xl"
+            >
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-[2px] bg-gradient-to-r from-transparent via-accent-secondary to-transparent" />
+
+              <div className="flex items-center justify-between pb-4 border-b border-white/5">
+                <h3 className="text-xl font-extrabold tracking-tight">
+                  Xác Thực Giao Dịch
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setAuthError(null)}
+                  className="rounded-full bg-white/5 p-1.5 text-slate-400 hover:bg-white/10 hover:text-white transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="py-8 text-center">
+                <svg className="mx-auto h-12 w-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <p className="mt-4 text-rose-400 font-bold">{authError}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                      if (authError.includes('đăng nhập')) {
+                          navigate('/login');
+                      } else {
+                          setAuthError(null);
+                      }
+                  }}
+                  className="mt-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 text-sm font-semibold transition-colors"
+                >
+                  {authError.includes('đăng nhập') ? 'Đăng nhập ngay' : 'Đã hiểu'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

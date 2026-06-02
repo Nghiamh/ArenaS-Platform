@@ -11,7 +11,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ activeKey, children })
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-950 text-white lg:flex-row">
+    <div data-section="admin" className="flex min-h-screen flex-col bg-slate-950 text-white lg:flex-row">
       <AdminSidebar activeKey={activeKey} collapsed={collapsed} onToggleCollapse={() => setCollapsed((current) => !current)} />
 
       <div className="flex-1">{children}</div>

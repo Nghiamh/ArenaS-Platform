@@ -283,7 +283,7 @@ export const OwnerSidebar: React.FC<OwnerSidebarProps> = ({ activeKey, collapsed
                     } ${collapsed ? 'xl:justify-center px-2' : 'justify-between px-3'}`}
                 >
                   <span className={`flex items-center font-semibold ${collapsed ? 'justify-center' : 'gap-2.5'}`}>
-                    <span className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-accent-primary'}>{item.icon}</span>
+                    <span className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-white'}>{item.icon}</span>
                     {!collapsed && item.label}
                   </span>
                   {!collapsed && typeof item.count === 'number' ? (

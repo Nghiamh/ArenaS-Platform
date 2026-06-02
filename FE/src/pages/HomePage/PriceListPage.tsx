@@ -82,10 +82,10 @@ const featureVariants: Variants = {
 const iconBaseClass = 'flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl';
 
 const iconToneClass: Record<NonNullable<PricePlan['iconTone']>, string> = {
-  slate: 'bg-white/5 text-slate-300',
-  blue: 'bg-[#CCFF00]/10 text-[#CCFF00]',
-  gold: 'bg-[#00F5FF]/10 text-[#00F5FF]',
-  violet: 'bg-[#CCFF00]/20 text-[#CCFF00]',
+  slate: 'bg-white/10 text-white',
+  blue: 'bg-white/10 text-white',
+  gold: 'bg-white/10 text-white',
+  violet: 'bg-white/10 text-white',
 };
 
 const planIcons: Record<PricePlan['iconName'], React.ReactNode> = {
@@ -139,10 +139,10 @@ const compareRows: CompareRow[] = [
 ];
 
 const stats = [
-  { value: '2.000+', label: 'Cơ sở đang dùng ArenaS', tone: 'from-[#00F5FF]/80 to-[#00F5FF]' },
-  { value: '98%', label: 'Chủ sân hài lòng', tone: 'from-[#CCFF00]/80 to-[#CCFF00]' },
-  { value: '40%', label: 'Tăng doanh thu trung bình', tone: 'from-[#00F5FF]/80 to-[#00F5FF]' },
-  { value: '24/7', label: 'Hỗ trợ kỹ thuật', tone: 'from-[#CCFF00]/80 to-[#CCFF00]' },
+  { value: '2.000+', label: 'Cơ sở đang dùng ArenaS', tone: 'from-accent-secondary/80 to-accent-secondary' },
+  { value: '98%', label: 'Chủ sân hài lòng', tone: 'from-accent-primary/80 to-accent-primary' },
+  { value: '40%', label: 'Tăng doanh thu trung bình', tone: 'from-accent-secondary/80 to-accent-secondary' },
+  { value: '24/7', label: 'Hỗ trợ kỹ thuật', tone: 'from-accent-primary/80 to-accent-primary' },
 ];
 
 const faqs: FaqItem[] = [
@@ -169,9 +169,9 @@ const faqs: FaqItem[] = [
 ];
 
 const planTagClass: Record<NonNullable<PricePlan['tagTone']>, string> = {
-  blue: 'border-[#CCFF00]/30 bg-[#CCFF00]/10 text-[#CCFF00]',
-  violet: 'border-[#CCFF00]/30 bg-[#CCFF00]/10 text-[#CCFF00]',
-  gold: 'border-[#00F5FF]/30 bg-[#00F5FF]/10 text-[#00F5FF]',
+  blue: 'border-white/30 bg-white/10 text-white',
+  violet: 'border-white/30 bg-white/10 text-white',
+  gold: 'border-white/30 bg-white/10 text-white',
 };
 
 export const PriceListPage: React.FC = () => {
@@ -272,17 +272,17 @@ export const PriceListPage: React.FC = () => {
           } else if (isBasic) {
             iconName = 'basic';
             iconTone = 'blue';
-            accent = 'from-[#CCFF00]/50 to-[#CCFF00]';
+            accent = 'from-accent-primary/50 to-accent-primary';
           } else if (isPro || nameSlug.includes('professional') || nameSlug.includes('pro')) {
             iconName = 'pro';
             iconTone = 'gold';
-            accent = 'from-[#00F5FF]/50 to-[#00F5FF]';
+            accent = 'from-accent-secondary/50 to-accent-secondary';
             tag = 'PHỔ BIẾN NHẤT';
             tagTone = 'gold';
           } else if (isEnterprise || plan.isCustom) {
             iconName = 'enterprise';
             iconTone = 'violet';
-            accent = 'from-[#CCFF00]/80 to-[#CCFF00]';
+            accent = 'from-accent-primary/80 to-accent-primary';
             tag = 'TÙY CHỈNH';
             tagTone = 'violet';
           }
@@ -379,6 +379,26 @@ export const PriceListPage: React.FC = () => {
       return;
     }
 
+    const token = localStorage.getItem('accessToken');
+    const currentUserStr = localStorage.getItem('currentUser');
+
+    if (!token || !currentUserStr) {
+      setSelectedPlanForValidation(plan);
+      setValidationError('Vui lòng đăng nhập để mua gói dịch vụ.');
+      return;
+    }
+
+    try {
+      const currentUser = JSON.parse(currentUserStr);
+      if (currentUser?.role !== 'owner') {
+        setSelectedPlanForValidation(plan);
+        setValidationError('Chỉ tài khoản chủ sân (Owner) mới có thể đăng ký gói dịch vụ này.');
+        return;
+      }
+    } catch (e) {
+      // ignore JSON parse errors
+    }
+
     setValidating(true);
     setValidationError(null);
     setValidationResult(null);
@@ -389,6 +409,10 @@ export const PriceListPage: React.FC = () => {
       const result = await validateSubscriptionAction(plan.id, billingCycle);
       setValidationResult(result);
     } catch (err: any) {
+      if (err.message === 'missing_token' || err.message === 'unauthorized') {
+        setValidationError('Vui lòng đăng nhập để mua gói dịch vụ.');
+        return;
+      }
       setValidationError(err.message || 'Không thể xác thực giao dịch này.');
     } finally {
       setValidating(false);
@@ -495,7 +519,9 @@ export const PriceListPage: React.FC = () => {
               </div>
             ) : error ? (
               <div className="col-span-full flex flex-col items-center justify-center py-20 text-center">
-                <span className="text-4xl">⚠️</span>
+                <svg className="mx-auto h-12 w-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
                 <p className="mt-4 text-rose-400 font-bold">{error}</p>
                 <button
                   onClick={() => window.location.reload()}
@@ -663,7 +689,7 @@ export const PriceListPage: React.FC = () => {
                           className={`flex items-start gap-3 text-[13px] ${feature.included ? 'text-slate-200' : 'text-slate-500'}`}
                         >
                           <span
-                            className={`mt-[2px] flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-black ${feature.included ? 'bg-[#CCFF00]/15 text-[#CCFF00]' : 'bg-white/5 text-slate-600'
+                            className={`mt-[2px] flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-black ${feature.included ? 'bg-white text-black' : 'bg-white/10 text-white/40'
                               }`}
                           >
                             {feature.included ? '✓' : '×'}
@@ -723,14 +749,25 @@ export const PriceListPage: React.FC = () => {
                 </div>
               ) : validationError ? (
                 <div className="py-8 text-center">
-                  <span className="text-4xl">⚠️</span>
+                  <svg className="mx-auto h-12 w-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
                   <p className="mt-4 text-rose-400 font-bold">{validationError}</p>
                   <button
                     type="button"
-                    onClick={() => handlePlanActionClick(selectedPlanForValidation, selectedActionType || 'upgrade')}
+                    onClick={() => {
+                      if (validationError.includes('đăng nhập')) {
+                        navigate('/login');
+                      } else if (validationError.includes('chủ sân')) {
+                        setSelectedPlanForValidation(null);
+                        setValidationResult(null);
+                      } else {
+                        handlePlanActionClick(selectedPlanForValidation, selectedActionType || 'upgrade');
+                      }
+                    }}
                     className="mt-6 rounded-xl bg-[#2A3317] border border-[#CCFF00]/30 hover:bg-[#CCFF00] text-[#CCFF00] hover:text-[#0A0A0B] px-5 py-2.5 text-sm font-semibold"
                   >
-                    Thử lại
+                    {validationError.includes('đăng nhập') ? 'Đăng nhập ngay' : validationError.includes('chủ sân') ? 'Đã hiểu' : 'Thử lại'}
                   </button>
                 </div>
               ) : validationResult ? (

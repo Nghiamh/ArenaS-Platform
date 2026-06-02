@@ -10,24 +10,20 @@ import {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const fmtCurrency = (v: number) =>
-  new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(v);
-
+const fmt    = (v: number) => new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(v);
+const fmtM   = (v: number) => `${(v / 1_000_000).toFixed(1)}M₫`;
 const fmtDate = (iso: string) => {
   const d = new Date(iso);
-  return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
-    ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    + ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 };
-
 const monthLabel = (offset: number) => {
-  const d = new Date();
-  d.setMonth(d.getMonth() + offset);
+  const d = new Date(); d.setMonth(d.getMonth() + offset);
   return `Tháng ${d.getMonth() + 1}/${d.getFullYear()}`;
 };
-
-const growthPct = (current: number, prev: number) => {
-  if (prev === 0) return current > 0 ? 100 : 0;
-  return Math.round(((current - prev) / prev) * 100);
+const growthPct = (cur: number, prev: number) => {
+  if (prev === 0) return cur > 0 ? 100 : 0;
+  return Math.round(((cur - prev) / prev) * 100);
 };
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -38,28 +34,15 @@ const RefreshIcon = () => (
     <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
   </svg>
 );
-const AlertIcon = () => (
-  <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8">
-    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-    <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
-  </svg>
-);
 const SearchIcon = () => (
   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
     <circle cx="11" cy="11" r="7" /><path d="m21 21-4.35-4.35" />
   </svg>
 );
-const WalletIcon = () => (
-  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-    <path d="M20 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2Z" />
-    <path d="M16 3H8L4 7h16l-4-4Z" />
-    <circle cx="16" cy="13" r="1" fill="currentColor" stroke="none" />
-  </svg>
-);
-const PackageIcon = () => (
-  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-    <path d="M12 2 2 7l10 5 10-5-10-5Z" />
-    <path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
+const AlertIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+    <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
   </svg>
 );
 const TrendUpIcon = () => (
@@ -80,13 +63,13 @@ const ChevronIcon = ({ dir }: { dir: 'left' | 'right' }) => (
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
-const RowSkeleton: React.FC = () => (
+const RowSkeleton = () => (
   <tbody>
     {Array.from({ length: 8 }).map((_, i) => (
-      <tr key={i} className="border-b border-slate-700/30">
+      <tr key={i} className="border-b border-white/[0.04]">
         {Array.from({ length: 6 }).map((__, j) => (
-          <td key={j} className="px-3 py-4">
-            <div className="h-4 animate-pulse rounded bg-slate-700/50" style={{ width: `${55 + (j * 11) % 40}%` }} />
+          <td key={j} className="px-4 py-4">
+            <div className="h-4 animate-pulse rounded-md bg-white/[0.06]" style={{ width: `${55 + (j * 11) % 40}%` }} />
           </td>
         ))}
       </tr>
@@ -94,17 +77,15 @@ const RowSkeleton: React.FC = () => (
   </tbody>
 );
 
-// ─── Type badge ───────────────────────────────────────────────────────────────
+// ─── Type Badge ───────────────────────────────────────────────────────────────
 
 const TypeBadge: React.FC<{ type: AdminIncomeType }> = ({ type }) =>
   type === 'deposit' ? (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-cyan-500/15 px-2.5 py-1 text-xs font-semibold text-cyan-200 ring-1 ring-cyan-400/25">
-      <WalletIcon />
+    <span className="inline-flex rounded-full bg-cyan-500/15 px-2.5 py-0.5 text-xs font-semibold text-cyan-200 ring-1 ring-cyan-400/25">
       Nạp ví
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-500/15 px-2.5 py-1 text-xs font-semibold text-violet-200 ring-1 ring-violet-400/25">
-      <PackageIcon />
+    <span className="inline-flex rounded-full bg-violet-500/15 px-2.5 py-0.5 text-xs font-semibold text-violet-200 ring-1 ring-violet-400/25">
       Mua gói
     </span>
   );
@@ -112,17 +93,17 @@ const TypeBadge: React.FC<{ type: AdminIncomeType }> = ({ type }) =>
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export const AdminIncomePage: React.FC = () => {
-  const [items,        setItems]        = useState<AdminIncomeEntry[]>([]);
-  const [summary,      setSummary]      = useState<AdminIncomeSummary | null>(null);
-  const [total,        setTotal]        = useState(0);
-  const [totalPages,   setTotalPages]   = useState(1);
-  const [page,         setPage]         = useState(1);
-  const [loading,      setLoading]      = useState(true);
-  const [error,        setError]        = useState<string | null>(null);
-  const [typeFilter,   setTypeFilter]   = useState<'all' | AdminIncomeType>('all');
-  const [keyword,      setKeyword]      = useState('');
-  const [dateFrom,     setDateFrom]     = useState('');
-  const [dateTo,       setDateTo]       = useState('');
+  const [items,      setItems]      = useState<AdminIncomeEntry[]>([]);
+  const [summary,    setSummary]    = useState<AdminIncomeSummary | null>(null);
+  const [total,      setTotal]      = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [page,       setPage]       = useState(1);
+  const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState<string | null>(null);
+  const [typeFilter, setTypeFilter] = useState<'all' | AdminIncomeType>('all');
+  const [keyword,    setKeyword]    = useState('');
+  const [dateFrom,   setDateFrom]   = useState('');
+  const [dateTo,     setDateTo]     = useState('');
 
   const fetchIncome = async (p = page) => {
     setLoading(true);
@@ -133,7 +114,7 @@ export const AdminIncomePage: React.FC = () => {
         page: p,
         limit: 20,
         ...(dateFrom && { dateFrom }),
-        ...(dateTo   && { dateTo   }),
+        ...(dateTo   && { dateTo }),
       });
       setItems(res.items);
       setSummary(res.summary);
@@ -147,166 +128,147 @@ export const AdminIncomePage: React.FC = () => {
     }
   };
 
-  useEffect(() => { fetchIncome(1); }, [typeFilter, dateFrom, dateTo]);
+  useEffect(() => { fetchIncome(1); }, [typeFilter, dateFrom, dateTo]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* client-side keyword filter on current page */
   const displayed = useMemo(() => {
     const q = keyword.trim().toLowerCase();
     if (!q) return items;
-    return items.filter(
-      (it) =>
-        it.userName.toLowerCase().includes(q)  ||
-        it.userEmail.toLowerCase().includes(q) ||
-        it.description.toLowerCase().includes(q),
+    return items.filter(it =>
+      it.userName.toLowerCase().includes(q) ||
+      it.userEmail.toLowerCase().includes(q) ||
+      it.description.toLowerCase().includes(q),
     );
   }, [items, keyword]);
 
   const growth = summary ? growthPct(summary.thisMonthRevenue, summary.lastMonthRevenue) : 0;
 
+  const depositPct = summary?.totalRevenue
+    ? Math.round((summary.depositTotal / summary.totalRevenue) * 100)
+    : 50;
+
   return (
     <AdminLayout activeKey="income">
-      <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-4 py-8 text-white sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gradient-to-br from-[#070B14] via-[#0A0F1E] to-[#080C17] px-4 sm:px-6 lg:px-8 py-8 text-white">
         <div className="mx-auto max-w-7xl space-y-6">
 
           {/* ── Header ── */}
-          <header className="rounded-2xl border border-slate-700/50 bg-slate-900/40 p-6 backdrop-blur-sm">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-cyan-300">Admin / Thu nhập</p>
-                <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Quản lý thu nhập</h1>
-                <p className="mt-2 text-sm text-slate-400">
-                  Giao dịch dương (+): nạp tiền ví &amp; mua gói. Nguồn: <code className="rounded bg-black/30 px-1 text-xs">GET /api/admin/income</code>
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Link to="/admin/dashboard"
-                  className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/10">
-                  Về Dashboard
-                </Link>
-                <button
-                  onClick={() => fetchIncome(1)}
-                  disabled={loading}
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/10 disabled:opacity-50"
-                >
-                  <span className={loading ? 'animate-spin' : ''}><RefreshIcon /></span>
-                  Tải lại
-                </button>
-              </div>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-cyan-400">Admin / Thu nhập</p>
+              <h1 className="mt-2 text-3xl font-black tracking-tight">Quản lý thu nhập</h1>
+              <p className="mt-1 text-sm text-slate-400">Giao dịch dương: nạp tiền ví & mua gói subscription</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link to="/admin/dashboard" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/[0.08]">
+                ← Dashboard
+              </Link>
+              <button
+                onClick={() => fetchIncome(1)}
+                disabled={loading}
+                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/[0.08] disabled:opacity-50"
+              >
+                <span className={loading ? 'animate-spin' : ''}><RefreshIcon /></span>
+                Tải lại
+              </button>
+            </div>
+          </div>
+
+          {/* ── Summary Cards ── */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Total */}
+            <div className="sm:col-span-2 lg:col-span-1 rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/15 to-teal-600/10 p-5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-400">Tổng doanh thu</p>
+              <p className="mt-2 text-2xl font-black text-emerald-100">{summary ? fmtM(summary.totalRevenue) : '—'}</p>
+              <p className="mt-1 text-[11px] text-slate-500">Tích lũy tất cả thời gian</p>
             </div>
 
-            {/* ── Summary cards ── */}
-            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {/* Total revenue */}
-              <div className="col-span-full rounded-xl border border-emerald-400/25 bg-gradient-to-br from-emerald-500/15 to-cyan-500/10 p-5 lg:col-span-1">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">Tổng doanh thu</p>
-                <p className="mt-2 text-3xl font-black text-emerald-100">
-                  {summary ? fmtCurrency(summary.totalRevenue) : '—'}₫
+            {/* This month */}
+            <div className="rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/15 to-blue-600/10 p-5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-400">{monthLabel(0)}</p>
+              <p className="mt-2 text-2xl font-black text-cyan-100">{summary ? fmtM(summary.thisMonthRevenue) : '—'}</p>
+              {summary && (
+                <p className={`mt-1 inline-flex items-center gap-1 text-[11px] font-semibold ${growth >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {growth >= 0 ? <TrendUpIcon /> : <TrendDownIcon />}
+                  {Math.abs(growth)}% vs {monthLabel(-1)}
                 </p>
-                <p className="mt-1 text-xs text-emerald-400/70">Tích lũy tất cả thời gian</p>
-              </div>
+              )}
+            </div>
 
-              {/* This month */}
-              <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">{monthLabel(0)}</p>
-                <p className="mt-2 text-3xl font-black text-cyan-100">
-                  {summary ? fmtCurrency(summary.thisMonthRevenue) : '—'}₫
-                </p>
-                {summary && (
-                  <span className={`mt-1 inline-flex items-center gap-1 text-xs font-semibold ${growth >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
-                    {growth >= 0 ? <TrendUpIcon /> : <TrendDownIcon />}
-                    {Math.abs(growth)}% so với {monthLabel(-1)}
-                  </span>
-                )}
-              </div>
+            {/* Deposits */}
+            <div className="rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-500/15 to-cyan-600/10 p-5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-400">Nạp tiền ví</p>
+              <p className="mt-2 text-2xl font-black text-sky-100">{summary ? fmtM(summary.depositTotal) : '—'}</p>
+              <p className="mt-1 text-[11px] text-slate-500">{summary?.depositCount.toLocaleString('vi-VN') ?? '—'} giao dịch</p>
+            </div>
 
-              {/* Deposits */}
-              <div className="rounded-xl border border-sky-400/20 bg-sky-500/10 p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-300">Nạp tiền ví</p>
-                <p className="mt-2 text-3xl font-black text-sky-100">
-                  {summary ? fmtCurrency(summary.depositTotal) : '—'}₫
-                </p>
-                <p className="mt-1 text-xs text-sky-400/70">
-                  {summary ? summary.depositCount.toLocaleString('vi-VN') : '—'} giao dịch
-                </p>
-              </div>
+            {/* Subscriptions */}
+            <div className="rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/15 to-purple-600/10 p-5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-400">Mua gói</p>
+              <p className="mt-2 text-2xl font-black text-violet-100">{summary ? fmtM(summary.subscriptionTotal) : '—'}</p>
+              <p className="mt-1 text-[11px] text-slate-500">{summary?.subscriptionCount.toLocaleString('vi-VN') ?? '—'} đơn</p>
+            </div>
+          </div>
 
-              {/* Subscriptions */}
-              <div className="rounded-xl border border-violet-400/20 bg-violet-500/10 p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-300">Mua gói</p>
-                <p className="mt-2 text-3xl font-black text-violet-100">
-                  {summary ? fmtCurrency(summary.subscriptionTotal) : '—'}₫
-                </p>
-                <p className="mt-1 text-xs text-violet-400/70">
-                  {summary ? summary.subscriptionCount.toLocaleString('vi-VN') : '—'} đơn
-                </p>
+          {/* Revenue split bar */}
+          {summary && (
+            <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] px-6 py-4">
+              <div className="flex justify-between mb-2 text-xs text-slate-400">
+                <span>Nạp ví · {depositPct}%  · {fmt(summary.depositTotal)}₫</span>
+                <span>Mua gói · {100 - depositPct}% · {fmt(summary.subscriptionTotal)}₫</span>
+              </div>
+              <div className="flex h-2.5 overflow-hidden rounded-full bg-white/[0.06]">
+                <div className="bg-gradient-to-r from-cyan-500 to-sky-500 transition-all duration-700" style={{ width: `${depositPct}%` }} />
+                <div className="flex-1 bg-gradient-to-r from-violet-600 to-purple-500" />
               </div>
             </div>
-          </header>
+          )}
 
           {/* ── Error ── */}
           {error && (
-            <div className="flex items-center gap-3 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+            <div className="flex items-center gap-3 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
               <AlertIcon />
               <span className="flex-1">{error}</span>
-              <button onClick={() => fetchIncome(1)}
-                className="shrink-0 rounded-lg bg-rose-500/20 px-3 py-1 text-xs font-semibold hover:bg-rose-500/30 transition">
-                Thử lại
-              </button>
+              <button onClick={() => fetchIncome(1)} className="rounded-lg bg-rose-500/20 px-3 py-1 text-xs font-semibold hover:bg-rose-500/30 transition">Thử lại</button>
             </div>
           )}
 
           {/* ── Table ── */}
-          <section className="rounded-2xl border border-slate-700/50 bg-slate-900/40 p-6 backdrop-blur-sm">
+          <section className="rounded-2xl border border-white/[0.07] bg-white/[0.025] overflow-hidden">
             {/* Controls */}
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-3 px-6 py-4 border-b border-white/[0.06] lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-black tracking-tight">Danh sách giao dịch</h2>
+                <h2 className="font-black text-base">Danh sách giao dịch</h2>
                 {!loading && (
-                  <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-semibold text-slate-300">
-                    {total}
-                  </span>
+                  <span className="rounded-full bg-white/[0.08] px-2.5 py-0.5 text-xs font-semibold text-slate-300">{total}</span>
                 )}
               </div>
               <div className="flex flex-wrap gap-2">
-                {/* Keyword */}
                 <div className="relative">
                   <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"><SearchIcon /></span>
                   <input
                     value={keyword}
-                    onChange={(e) => setKeyword(e.target.value)}
+                    onChange={e => setKeyword(e.target.value)}
                     placeholder="Tên, email, mô tả..."
-                    className="w-full rounded-xl border border-white/10 bg-white/5 py-2 pl-9 pr-4 text-sm outline-none placeholder:text-slate-500 focus:border-cyan-500/50 sm:w-56"
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2 pl-9 pr-4 text-sm outline-none placeholder:text-slate-600 focus:border-cyan-500/50 sm:w-52"
                   />
                 </div>
-                {/* Type filter */}
                 <select
                   value={typeFilter}
-                  onChange={(e) => { setTypeFilter(e.target.value as 'all' | AdminIncomeType); setPage(1); }}
-                  className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm text-white outline-none"
+                  onChange={e => { setTypeFilter(e.target.value as 'all' | AdminIncomeType); setPage(1); }}
+                  className="rounded-xl border border-white/10 bg-[#0A0F1E] px-3 py-2 text-sm text-white outline-none"
                 >
                   <option value="all">Tất cả loại</option>
                   <option value="deposit">Nạp tiền ví</option>
                   <option value="subscription">Mua gói</option>
                 </select>
-                {/* Date range */}
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm text-slate-200 outline-none [color-scheme:dark]"
-                />
+                <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                  className="rounded-xl border border-white/10 bg-[#0A0F1E] px-3 py-2 text-sm text-slate-200 outline-none [color-scheme:dark]" />
                 <span className="self-center text-slate-500 text-sm">–</span>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm text-slate-200 outline-none [color-scheme:dark]"
-                />
+                <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+                  className="rounded-xl border border-white/10 bg-[#0A0F1E] px-3 py-2 text-sm text-slate-200 outline-none [color-scheme:dark]" />
                 {(dateFrom || dateTo) && (
-                  <button
-                    onClick={() => { setDateFrom(''); setDateTo(''); }}
-                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-400 hover:text-white transition"
-                  >
+                  <button onClick={() => { setDateFrom(''); setDateTo(''); }}
+                    className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-slate-400 hover:text-white transition">
                     Xoá lọc
                   </button>
                 )}
@@ -314,58 +276,41 @@ export const AdminIncomePage: React.FC = () => {
             </div>
 
             {/* Table */}
-            <div className="mt-5 overflow-x-auto">
+            <div className="overflow-x-auto">
               <table className="w-full min-w-[780px] text-sm">
                 <thead>
-                  <tr className="border-b border-slate-700/60 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    <th className="px-3 py-3">Thời gian</th>
-                    <th className="px-3 py-3">Loại</th>
-                    <th className="px-3 py-3">Người dùng</th>
-                    <th className="px-3 py-3">Mô tả</th>
-                    <th className="px-3 py-3">Mã giao dịch</th>
-                    <th className="px-3 py-3 text-right">Số tiền (+)</th>
+                  <tr className="border-b border-white/[0.06] text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    <th className="px-4 py-3">Thời gian</th>
+                    <th className="px-4 py-3">Loại</th>
+                    <th className="px-4 py-3">Người dùng</th>
+                    <th className="px-4 py-3">Mô tả</th>
+                    <th className="px-4 py-3">Mã giao dịch</th>
+                    <th className="px-4 py-3 text-right">Số tiền (+)</th>
                   </tr>
                 </thead>
 
                 {loading ? (
                   <RowSkeleton />
                 ) : (
-                  <tbody>
+                  <tbody className="divide-y divide-white/[0.04]">
                     {displayed.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="px-3 py-16 text-center text-slate-500">
-                          Không có giao dịch nào.
-                        </td>
-                      </tr>
+                      <tr><td colSpan={6} className="py-20 text-center text-slate-500">Không có giao dịch nào.</td></tr>
                     ) : (
-                      displayed.map((it) => (
-                        <tr key={it.id}
-                          className="border-b border-slate-700/30 transition-colors hover:bg-slate-800/40">
-                          <td className="px-3 py-4 text-slate-400 whitespace-nowrap text-xs">
-                            {fmtDate(it.createdAt)}
-                          </td>
-                          <td className="px-3 py-4">
-                            <TypeBadge type={it.type} />
-                          </td>
-                          <td className="px-3 py-4">
+                      displayed.map(it => (
+                        <tr key={it.id} className="hover:bg-white/[0.025] transition-colors">
+                          <td className="px-4 py-4 text-slate-500 whitespace-nowrap text-xs">{fmtDate(it.createdAt)}</td>
+                          <td className="px-4 py-4"><TypeBadge type={it.type} /></td>
+                          <td className="px-4 py-4">
                             <p className="font-semibold text-white">{it.userName}</p>
                             <p className="text-[11px] text-slate-500">{it.userEmail}</p>
                           </td>
-                          <td className="px-3 py-4 text-slate-300">{it.description}</td>
-                          <td className="px-3 py-4">
-                            {it.transferCode ? (
-                              <span className="font-mono text-xs text-slate-400 bg-white/5 rounded-md px-1.5 py-0.5">
-                                {it.transferCode}
-                              </span>
-                            ) : (
-                              <span className="text-slate-600 text-xs">—</span>
-                            )}
+                          <td className="px-4 py-4 text-slate-400 text-xs max-w-[200px] truncate">{it.description}</td>
+                          <td className="px-4 py-4">
+                            {it.transferCode
+                              ? <span className="rounded-md bg-white/[0.05] px-2 py-0.5 font-mono text-xs text-slate-400">{it.transferCode}</span>
+                              : <span className="text-slate-600 text-xs">—</span>}
                           </td>
-                          <td className="px-3 py-4 text-right">
-                            <span className="font-black text-emerald-300">
-                              +{fmtCurrency(it.amount)}₫
-                            </span>
-                          </td>
+                          <td className="px-4 py-4 text-right font-black text-emerald-300">+{fmt(it.amount)}₫</td>
                         </tr>
                       ))
                     )}
@@ -376,46 +321,32 @@ export const AdminIncomePage: React.FC = () => {
 
             {/* Pagination */}
             {!loading && totalPages > 1 && (
-              <div className="mt-4 flex items-center justify-between border-t border-white/[0.06] pt-4">
-                <p className="text-xs text-slate-500">
-                  Trang {page} / {totalPages} · {total} giao dịch
-                </p>
-                <div className="flex items-center gap-2">
-                  <button
-                    disabled={page <= 1}
-                    onClick={() => fetchIncome(page - 1)}
-                    className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
+              <div className="flex items-center justify-between px-6 py-3 border-t border-white/[0.05]">
+                <p className="text-xs text-slate-500">Trang {page} / {totalPages} · {total} giao dịch</p>
+                <div className="flex items-center gap-1.5">
+                  <button disabled={page <= 1} onClick={() => fetchIncome(page - 1)}
+                    className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:bg-white/[0.08] disabled:opacity-40">
                     <ChevronIcon dir="left" /> Trước
                   </button>
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     const p = Math.max(1, Math.min(totalPages - 4, page - 2)) + i;
                     return (
-                      <button key={p}
-                        onClick={() => fetchIncome(p)}
-                        className={`w-8 h-8 rounded-lg text-xs font-semibold transition ${
-                          p === page
-                            ? 'bg-cyan-500/20 text-cyan-200 ring-1 ring-cyan-400/30'
-                            : 'border border-white/10 bg-white/5 text-slate-400 hover:bg-white/10'
-                        }`}>
+                      <button key={p} onClick={() => fetchIncome(p)}
+                        className={`h-8 w-8 rounded-lg text-xs font-semibold transition ${p === page ? 'bg-cyan-500/20 text-cyan-200 ring-1 ring-cyan-400/30' : 'border border-white/10 bg-white/[0.04] text-slate-400 hover:bg-white/[0.08]'}`}>
                         {p}
                       </button>
                     );
                   })}
-                  <button
-                    disabled={page >= totalPages}
-                    onClick={() => fetchIncome(page + 1)}
-                    className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
+                  <button disabled={page >= totalPages} onClick={() => fetchIncome(page + 1)}
+                    className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:bg-white/[0.08] disabled:opacity-40">
                     Sau <ChevronIcon dir="right" />
                   </button>
                 </div>
               </div>
             )}
           </section>
-
         </div>
-      </main>
+      </div>
     </AdminLayout>
   );
 };

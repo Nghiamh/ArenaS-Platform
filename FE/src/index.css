@@ -247,3 +247,198 @@ body {
     filter: saturate(1.12) brightness(1.05);
   }
 }
+
+/* ============================================================
+   GLOBAL THEME SYNC — ALL HARDCODED COLORS → CSS VARIABLES
+   These rules ensure every page respects the active theme
+   without needing individual file edits per theme change.
+   ============================================================ */
+
+/* ── SVG fill/stroke attributes ─────────────────────────────── */
+[fill="#CCFF00"]   { fill:   var(--accent-primary)   !important; }
+[fill="#00F5FF"]   { fill:   var(--accent-secondary) !important; }
+[stroke="#CCFF00"] { stroke: var(--accent-primary)   !important; }
+[stroke="#00F5FF"] { stroke: var(--accent-secondary) !important; }
+
+/* ── Text colors ─────────────────────────────────────────────── */
+.text-\[\#CCFF00\]      { color: var(--accent-primary)              !important; }
+.text-\[\#00F5FF\]      { color: var(--accent-secondary)            !important; }
+.text-\[\#CCFF00\]\/50  { color: rgba(var(--accent-primary-rgb), 0.5) !important; }
+.text-\[\#CCFF00\]\/40  { color: rgba(var(--accent-primary-rgb), 0.4) !important; }
+.hover\:text-\[\#CCFF00\]:hover { color: var(--accent-primary)  !important; }
+.hover\:text-\[\#00F5FF\]:hover { color: var(--accent-secondary) !important; }
+.hover\:text-\[\#0A0A0B\]:hover { color: var(--bg-deep)          !important; }
+.group:hover .group-hover\:text-\[\#CCFF00\] { color: var(--accent-primary) !important; }
+
+/* ── Background colors ──────────────────────────────────────── */
+.bg-\[\#0A0A0B\]  { background-color: var(--bg-deep) !important; }
+.bg-\[\#0C0C0E\]  { background-color: var(--bg-deep) !important; }
+.bg-\[\#0f1923\]  { background-color: var(--bg-deep) !important; }
+.bg-\[\#071024\]  { background-color: var(--bg-deep) !important; }
+.bg-\[\#101011\]  { background-color: color-mix(in srgb, var(--bg-deep) 85%, white 15%) !important; }
+.bg-\[\#10111a\]  { background-color: color-mix(in srgb, var(--bg-deep) 85%, white 15%) !important; }
+.bg-\[\#121320\]  { background-color: color-mix(in srgb, var(--bg-deep) 80%, white 20%) !important; }
+.bg-\[\#CCFF00\]  { background-color: var(--accent-primary)   !important; }
+.bg-\[\#00F5FF\]  { background-color: var(--accent-secondary) !important; }
+.bg-\[\#2A3317\]  { background-color: rgba(var(--accent-primary-rgb), 0.12) !important; }
+.bg-\[\#CCFF00\]\/10 { background-color: rgba(var(--accent-primary-rgb), 0.10) !important; }
+.bg-\[\#CCFF00\]\/20 { background-color: rgba(var(--accent-primary-rgb), 0.20) !important; }
+.hover\:bg-\[\#CCFF00\]:hover { background-color: var(--accent-primary) !important; }
+
+/* ── Border colors ───────────────────────────────────────────── */
+.border-\[\#CCFF00\]     { border-color: var(--accent-primary) !important; }
+.border-\[\#CCFF00\]\/30 { border-color: rgba(var(--accent-primary-rgb), 0.3) !important; }
+.border-\[\#CCFF00\]\/20 { border-color: rgba(var(--accent-primary-rgb), 0.2) !important; }
+.hover\:border-\[\#CCFF00\]:hover { border-color: var(--accent-primary) !important; }
+
+/* ── Focus / focus-within ────────────────────────────────────── */
+.focus-within\:border-\[\#CCFF00\]:focus-within { border-color: var(--accent-primary) !important; }
+.focus\:ring-\[\#CCFF00\]:focus  { --tw-ring-color: var(--accent-primary) !important; }
+.focus\:border-\[\#CCFF00\]:focus { border-color: var(--accent-primary) !important; }
+
+/* ── Gradient from/via/to ────────────────────────────────────── */
+.from-\[\#0A0A0B\]  { --tw-gradient-from: var(--bg-deep) !important; }
+.via-\[\#0A0A0B\]   { --tw-gradient-via:  var(--bg-deep) !important; }
+.to-\[\#0A0A0B\]    { --tw-gradient-to:   var(--bg-deep) !important; }
+.from-\[\#0f1923\]  { --tw-gradient-from: var(--bg-deep) !important; }
+.to-\[\#0f1923\]    { --tw-gradient-to:   var(--bg-deep) !important; }
+
+/* ── Scrollbar follows theme ─────────────────────────────────── */
+.arena-scroll { scrollbar-color: rgba(var(--accent-primary-rgb), 0.6) rgba(var(--accent-primary-rgb), 0.08); }
+.arena-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg,
+    rgba(var(--accent-primary-rgb), 0.9),
+    rgba(var(--accent-primary-rgb), 0.6)
+  );
+}
+
+/* ── Autofill input follows theme ────────────────────────────── */
+.login-input:-webkit-autofill,
+.login-input:-webkit-autofill:hover,
+.login-input:-webkit-autofill:focus,
+.login-input:-webkit-autofill:active {
+  box-shadow: 0 0 0 1000px var(--bg-deep) inset !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--bg-deep) inset !important;
+}
+
+/* ── Cyan/blue accent classes in user-facing pages (NOT admin) ── */
+/* Admin pages use [data-section="admin"], so :not() excludes them */
+:not([data-section='admin']) .text-cyan-400,
+:not([data-section='admin']) .text-cyan-300,
+:not([data-section='admin']) .text-cyan-500 {
+  color: var(--accent-primary) !important;
+}
+:not([data-section='admin']) .text-blue-400,
+:not([data-section='admin']) .text-blue-300,
+:not([data-section='admin']) .text-blue-500 {
+  color: var(--accent-primary) !important;
+}
+:not([data-section='admin']) .border-cyan-500,
+:not([data-section='admin']) .border-cyan-400,
+:not([data-section='admin']) .border-cyan-500\/20,
+:not([data-section='admin']) .border-cyan-500\/30 {
+  border-color: rgba(var(--accent-primary-rgb), 0.3) !important;
+}
+:not([data-section='admin']) .bg-cyan-500 { background-color: var(--accent-primary) !important; }
+:not([data-section='admin']) .bg-cyan-500\/10 { background-color: rgba(var(--accent-primary-rgb), 0.1) !important; }
+:not([data-section='admin']) .bg-cyan-500\/20 { background-color: rgba(var(--accent-primary-rgb), 0.2) !important; }
+:not([data-section='admin']) .text-cyan-400\/80 { color: rgba(var(--accent-primary-rgb), 0.8) !important; }
+
+/* ── Additional background variants ─────────────────────────── */
+.bg-\[\#1A1A1C\]  { background-color: color-mix(in srgb, var(--bg-deep) 70%, white 30%) !important; }
+.bg-\[\#0c1220\]  { background-color: var(--bg-deep) !important; }
+
+/* ── Ring/outline variants ───────────────────────────────────── */
+.ring-\[\#CCFF00\]\/15 { --tw-ring-color: rgba(var(--accent-primary-rgb), 0.15) !important; }
+.ring-\[\#CCFF00\]\/10 { --tw-ring-color: rgba(var(--accent-primary-rgb), 0.10) !important; }
+.ring-4.ring-\[\#CCFF00\]\/15 { box-shadow: 0 0 0 4px rgba(var(--accent-primary-rgb), 0.15) !important; }
+
+/* ── Border with [#CCFF00] + bg combination in selected plan ──── */
+.border-\[\#CCFF00\]\/80 { border-color: rgba(var(--accent-primary-rgb), 0.8) !important; }
+.bg-\[\#CCFF00\]\/15 { background-color: rgba(var(--accent-primary-rgb), 0.15) !important; }
+.bg-\[\#00F5FF\]\/10 { background-color: rgba(var(--accent-secondary-rgb), 0.10) !important; }
+.border-\[\#00F5FF\]\/30 { border-color: rgba(var(--accent-secondary-rgb), 0.3) !important; }
+.text-\[\#00F5FF\]\/85 { color: rgba(var(--accent-secondary-rgb), 0.85) !important; }
+
+/* ── Via gradient stops ───────────────────────────────────────── */
+.via-\[\#00F5FF\] { --tw-gradient-via: var(--accent-secondary) !important; }
+.via-\[\#CCFF00\] { --tw-gradient-via: var(--accent-primary) !important; }
+
+/* ── Gradient stops with hardcoded neon colors ───────────────── */
+.from-\[\#CCFF00\]    { --tw-gradient-from: var(--accent-primary) !important; }
+.from-\[\#CCFF00\]\/80 { --tw-gradient-from: rgba(var(--accent-primary-rgb),0.8) !important; }
+.from-\[\#CCFF00\]\/50 { --tw-gradient-from: rgba(var(--accent-primary-rgb),0.5) !important; }
+.to-\[\#CCFF00\]      { --tw-gradient-to: var(--accent-primary) !important; }
+.to-\[\#CCFF00\]\/80  { --tw-gradient-to: rgba(var(--accent-primary-rgb),0.8) !important; }
+.from-\[\#00F5FF\]    { --tw-gradient-from: var(--accent-secondary) !important; }
+.from-\[\#00F5FF\]\/80 { --tw-gradient-from: rgba(var(--accent-secondary-rgb),0.8) !important; }
+.from-\[\#00F5FF\]\/50 { --tw-gradient-from: rgba(var(--accent-secondary-rgb),0.5) !important; }
+.to-\[\#00F5FF\]      { --tw-gradient-to: var(--accent-secondary) !important; }
+.to-\[\#00F5FF\]\/80  { --tw-gradient-to: rgba(var(--accent-secondary-rgb),0.8) !important; }
+
+/* ── Selection highlight follows theme ───────────────────────── */
+.selection\:bg-\[\#CCFF00\]\/30::selection {
+  background-color: rgba(var(--accent-primary-rgb), 0.3) !important;
+}
+
+/* ── Speed (Light) theme: invert hardcoded dark backgrounds ──── */
+[data-theme='speed'] .bg-\[\#0A0A0B\],
+[data-theme='speed'] .bg-\[\#0C0C0E\],
+[data-theme='speed'] .bg-\[\#0f1923\],
+[data-theme='speed'] .bg-\[\#071024\] { background-color: #FFFFFF !important; }
+[data-theme='speed'] .text-\[\#CCFF00\] { color: var(--accent-primary) !important; }
+[data-theme='speed'] .text-\[\#00F5FF\] { color: var(--accent-secondary) !important; }
+[data-theme='speed'] .hover\:text-\[\#0A0A0B\]:hover { color: #FFFFFF !important; }
+[data-theme='speed'] .hover\:bg-\[\#CCFF00\]:hover { background-color: var(--accent-primary) !important; }
+
+/* ============================================================
+   SVG ATTRIBUTE → THEME VARIABLE MAPPING
+   Maps hardcoded SVG fill/stroke hex values to theme variables
+   so icons and illustrations update automatically per theme.
+   ============================================================ */
+
+/* ── SVG fill attributes ─────────────────────────────────── */
+[fill="#00F5FF"] { fill: var(--accent-secondary) !important; }
+[fill="#CCFF00"] { fill: var(--accent-primary) !important; }
+
+/* ── SVG stroke attributes ───────────────────────────────── */
+[stroke="#00F5FF"] { stroke: var(--accent-secondary) !important; }
+[stroke="#CCFF00"] { stroke: var(--accent-primary) !important; }
+
+/* ============================================================
+   THEME UTILITY CLASSES
+   Semantic helpers for applying theme variables across pages.
+   ============================================================ */
+
+/* Background using the deep background variable */
+.theme-bg { background-color: var(--bg-deep); }
+
+/* Primary accent text color */
+.theme-accent { color: var(--accent-primary); }
+
+/* Secondary accent text color */
+.theme-accent-2 { color: var(--accent-secondary); }
+
+/* Border using primary accent at 20% opacity */
+.theme-border { border-color: rgba(var(--accent-primary-rgb), 0.2); }
+
+/* ============================================================
+   COURT / CHECKOUT PAGE DARK BACKGROUND OVERRIDES
+   Ensures hardcoded dark background values used on court detail
+   and checkout pages resolve to the active theme's deep bg.
+   ============================================================ */
+
+.bg-court-page,
+[class*="bg-[#0f1923]"],
+[class*="bg-[#071024]"] {
+  background-color: var(--bg-deep) !important;
+}
+
+/* ============================================================
+   SPEED LIGHT THEME — DROPDOWN / PANEL VISIBILITY FIX
+   In Speed Monochrome (light) mode, panels and dropdowns that
+   use .bg-deep as a background must render with the light bg
+   so they remain visible against the white page surface.
+   ============================================================ */
+
+[data-theme='speed'] .bg-deep { background-color: #F8FAFC; }

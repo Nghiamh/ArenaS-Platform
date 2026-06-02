@@ -537,6 +537,122 @@ export async function adminGetIncome(params?: {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// ADMIN — USER MANAGEMENT
+// ---------------------------------------------------------------------------
+
+export type AdminUserRole = 'user' | 'owner' | 'admin';
+
+export type AdminUser = {
+	_id: string;
+	name?: string;
+	userName: string;
+	email: string;
+	phone?: string;
+	address?: string;
+	avatarUrl?: string;
+	role: AdminUserRole;
+	isBanned?: boolean;
+	authProvider: 'local' | 'google';
+	xp?: number;
+	points?: number;
+	reliability_score?: number;
+	completed_matches_count?: number;
+	canceled_matches_count?: number;
+	createdAt: string;
+	updatedAt: string;
+};
+
+type AdminUsersResponse = {
+	message: string;
+	users: AdminUser[];
+	total: number;
+	page: number;
+	limit: number;
+	totalPages: number;
+};
+
+type AdminUserResponse = {
+	message: string;
+	user: AdminUser;
+};
+
+export type AdminGetUsersParams = {
+	keyword?: string;
+	role?: 'all' | AdminUserRole;
+	status?: 'all' | 'active' | 'banned';
+	page?: number;
+	limit?: number;
+};
+
+export type AdminCreateUserPayload = {
+	name: string;
+	email: string;
+	userName: string;
+	password: string;
+	phone?: string;
+	role?: AdminUserRole;
+};
+
+export type AdminUpdateUserPayload = {
+	name?: string;
+	phone?: string;
+	address?: string;
+	role?: AdminUserRole;
+	isBanned?: boolean;
+	password?: string;
+};
+
+export async function adminGetAllUsers(
+	params?: AdminGetUsersParams,
+): Promise<{ users: AdminUser[]; total: number; totalPages: number; page: number }> {
+	try {
+		const { data } = await axiosClient.get<AdminUsersResponse>('/admin/users', {
+			headers: withAuthHeaders(),
+			params,
+		});
+		return { users: data.users, total: data.total, totalPages: data.totalPages, page: data.page };
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function adminCreateUserAccount(payload: AdminCreateUserPayload): Promise<AdminUser> {
+	try {
+		const { data } = await axiosClient.post<AdminUserResponse>('/admin/users', payload, {
+			headers: withAuthHeaders(),
+		});
+		return data.user;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function adminUpdateUserAccount(
+	userId: string,
+	payload: AdminUpdateUserPayload,
+): Promise<AdminUser> {
+	try {
+		const { data } = await axiosClient.put<AdminUserResponse>(`/admin/users/${userId}`, payload, {
+			headers: withAuthHeaders(),
+		});
+		return data.user;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function adminDeleteUserAccount(userId: string): Promise<{ message: string }> {
+	try {
+		const { data } = await axiosClient.delete<{ message: string }>(`/admin/users/${userId}`, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
 export async function getPublicCourts(params?: { sport?: string }): Promise<PublicCourt[]> {
 	try {
 		const { data } = await axiosClient.get<PublicCourtsResponse>('/courts/public', {
@@ -1012,7 +1128,10 @@ export async function validateSubscriptionAction(
 		return data;
 	} catch (error: unknown) {
 		if (axios.isAxiosError(error) && error.response?.data) {
-			return error.response.data as ValidateSubscriptionActionResponse;
+			const data = error.response.data as any;
+			if (data.action === 'downgrade') {
+				return data as ValidateSubscriptionActionResponse;
+			}
 		}
 		throw new Error(toErrorMessage(error));
 	}
@@ -1339,6 +1458,142 @@ export async function appealReport(reportId: string, appealDescription: string):
 			{
 				headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
 			}
+		);
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+// ---------------------------------------------------------------------------
+// OWNER REGISTRATION APPLICATION
+// ---------------------------------------------------------------------------
+
+export type OwnerApplicationStatus = 'pending' | 'approved' | 'rejected';
+
+export type OwnerApplicationUser = {
+	_id: string;
+	name?: string;
+	userName: string;
+	email: string;
+	phone?: string;
+	avatarUrl?: string;
+	address?: string;
+	createdAt?: string;
+};
+
+export type OwnerApplication = {
+	_id: string;
+	userId: OwnerApplicationUser | string;
+	businessName: string;
+	businessAddress: string;
+	phone: string;
+	identityCard: string;
+	bankAccount?: string;
+	description?: string;
+	largeCourts?: number;
+	smallCourts?: number;
+	status: OwnerApplicationStatus;
+	rejectionReason?: string;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export type OwnerApplicationPayload = {
+	businessName: string;
+	businessAddress: string;
+	phone: string;
+	identityCard: string;
+	bankAccount?: string;
+	description?: string;
+	largeCourts?: number;
+	smallCourts?: number;
+};
+
+export type MyOwnerApplicationResponse = {
+	message: string;
+	application: OwnerApplication | null;
+};
+
+export type AdminOwnerApplicationsResponse = {
+	message: string;
+	applications: OwnerApplication[];
+	total: number;
+	page: number;
+	limit: number;
+	totalPages: number;
+};
+
+export type OwnerApplicationActionResponse = {
+	message: string;
+	application: OwnerApplication;
+};
+
+export async function submitOwnerApplication(
+	payload: OwnerApplicationPayload,
+): Promise<OwnerApplicationActionResponse> {
+	try {
+		const { data } = await axiosClient.post<OwnerApplicationActionResponse>(
+			'/profile/me/owner-application',
+			payload,
+			{ headers: withAuthHeaders() },
+		);
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function getMyOwnerApplication(): Promise<MyOwnerApplicationResponse> {
+	try {
+		const { data } = await axiosClient.get<MyOwnerApplicationResponse>(
+			'/profile/me/owner-application',
+			{ headers: withAuthHeaders() },
+		);
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function adminGetOwnerApplications(params?: {
+	status?: 'all' | OwnerApplicationStatus;
+	page?: number;
+	limit?: number;
+}): Promise<AdminOwnerApplicationsResponse> {
+	try {
+		const { data } = await axiosClient.get<AdminOwnerApplicationsResponse>(
+			'/admin/owner-applications',
+			{ params },
+		);
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function adminApproveOwnerApplication(
+	applicationId: string,
+): Promise<OwnerApplicationActionResponse> {
+	try {
+		const { data } = await axiosClient.post<OwnerApplicationActionResponse>(
+			`/admin/owner-applications/${applicationId}/approve`,
+			{},
+		);
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function adminRejectOwnerApplication(
+	applicationId: string,
+	reason?: string,
+): Promise<OwnerApplicationActionResponse> {
+	try {
+		const { data } = await axiosClient.post<OwnerApplicationActionResponse>(
+			`/admin/owner-applications/${applicationId}/reject`,
+			{ reason },
 		);
 		return data;
 	} catch (error: unknown) {

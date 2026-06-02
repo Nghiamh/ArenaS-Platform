@@ -3,18 +3,18 @@ import { Link, useNavigate } from 'react-router-dom';
 import { register as registerApi } from '../../Axios/Axios';
 
 const RunIcon = () => (
-  <svg viewBox="0 0 24 24" fill="#CCFF00" className="h-6 w-6" aria-hidden="true">
+  <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6 text-accent-primary" aria-hidden="true">
     <path d="M13.49 5.48c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm-3.6 13.9l1-4.4 2.1 2v6h2v-7.5l-2.1-2 .6-3c1.3 1.5 3.3 2.5 5.5 2.5v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1l-5.2 2.2v4.7h2v-3.4l1.8-.7-1.6 8.1-4.9-1-.4 2 6.7 1.4 1.1-5.4z" />
   </svg>
 );
 
 const PatternIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect x="11" y="2" width="2" height="6" fill="#00F5FF" />
-    <rect x="11" y="16" width="2" height="6" fill="#00F5FF" />
-    <rect x="16" y="11" width="6" height="2" fill="#00F5FF" />
-    <rect x="2" y="11" width="6" height="2" fill="#00F5FF" />
-    <circle cx="12" cy="12" r="3" fill="#00F5FF" />
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-accent-secondary">
+    <rect x="11" y="2" width="2" height="6" fill="currentColor" />
+    <rect x="11" y="16" width="2" height="6" fill="currentColor" />
+    <rect x="16" y="11" width="6" height="2" fill="currentColor" />
+    <rect x="2" y="11" width="6" height="2" fill="currentColor" />
+    <circle cx="12" cy="12" r="3" fill="currentColor" />
   </svg>
 );
 
@@ -114,10 +114,10 @@ export const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0B] text-white flex flex-col lg:flex-row font-inter">
+    <div className="min-h-screen bg-deep text-white flex flex-col lg:flex-row font-inter">
       {/* LEFT SECTION (IMAGE) */}
       <section className="hidden lg:flex relative w-full lg:w-1/2 min-h-screen flex-col justify-between p-12 overflow-hidden border-r border-white/5 sticky top-0">
-        <div 
+        <div
           className="absolute inset-0 z-0 opacity-40 mix-blend-luminosity"
           style={{
             backgroundImage: 'url(https://images.unsplash.com/photo-1552674605-db6ffd4facb5?q=80&w=1600&auto=format&fit=crop)',
@@ -125,13 +125,13 @@ export const RegisterPage: React.FC = () => {
             backgroundPosition: 'center',
           }}
         />
-        <div className="absolute inset-0 z-0 bg-gradient-to-t from-[#0A0A0B] via-[#0A0A0B]/80 to-[#0A0A0B]/30" />
-        <div className="absolute -left-20 top-1/4 h-[300px] w-[300px] rounded-full bg-[#CCFF00]/10 blur-[100px] z-0" />
-        
+        <div className="absolute inset-0 z-0 bg-gradient-to-t from-deep via-deep/80 to-deep/30" />
+        <div className="absolute -left-20 top-1/4 h-[300px] w-[300px] rounded-full bg-accent-primary/10 blur-[100px] z-0" />
+
         <div className="relative z-10 flex flex-col justify-between h-full max-w-xl">
           <Link to="/home" className="inline-flex items-center gap-2 self-start transition-opacity hover:opacity-80">
             <RunIcon />
-            <span className="text-xl font-black tracking-[0.2em] text-[#CCFF00] uppercase font-montserrat">
+            <span className="text-xl font-black tracking-[0.2em] text-accent-primary uppercase font-montserrat">
               ArenaS
             </span>
           </Link>
@@ -139,7 +139,7 @@ export const RegisterPage: React.FC = () => {
           <div className="mb-10 mt-auto">
             <h1 className="text-[3rem] font-black leading-[1.1] tracking-tight text-white mb-4 font-montserrat">
               Đăng Ký Nhanh,<br/>
-              <span className="text-[#CCFF00]">Trải Nghiệm Đỉnh</span>
+              <span className="text-accent-primary">Trải Nghiệm Đỉnh</span>
             </h1>
             <p className="text-base text-slate-400 leading-relaxed max-w-md">
               Hệ thống quản lý chiến thuật dành riêng cho môi trường thể thao chuyên nghiệp. Kiểm soát mọi dữ liệu trong lòng bàn tay.
@@ -148,13 +148,13 @@ export const RegisterPage: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
-              <p className="text-[10px] font-bold tracking-[0.2em] text-[#00F5FF] uppercase mb-2">Hội viên Active</p>
+              <p className="text-[10px] font-bold tracking-[0.2em] text-accent-secondary uppercase mb-2">Hội viên Active</p>
               <p className="text-3xl font-black text-white">12,450+</p>
             </div>
             <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
-              <p className="text-[10px] font-bold tracking-[0.2em] text-[#CCFF00] uppercase mb-2">Tăng trưởng</p>
+              <p className="text-[10px] font-bold tracking-[0.2em] text-accent-primary uppercase mb-2">Tăng trưởng</p>
               <p className="text-3xl font-black text-white flex items-center gap-2">
-                <span className="text-[#CCFF00]">↗</span> 34.2%
+                <span className="text-accent-primary">↗</span> 34.2%
               </p>
             </div>
           </div>
@@ -163,10 +163,10 @@ export const RegisterPage: React.FC = () => {
 
       {/* RIGHT SECTION (FORM) */}
       <section className="relative flex w-full lg:w-1/2 min-h-screen items-center justify-center p-6 sm:p-12">
-        <button 
+        <button
           type="button"
-          onClick={() => navigate(-1)} 
-          className="absolute top-6 left-6 lg:hidden flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-[#CCFF00] transition-colors z-10"
+          onClick={() => navigate(-1)}
+          className="absolute top-6 left-6 lg:hidden flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-accent-primary transition-colors z-10"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -176,7 +176,7 @@ export const RegisterPage: React.FC = () => {
         <div className="absolute top-8 right-8 opacity-40">
           <PatternIcon />
         </div>
-        
+
         <div className="w-full max-w-[28rem] py-4">
           <div className="mb-6">
             <h2 className="text-2xl font-black tracking-tight text-white mb-1 font-montserrat">
@@ -192,7 +192,7 @@ export const RegisterPage: React.FC = () => {
               <label className="text-[10px] font-bold tracking-[0.15em] text-slate-400 uppercase">
                 Họ Và Tên
               </label>
-              <div className="flex items-center gap-3 border-b border-white/20 pb-2 pt-1 transition-colors focus-within:border-[#CCFF00]">
+              <div className="flex items-center gap-3 border-b border-white/20 pb-2 pt-1 transition-colors focus-within:border-accent-primary">
                 <span className="text-slate-500">
                   <UserIcon />
                 </span>
@@ -211,7 +211,7 @@ export const RegisterPage: React.FC = () => {
               <label className="text-[10px] font-bold tracking-[0.15em] text-slate-400 uppercase">
                 Tên Đăng Nhập
               </label>
-              <div className="flex items-center gap-3 border-b border-white/20 pb-2 pt-1 transition-colors focus-within:border-[#CCFF00]">
+              <div className="flex items-center gap-3 border-b border-white/20 pb-2 pt-1 transition-colors focus-within:border-accent-primary">
                 <span className="text-slate-500">
                   <UserIcon />
                 </span>
@@ -230,7 +230,7 @@ export const RegisterPage: React.FC = () => {
               <label className="text-[10px] font-bold tracking-[0.15em] text-slate-400 uppercase">
                 Địa Chỉ Email
               </label>
-              <div className="flex items-center gap-3 border-b border-white/20 pb-2 pt-1 transition-colors focus-within:border-[#CCFF00]">
+              <div className="flex items-center gap-3 border-b border-white/20 pb-2 pt-1 transition-colors focus-within:border-accent-primary">
                 <span className="text-slate-500">
                   <EnvelopeIcon />
                 </span>
@@ -249,7 +249,7 @@ export const RegisterPage: React.FC = () => {
               <label className="text-[10px] font-bold tracking-[0.15em] text-slate-400 uppercase">
                 Mật Khẩu
               </label>
-              <div className="flex items-center gap-3 border-b border-white/20 pb-2 pt-1 transition-colors focus-within:border-[#CCFF00]">
+              <div className="flex items-center gap-3 border-b border-white/20 pb-2 pt-1 transition-colors focus-within:border-accent-primary">
                 <span className="text-slate-500">
                   <LockIcon />
                 </span>
@@ -275,7 +275,7 @@ export const RegisterPage: React.FC = () => {
               <label className="text-[10px] font-bold tracking-[0.15em] text-slate-400 uppercase">
                 Xác Nhận Mật Khẩu
               </label>
-              <div className="flex items-center gap-3 border-b border-white/20 pb-2 pt-1 transition-colors focus-within:border-[#CCFF00]">
+              <div className="flex items-center gap-3 border-b border-white/20 pb-2 pt-1 transition-colors focus-within:border-accent-primary">
                 <span className="text-slate-500">
                   <LockIcon />
                 </span>
@@ -302,10 +302,10 @@ export const RegisterPage: React.FC = () => {
                 type="checkbox"
                 checked={hasAcceptedTerms}
                 onChange={(event) => setHasAcceptedTerms(event.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-white/20 bg-transparent text-[#CCFF00] focus:ring-[#CCFF00] focus:ring-offset-0 transition-colors"
+                className="mt-0.5 h-4 w-4 rounded border-white/20 bg-transparent text-accent-primary focus:ring-accent-primary focus:ring-offset-0 transition-colors"
               />
               <span>
-                Tôi đồng ý với <span className="text-[#00F5FF]">Điều khoản dịch vụ</span> và <span className="text-[#00F5FF]">Chính sách bảo mật</span>
+                Tôi đồng ý với <span className="text-accent-secondary">Điều khoản dịch vụ</span> và <span className="text-accent-secondary">Chính sách bảo mật</span>
               </span>
             </label>
 
@@ -318,23 +318,23 @@ export const RegisterPage: React.FC = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#2A3317] border border-[#CCFF00]/30 text-sm font-bold text-[#CCFF00] shadow-[0_0_15px_rgba(204,255,0,0.15)] transition-all hover:bg-[#CCFF00] hover:text-[#0A0A0B] hover:shadow-[0_0_20px_rgba(204,255,0,0.4)] disabled:opacity-50 uppercase tracking-wider"
+              className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-accent-primary/15 border border-accent-primary/30 text-sm font-bold text-accent-primary shadow-[0_0_15px_rgba(var(--accent-primary-rgb),0.15)] transition-all hover:bg-accent-primary hover:text-deep hover:shadow-[0_0_20px_rgba(var(--accent-primary-rgb),0.4)] disabled:opacity-50 uppercase tracking-wider"
             >
-              {isSubmitting ? 'Đang Tạo Tài Khoản...' : 'Đăng Ký'} 
+              {isSubmitting ? 'Đang Tạo Tài Khoản...' : 'Đăng Ký'}
               {!isSubmitting && <span>→</span>}
             </button>
           </form>
 
           <p className="mt-6 text-center text-xs font-medium text-slate-400">
             Đã có tài khoản?{' '}
-            <Link to="/login" className="font-bold text-[#00F5FF] transition hover:opacity-80">
+            <Link to="/login" className="font-bold text-accent-secondary transition hover:opacity-80">
               Đăng nhập ngay
             </Link>
           </p>
         </div>
 
         <div className="absolute bottom-6 right-8">
-          <span className="text-[9px] font-bold tracking-[0.2em] text-[#CCFF00]/50 uppercase">
+          <span className="text-[9px] font-bold tracking-[0.2em] text-accent-primary/50 uppercase">
             * Sys.Auth.v2
           </span>
         </div>

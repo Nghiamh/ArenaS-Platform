@@ -7,6 +7,17 @@ import {
 	adminRejectCourt,
 } from "../controllers/adminCourtController.js";
 import { adminGetIncome } from "../controllers/adminIncomeController.js";
+import {
+	adminGetAllOwnerApplications,
+	adminApproveOwnerApplication,
+	adminRejectOwnerApplication,
+} from "../controllers/ownerApplicationController.js";
+import {
+	adminGetAllUsers,
+	adminCreateUser,
+	adminUpdateUser,
+	adminDeleteUser,
+} from "../controllers/adminUserController.js";
 
 const adminRoutes = Router();
 
@@ -30,5 +41,21 @@ adminRoutes.put("/courts/:id/status",   ...adminOnly, adminUpdateCourtStatus);
 
 // GET  /api/admin/income  — all "+"-direction revenue (deposits + subscriptions)
 adminRoutes.get("/income", ...adminOnly, adminGetIncome);
+
+// GET  /api/admin/owner-applications         — list all owner registration applications
+// POST /api/admin/owner-applications/:id/approve — approve application → upgrade user to owner
+// POST /api/admin/owner-applications/:id/reject  — reject application with reason
+adminRoutes.get("/owner-applications", ...adminOnly, adminGetAllOwnerApplications);
+adminRoutes.post("/owner-applications/:id/approve", ...adminOnly, adminApproveOwnerApplication);
+adminRoutes.post("/owner-applications/:id/reject",  ...adminOnly, adminRejectOwnerApplication);
+
+// GET  /api/admin/users            — list all users (paginated, searchable, filterable)
+// POST /api/admin/users            — create a new user account
+// PUT  /api/admin/users/:id        — update user (name, role, isBanned, password...)
+// DELETE /api/admin/users/:id      — delete user account
+adminRoutes.get("/users",      ...adminOnly, adminGetAllUsers);
+adminRoutes.post("/users",     ...adminOnly, adminCreateUser);
+adminRoutes.put("/users/:id",  ...adminOnly, adminUpdateUser);
+adminRoutes.delete("/users/:id", ...adminOnly, adminDeleteUser);
 
 export default adminRoutes;

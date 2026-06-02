@@ -264,7 +264,7 @@ const CourtDetailPage: React.FC = () => {
       navigate('/login', { state: { from: location.pathname } });
       return;
     }
-    
+
     try {
       await lockSlots({
         court_id: courtId,
@@ -307,21 +307,21 @@ const CourtDetailPage: React.FC = () => {
 
   // ── Loading / Error ─────────────────────────────────────────────────────────
   if (loading) return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0f1923]">
-      <div className="h-9 w-9 animate-spin rounded-full border-4 border-[#1D9E75]/20 border-t-[#1D9E75]" />
+    <div className="flex min-h-screen items-center justify-center bg-deep">
+      <div className="h-9 w-9 animate-spin rounded-full border-4 border-accent-primary/20 border-t-accent-primary" />
     </div>
   );
 
   if (error || !court) return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#0f1923]">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-deep">
       <p className="text-rose-400 text-sm">{error ?? 'Không tìm thấy sân.'}</p>
-      <button onClick={() => navigate(-1)} className="rounded-xl bg-[#1D9E75] px-5 py-2 text-sm font-semibold text-white">Quay lại</button>
+      <button onClick={() => navigate(-1)} className="rounded-xl bg-accent-primary px-5 py-2 text-sm font-semibold text-white">Quay lại</button>
     </div>
   );
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#0f1923] text-slate-100 pb-20">
+    <div className="min-h-screen bg-deep text-slate-100 pb-20">
 
       {/* Breadcrumb */}
       <div className="mx-auto max-w-[1400px] px-4 pt-5 pb-2 sm:px-6 lg:px-8">
@@ -360,7 +360,7 @@ const CourtDetailPage: React.FC = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate('/tim-san', { state: { targetCourtId: court.id, directionsCourt: court, showMap: true } })}
-              className="flex items-center gap-2 rounded-xl bg-blue-500/10 border border-blue-500/20 px-5 py-2.5 text-sm font-semibold text-blue-400 hover:bg-blue-500/20 transition"
+              className="flex items-center gap-2 rounded-xl bg-accent-primary/10 border border-accent-primary/20 px-5 py-2.5 text-sm font-semibold text-accent-primary hover:bg-accent-primary/20 transition"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
@@ -403,7 +403,7 @@ const CourtDetailPage: React.FC = () => {
 
             {/* Court Info */}
             <div className="bg-[#141e2b] border border-white/8 rounded-2xl p-6 space-y-5 shadow-lg">
-              <h3 className="font-bold text-white border-l-4 border-[#1D9E75] pl-3 text-lg leading-none">Thông tin sân</h3>
+              <h3 className="font-bold text-white border-l-4 border-accent-primary pl-3 text-lg leading-none">Thông tin sân</h3>
               <div className="space-y-4 text-sm">
                 <div className="flex items-center justify-between border-b border-white/5 pb-2">
                   <span className="text-slate-400">Giờ hoạt động:</span>
@@ -422,7 +422,7 @@ const CourtDetailPage: React.FC = () => {
 
             {/* Amenities */}
             <div className="bg-[#141e2b] border border-white/8 rounded-2xl p-6 space-y-5 shadow-lg flex-1">
-              <h3 className="font-bold text-white border-l-4 border-blue-500 pl-3 text-lg leading-none">Dịch vụ tiện ích</h3>
+              <h3 className="font-bold text-white border-l-4 border-accent-primary pl-3 text-lg leading-none">Dịch vụ tiện ích</h3>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 {court.amenities?.map(amenity => (
                   <div key={amenity} className="flex items-center gap-2.5 text-slate-300">
@@ -469,7 +469,7 @@ const CourtDetailPage: React.FC = () => {
               <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm border border-white/20 bg-transparent"></span><span className="text-slate-400">Giờ trống</span></div>
               <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-slate-700"></span><span className="text-slate-400">Đã khóa</span></div>
               <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-rose-500"></span><span className="text-slate-400">Đã đặt</span></div>
-              <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-[#1D9E75]"></span><span className="text-slate-400">Đã chơi</span></div>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-accent-primary"></span><span className="text-slate-400">Đã chơi</span></div>
             </div>
 
             {/* Action chips */}
@@ -479,14 +479,14 @@ const CourtDetailPage: React.FC = () => {
               </button>
               <button
                 onClick={() => setShift('morning')}
-                className={`px-4 py-1.5 rounded-full border text-xs font-semibold flex items-center gap-1.5 transition ${shift === 'morning' ? 'bg-blue-500/20 border-blue-500/30 text-blue-400' : 'border-white/10 text-slate-300 hover:bg-white/5'
+                className={`px-4 py-1.5 rounded-full border text-xs font-semibold flex items-center gap-1.5 transition ${shift === 'morning' ? 'bg-accent-primary/20 border-accent-primary/30 text-accent-primary' : 'border-white/10 text-slate-300 hover:bg-white/5'
                   }`}
               >
                 Ca sáng
               </button>
               <button
                 onClick={() => setShift('afternoon')}
-                className={`px-4 py-1.5 rounded-full border text-xs font-semibold flex items-center gap-1.5 transition ${shift === 'afternoon' ? 'bg-blue-500/20 border-blue-500/30 text-blue-400' : 'border-white/10 text-slate-300 hover:bg-white/5'
+                className={`px-4 py-1.5 rounded-full border text-xs font-semibold flex items-center gap-1.5 transition ${shift === 'afternoon' ? 'bg-accent-primary/20 border-accent-primary/30 text-accent-primary' : 'border-white/10 text-slate-300 hover:bg-white/5'
                   }`}
               >
                 Ca chiều
@@ -506,7 +506,7 @@ const CourtDetailPage: React.FC = () => {
                   className={`px-6 py-3 text-sm font-semibold transition border-b-2 ${isPastDay
                     ? 'text-slate-700 border-transparent cursor-not-allowed'
                     : idx === selectedDayIdx
-                      ? 'text-blue-400 border-blue-500'
+                      ? 'text-accent-primary border-accent-primary'
                       : 'text-slate-400 border-transparent hover:text-slate-200'
                     }`}
                 >
@@ -517,7 +517,7 @@ const CourtDetailPage: React.FC = () => {
           </div>
 
           {/* Schedule Grid */}
-          <div className="min-w-[800px] border border-white/5 rounded-xl overflow-hidden bg-[#0f1923]/50">
+          <div className="min-w-[800px] border border-white/5 rounded-xl overflow-hidden bg-deep/50">
             {/* Header Row (Hours) */}
             <div className="flex border-b border-white/5">
               <div className="w-16 flex-shrink-0"></div> {/* Empty corner */}
@@ -559,13 +559,13 @@ const CourtDetailPage: React.FC = () => {
                       if (slotStart) {
                         const slotDate = new Date(`${selectedDateStr}T${slotStart}:00`);
                         if (slotDate < new Date()) {
-                          if (status === 'booked') return 'bg-[#1D9E75] border-[#1D9E75]/80 cursor-not-allowed'; // Đã chơi
+                          if (status === 'booked') return 'bg-accent-primary border-accent-primary/80 cursor-not-allowed'; // Đã chơi
                           return 'bg-white/[0.02] border-white/5 cursor-not-allowed'; // Quá giờ (trống)
                         }
                       }
 
-                      if (slotStart && isSlotSelected(slotStart)) return 'bg-cyan-500/30 border-cyan-400 ring-1 ring-cyan-400/50 shadow-[0_0_10px_rgba(34,211,238,0.15)]';
-                      if (!status || status === 'available') return 'bg-transparent border border-white/10 hover:border-cyan-500/50 hover:bg-cyan-500/5';
+                      if (slotStart && isSlotSelected(slotStart)) return 'bg-accent-primary/30 border-accent-primary ring-1 ring-accent-primary/50 shadow-[0_0_10px_rgba(var(--accent-primary-rgb),0.15)]';
+                      if (!status || status === 'available') return 'bg-transparent border border-white/10 hover:border-accent-primary/50 hover:bg-accent-primary/5';
                       if (status === 'locked') return 'bg-slate-700 border-slate-600 hover:border-slate-500';
                       if (status === 'booked') return 'bg-rose-500 border-rose-400 hover:border-rose-300';
 
@@ -646,7 +646,7 @@ const CourtDetailPage: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => { setEditingMyReview(true); setShowReviewModal(true); setReviewRating(myReview.rating); setReviewComment(myReview.comment || ''); }}
-                    className="px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/25 text-blue-300 text-xs font-bold hover:bg-blue-500/20 transition"
+                    className="px-3 py-1.5 rounded-xl bg-accent-primary/10 border border-accent-primary/25 text-accent-primary text-xs font-bold hover:bg-accent-primary/20 transition"
                   > Sửa</button>
                   <button
                     onClick={() => setShowDeleteReviewModal(true)}
@@ -686,7 +686,7 @@ const CourtDetailPage: React.FC = () => {
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {reviews.map(r => (
-                  <div key={r._id} className="rounded-xl border border-white/5 bg-[#0f1923] p-5 space-y-3">
+                  <div key={r._id} className="rounded-xl border border-white/5 bg-deep p-5 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 border border-slate-700 text-sm font-bold text-white overflow-hidden shrink-0">
@@ -818,13 +818,13 @@ const CourtDetailPage: React.FC = () => {
 
       {/* Floating Booking Bar */}
       {selectedSlot && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#0c1220]/95 backdrop-blur-xl shadow-2xl shadow-black/50">
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-deep/95 backdrop-blur-xl shadow-2xl shadow-black/50">
           <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-4">
 
               <div>
                 <p className="text-sm font-semibold text-white">
-                  {selectedSlot.subCourtName} • <span className="text-cyan-400">{selectedSlot.startTime} - {selectedSlot.endTime}</span>
+                  {selectedSlot.subCourtName} • <span className="text-accent-primary">{selectedSlot.startTime} - {selectedSlot.endTime}</span>
                 </p>
                 <p className="text-xs text-slate-500">{formatShortDate(weekDays[selectedDayIdx])} • Nhấn để đặt sân</p>
               </div>
@@ -838,7 +838,7 @@ const CourtDetailPage: React.FC = () => {
               </button>
               <button
                 onClick={handleOpenBookingModal}
-                className="rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-300"
+                className="rounded-xl bg-gradient-to-r from-accent-primary to-accent-secondary px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-accent-primary/25 hover:shadow-accent-primary/40 transition-all duration-300"
               >
                 Đặt sân ngay
               </button>
