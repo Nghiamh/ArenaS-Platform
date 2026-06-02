@@ -19,5 +19,17 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     open: true
+  },
+  build: {
+    chunkSizeWarningLimit: 1600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'mapbox': ['mapbox-gl', 'react-map-gl'],
+          'framer-motion': ['framer-motion']
+        }
+      }
+    }
   }
 });

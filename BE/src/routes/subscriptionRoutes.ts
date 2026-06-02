@@ -9,7 +9,7 @@ import {
 	getAllPlans,
 	getCheckoutStatus,
 } from "../controllers/subscriptionController.js";
-import { handleSepayWebhook, fakeSubscriptionPayment } from "../controllers/webhookController.js";
+import { handleSepayWebhook } from "../controllers/webhookController.js";
 import { getCurrentSubscriptionStatus, validateSubscriptionAction } from "../controllers/subscriptionManagementController.js";
 
 const router = Router();
@@ -25,8 +25,6 @@ router.get("/checkout-status/:paymentCode", getCheckoutStatus);
 /** POST /api/subscriptions/sepay-webhook — webhook receiver for SePay transaction sync */
 router.post("/sepay-webhook", handleSepayWebhook);
 
-/** POST /api/subscriptions/fake-payment — simulate successful bank transfer for development */
-router.post("/fake-payment", fakeSubscriptionPayment);
 
 // ─── Owner-only ───────────────────────────────────────────────────────────────
 

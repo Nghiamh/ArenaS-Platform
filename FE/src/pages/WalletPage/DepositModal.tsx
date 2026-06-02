@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { createDeposit, sendFakeWebhook } from '../../Axios/walletApi';
+import { createDeposit } from '../../Axios/walletApi';
 import { useDepositPolling } from '../../hooks/useDepositPolling';
 
 type DepositModalProps = {
@@ -146,17 +146,7 @@ export function DepositModal({ isOpen, onClose, onSuccess, initialAmount, autoCr
 		}
 	}, [isOpen, autoCreate, amount, step]);
 
-	const handleFakePayment = async () => {
-		if (!transferCode) return;
-		try {
-			setLoading(true);
-			await sendFakeWebhook(transferCode);
-		} catch (err: unknown) {
-			setError(err instanceof Error ? err.message : 'Fake webhook thất bại');
-		} finally {
-			setLoading(false);
-		}
-	};
+
 
 	if (!isOpen) return null;
 
@@ -328,15 +318,7 @@ export function DepositModal({ isOpen, onClose, onSuccess, initialAmount, autoCr
 								</div>
 							)}
 
-							{/* Dev: Fake payment button */}
-							<button
-								id="fake-payment-btn"
-								onClick={handleFakePayment}
-								disabled={loading || isCompleted || isExpired}
-								className="w-full py-2.5 rounded-xl text-sm font-medium text-amber-300 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-							>
-								{loading ? '⏳ Đang xử lý...' : '🧪 Giả lập thanh toán (Dev)'}
-							</button>
+
 						</div>
 					)}
 

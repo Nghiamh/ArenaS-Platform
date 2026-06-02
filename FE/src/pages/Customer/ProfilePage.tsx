@@ -1179,7 +1179,7 @@ export const ProfilePage: React.FC = () => {
                       </svg>
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold text-rose-400 tracking-wider uppercase mb-0.5">Bị Tố Cáo</p>
+                      <p className="text-[10px] font-bold text-rose-400 tracking-wider uppercase mb-0.5"> Tố Cáo</p>
                       <p className="text-sm font-semibold text-white">Bạn có <span className="text-rose-400 font-bold">{reports.length}</span> đơn</p>
                     </div>
                   </div>
@@ -1199,7 +1199,7 @@ export const ProfilePage: React.FC = () => {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-emerald-400 tracking-wider uppercase mb-0.5">Hồ sơ sạch sẽ</p>
+                    <p className="text-[10px] font-bold text-emerald-400 tracking-wider uppercase mb-0.5">Uy tín cao</p>
                     <p className="text-sm font-semibold text-slate-300">Không có tố cáo</p>
                   </div>
                 </div>
@@ -2028,7 +2028,7 @@ export const ProfilePage: React.FC = () => {
                     <div className="text-center py-8 text-sm text-slate-400 animate-pulse">Đang tải...</div>
                   ) : reports.length === 0 ? (
                     <div className="text-center py-10 rounded-2xl bg-slate-950/20 border border-dashed border-white/10">
-                      <p className="text-xs font-bold uppercase tracking-[0.25em] text-slate-500">Hồ sơ sạch sẽ</p>
+                      <p className="text-xs font-bold uppercase tracking-[0.25em] text-slate-500">Uy tín cao</p>
                     </div>
                   ) : (
                     <div className="divide-y divide-white/[0.04]">

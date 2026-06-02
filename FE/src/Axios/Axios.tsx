@@ -537,6 +537,122 @@ export async function adminGetIncome(params?: {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// ADMIN — USER MANAGEMENT
+// ---------------------------------------------------------------------------
+
+export type AdminUserRole = 'user' | 'owner' | 'admin';
+
+export type AdminUser = {
+	_id: string;
+	name?: string;
+	userName: string;
+	email: string;
+	phone?: string;
+	address?: string;
+	avatarUrl?: string;
+	role: AdminUserRole;
+	isBanned?: boolean;
+	authProvider: 'local' | 'google';
+	xp?: number;
+	points?: number;
+	reliability_score?: number;
+	completed_matches_count?: number;
+	canceled_matches_count?: number;
+	createdAt: string;
+	updatedAt: string;
+};
+
+type AdminUsersResponse = {
+	message: string;
+	users: AdminUser[];
+	total: number;
+	page: number;
+	limit: number;
+	totalPages: number;
+};
+
+type AdminUserResponse = {
+	message: string;
+	user: AdminUser;
+};
+
+export type AdminGetUsersParams = {
+	keyword?: string;
+	role?: 'all' | AdminUserRole;
+	status?: 'all' | 'active' | 'banned';
+	page?: number;
+	limit?: number;
+};
+
+export type AdminCreateUserPayload = {
+	name: string;
+	email: string;
+	userName: string;
+	password: string;
+	phone?: string;
+	role?: AdminUserRole;
+};
+
+export type AdminUpdateUserPayload = {
+	name?: string;
+	phone?: string;
+	address?: string;
+	role?: AdminUserRole;
+	isBanned?: boolean;
+	password?: string;
+};
+
+export async function adminGetAllUsers(
+	params?: AdminGetUsersParams,
+): Promise<{ users: AdminUser[]; total: number; totalPages: number; page: number }> {
+	try {
+		const { data } = await axiosClient.get<AdminUsersResponse>('/admin/users', {
+			headers: withAuthHeaders(),
+			params,
+		});
+		return { users: data.users, total: data.total, totalPages: data.totalPages, page: data.page };
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function adminCreateUserAccount(payload: AdminCreateUserPayload): Promise<AdminUser> {
+	try {
+		const { data } = await axiosClient.post<AdminUserResponse>('/admin/users', payload, {
+			headers: withAuthHeaders(),
+		});
+		return data.user;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function adminUpdateUserAccount(
+	userId: string,
+	payload: AdminUpdateUserPayload,
+): Promise<AdminUser> {
+	try {
+		const { data } = await axiosClient.put<AdminUserResponse>(`/admin/users/${userId}`, payload, {
+			headers: withAuthHeaders(),
+		});
+		return data.user;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function adminDeleteUserAccount(userId: string): Promise<{ message: string }> {
+	try {
+		const { data } = await axiosClient.delete<{ message: string }>(`/admin/users/${userId}`, {
+			headers: withAuthHeaders(),
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
 export async function getPublicCourts(params?: { sport?: string }): Promise<PublicCourt[]> {
 	try {
 		const { data } = await axiosClient.get<PublicCourtsResponse>('/courts/public', {
@@ -919,19 +1035,7 @@ export async function getSubscriptionCheckoutStatus(
 	}
 }
 
-export async function sendFakeSubscriptionPayment(
-	paymentCode: string,
-): Promise<{ success: boolean; message: string }> {
-	try {
-		const { data } = await axiosClient.post<{ success: boolean; message: string }>(
-			'/subscriptions/fake-payment',
-			{ paymentCode },
-		);
-		return data;
-	} catch (error: unknown) {
-		throw new Error(toErrorMessage(error));
-	}
-}
+
 
 export type MyStatusSubscriptionResponse = {
 	success: boolean;
