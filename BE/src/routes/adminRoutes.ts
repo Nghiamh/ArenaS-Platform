@@ -12,6 +12,12 @@ import {
 	adminApproveOwnerApplication,
 	adminRejectOwnerApplication,
 } from "../controllers/ownerApplicationController.js";
+import {
+	adminGetAllUsers,
+	adminCreateUser,
+	adminUpdateUser,
+	adminDeleteUser,
+} from "../controllers/adminUserController.js";
 
 const adminRoutes = Router();
 
@@ -42,5 +48,14 @@ adminRoutes.get("/income", ...adminOnly, adminGetIncome);
 adminRoutes.get("/owner-applications", ...adminOnly, adminGetAllOwnerApplications);
 adminRoutes.post("/owner-applications/:id/approve", ...adminOnly, adminApproveOwnerApplication);
 adminRoutes.post("/owner-applications/:id/reject",  ...adminOnly, adminRejectOwnerApplication);
+
+// GET  /api/admin/users            — list all users (paginated, searchable, filterable)
+// POST /api/admin/users            — create a new user account
+// PUT  /api/admin/users/:id        — update user (name, role, isBanned, password...)
+// DELETE /api/admin/users/:id      — delete user account
+adminRoutes.get("/users",      ...adminOnly, adminGetAllUsers);
+adminRoutes.post("/users",     ...adminOnly, adminCreateUser);
+adminRoutes.put("/users/:id",  ...adminOnly, adminUpdateUser);
+adminRoutes.delete("/users/:id", ...adminOnly, adminDeleteUser);
 
 export default adminRoutes;

@@ -12,6 +12,7 @@ export interface IUser extends Document {
 	address?: string;
 	userName: string;
 	role: IUserRole;
+	isBanned?: boolean;
 	password?: string;
 	googleId?: string;
 	authProvider: "local" | "google";
@@ -71,6 +72,11 @@ const userSchema = new Schema<IUser, IUserModel>(
 			required: true,
 			default: "user",
 			enum: ["user", "owner", "admin"],
+		},
+		isBanned: {
+			type: Boolean,
+			required: false,
+			default: false,
 		},
 		password: {
 			type: String,
