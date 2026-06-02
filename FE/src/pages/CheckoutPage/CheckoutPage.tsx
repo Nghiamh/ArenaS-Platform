@@ -343,7 +343,7 @@ export const CheckoutPage: React.FC = () => {
               transition={{ type: 'spring', damping: 25, stiffness: 280 }}
               className="relative w-full max-w-lg overflow-hidden rounded-[2.5rem] border border-white/10 bg-[#101011] p-6 shadow-[0_30px_70px_rgba(0,0,0,0.7)] text-white backdrop-blur-2xl"
             >
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-[2px] bg-gradient-to-r from-transparent via-[#00F5FF] to-transparent" />
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-[2px] bg-gradient-to-r from-transparent via-accent-secondary to-transparent" />
 
               <div className="flex items-center justify-between pb-4 border-b border-white/5">
                 <h3 className="text-xl font-extrabold tracking-tight">

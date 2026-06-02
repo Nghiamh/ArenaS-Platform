@@ -76,7 +76,7 @@ const normalizeLocationText = (value: string) =>
   value
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -389,7 +389,7 @@ export const FindFieldPage: React.FC = () => {
 
   // Shared top bar content
   const topBar = (
-    <div className={`${viewMode === 'map' ? 'flex-shrink-0' : 'sticky top-0 z-30'} border-b border-white/8 bg-[#0A0A0B]/95 backdrop-blur font-inter`}>
+    <div className={`${viewMode === 'map' ? 'flex-shrink-0' : 'sticky top-0 z-30'} border-b border-white/8 bg-deep/95 backdrop-blur font-inter`}>
       <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-center gap-x-2 gap-y-2 px-4 py-3">
 
         <div className="flex flex-shrink-0 rounded-xl border border-white/10 bg-white/5 p-0.5">
@@ -397,7 +397,7 @@ export const FindFieldPage: React.FC = () => {
             <button
               key={mode}
               onClick={() => setViewMode(mode)}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-bold transition ${viewMode === mode ? 'bg-[#CCFF00] text-[#0A0A0B] shadow-[0_0_10px_rgba(204,255,0,0.2)]' : 'text-slate-400 hover:text-white'
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-bold transition ${viewMode === mode ? 'bg-accent-primary text-deep shadow-[0_0_10px_rgba(var(--accent-primary-rgb),0.2)]' : 'text-slate-400 hover:text-white'
                 }`}
             >
               {mode === 'list' ? '📋 Danh sách' : '🗺️ Bản đồ'}
@@ -411,9 +411,9 @@ export const FindFieldPage: React.FC = () => {
           placeholder="Nhập tên sân, quận, hoặc từ khóa..."
           value={searchText}
           onChange={e => setSearchText(e.target.value)}
-          className="w-56 min-w-0 rounded-xl border border-white/10 bg-[#1A1A1C] px-4 py-2 text-sm text-white placeholder-slate-500 outline-none focus:border-[#00F5FF]/60 transition"
+          className="w-56 min-w-0 rounded-xl border border-white/10 bg-[#1A1A1C] px-4 py-2 text-sm text-white placeholder-slate-500 outline-none focus:border-accent-secondary/60 transition"
         />
-        <button className="flex-shrink-0 rounded-xl bg-[#2A3317] border border-[#CCFF00]/30 hover:bg-[#CCFF00] text-[#CCFF00] hover:text-[#0A0A0B] px-4 py-2 text-sm font-bold transition shadow-[0_0_15px_rgba(204,255,0,0.15)] uppercase tracking-wider">
+        <button className="flex-shrink-0 rounded-xl bg-accent-primary/15 border border-accent-primary/30 hover:bg-accent-primary text-accent-primary hover:text-deep px-4 py-2 text-sm font-bold transition shadow-[0_0_15px_rgba(var(--accent-primary-rgb),0.15)] uppercase tracking-wider">
           Tìm kiếm
         </button>
 
@@ -428,7 +428,7 @@ export const FindFieldPage: React.FC = () => {
               key={chip.value}
               onClick={() => setActiveSportFilter(chip.value)}
               className={`flex flex-shrink-0 items-center gap-1 rounded-full px-4 py-1.5 text-xs font-bold whitespace-nowrap transition ${active
-                  ? 'bg-[#CCFF00]/10 border border-[#CCFF00]/50 text-[#CCFF00] shadow-[0_0_15px_rgba(204,255,0,0.15)]'
+                  ? 'bg-accent-primary/10 border border-accent-primary/50 text-accent-primary shadow-[0_0_15px_rgba(var(--accent-primary-rgb),0.15)]'
                   : 'border border-white/10 bg-white/5 text-slate-400 hover:text-white hover:border-white/25'
                 }`}
             >
@@ -456,7 +456,7 @@ export const FindFieldPage: React.FC = () => {
       </AnimatePresence>
 
       {/* ── LIST MODE: Always rendered underneath ── */}
-      <div className="min-h-screen bg-[#0A0A0B] text-slate-100 font-inter">
+      <div className="min-h-screen bg-deep text-slate-100 font-inter">
         {topBar}
 
         <div className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6">
@@ -468,7 +468,7 @@ export const FindFieldPage: React.FC = () => {
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value as SortOption)}
-              className="rounded-xl border border-white/10 bg-[#1A1A1C] px-3 py-1.5 text-sm font-bold text-slate-300 outline-none focus:border-[#CCFF00]/50 transition"
+              className="rounded-xl border border-white/10 bg-[#1A1A1C] px-3 py-1.5 text-sm font-bold text-slate-300 outline-none focus:border-accent-primary/50 transition"
             >
               {sortOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
             </select>
@@ -495,14 +495,14 @@ export const FindFieldPage: React.FC = () => {
                         initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                         transition={{ delay: idx * 0.02, duration: 0.22 }}
                         onClick={() => navigate(`/courts/${venue.id}`, { state: { fromMatch } })}
-                        className="group cursor-pointer overflow-hidden rounded-[1.5rem] border border-white/5 bg-[#101011] transition hover:border-[#00F5FF]/40 hover:shadow-[0_0_20px_rgba(0,245,255,0.15)]"
+                        className="group cursor-pointer overflow-hidden rounded-[1.5rem] border border-white/5 bg-[#101011] transition hover:border-accent-secondary/40 hover:shadow-[0_0_20px_rgba(var(--accent-secondary-rgb),0.15)]"
                       >
                         <div className="relative h-44 overflow-hidden">
                           <img src={venue.image} alt={venue.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-                          <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0B]/80 via-transparent to-transparent" />
-                          <span className={`absolute right-2 top-2 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest ${venue.tag === 'Đang mở' ? 'bg-[#CCFF00]/20 border border-[#CCFF00]/40 text-[#CCFF00] backdrop-blur-md' : 'bg-slate-800/80 border border-white/10 text-slate-400 backdrop-blur-md'
+                          <div className="absolute inset-0 bg-gradient-to-t from-deep/80 via-transparent to-transparent" />
+                          <span className={`absolute right-2 top-2 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest ${venue.tag === 'Đang mở' ? 'bg-accent-primary/20 border border-accent-primary/40 text-accent-primary backdrop-blur-md' : 'bg-slate-800/80 border border-white/10 text-slate-400 backdrop-blur-md'
                             }`}>{venue.tag}</span>
-                          <span className="absolute left-2 bottom-2 rounded-md bg-[#0A0A0B]/60 border border-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-[#00F5FF] backdrop-blur">{venue.formatLabel}</span>
+                          <span className="absolute left-2 bottom-2 rounded-md bg-deep/60 border border-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-accent-secondary backdrop-blur">{venue.formatLabel}</span>
                         </div>
                         <div className="p-4 space-y-2">
                           <h3 className="truncate font-black font-montserrat text-white text-base tracking-wide">{venue.name}</h3>
@@ -511,7 +511,7 @@ export const FindFieldPage: React.FC = () => {
                             <span className="text-slate-400">
                               {venue.rating > 0 ? `⭐ ${venue.rating.toFixed(1)}` : <span className="italic opacity-60">Chưa có đánh giá</span>}
                             </span>
-                            <span className="font-black text-[#00F5FF] text-sm">{new Intl.NumberFormat('vi-VN').format(venue.priceK * 1000)}đ/giờ</span>
+                            <span className="font-black text-accent-secondary text-sm">{new Intl.NumberFormat('vi-VN').format(venue.priceK * 1000)}đ/giờ</span>
                           </div>
                           {venue.amenities.length > 0 && (
                             <p className="truncate text-[11px] text-slate-600">{venue.amenities.slice(0, 3).join(' · ')}</p>
@@ -536,7 +536,7 @@ export const FindFieldPage: React.FC = () => {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', bounce: 0, duration: 0.5 }}
-            className="fixed inset-0 z-[60] flex flex-col bg-[#0A0A0B]"
+            className="fixed inset-0 z-[60] flex flex-col bg-deep"
           >
             {topBar}
             <div className="flex-1 overflow-hidden">
@@ -548,4 +548,3 @@ export const FindFieldPage: React.FC = () => {
     </>
   );
 };
-
