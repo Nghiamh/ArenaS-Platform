@@ -30,6 +30,7 @@ import { startMatchBookingTimeoutCron } from "./cron/matchBookingTimeoutCron.js"
 import { startSlotLockTimeoutCron } from "./cron/slotLockTimeoutCron.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -68,6 +69,7 @@ app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/plans", planRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/notifications", notificationRoutes);
 app.get("/api/health", (_req, res) => {
 	res.status(200).json({ status: "ok", service: "arena-backend" });
 });

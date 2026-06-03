@@ -5,6 +5,7 @@ import {
   adminGetOwnerApplications,
   adminApproveOwnerApplication,
   adminRejectOwnerApplication,
+  adminRevokeOwnerApplication,
   type OwnerApplication,
   type OwnerApplicationStatus,
   type OwnerApplicationUser,
@@ -79,6 +80,15 @@ const RefreshIcon = () => (
   </svg>
 );
 
+const DowngradeIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.2">
+    <path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z" />
+    <path d="M16 3v5h5" />
+    <path d="M12 11v6" />
+    <path d="m9 14 3 3 3-3" />
+  </svg>
+);
+
 // ─── Detail Modal ──────────────────────────────────────────────────────────────
 
 type DetailModalProps = {
@@ -86,12 +96,14 @@ type DetailModalProps = {
   onClose: () => void;
   onApprove: (id: string) => void;
   onReject: (id: string, reason: string) => void;
+  onRevoke: (id: string) => void;
   loading: boolean;
 };
 
-const DetailModal: React.FC<DetailModalProps> = ({ app, onClose, onApprove, onReject, loading }) => {
+const DetailModal: React.FC<DetailModalProps> = ({ app, onClose, onApprove, onReject, onRevoke, loading }) => {
   const [rejectMode, setRejectMode] = useState(false);
   const [reason, setReason] = useState('');
+  const [revokeConfirm, setRevokeConfirm] = useState(false);
   const user = resolveUser(app);
 
   const handleReject = () => {
@@ -231,7 +243,50 @@ const DetailModal: React.FC<DetailModalProps> = ({ app, onClose, onApprove, onRe
             )}
           </div>
         )}
-        {app.status !== 'pending' && (
+        {app.status === 'approved' && (
+          <div className="flex items-center justify-between border-t border-white/10 px-6 py-4 shrink-0">
+            {!revokeConfirm ? (
+              <>
+                <button
+                  onClick={() => setRevokeConfirm(true)}
+                  disabled={loading}
+                  className="inline-flex items-center gap-2 rounded-xl bg-amber-500/15 px-4 py-2 text-sm font-semibold text-amber-200 transition hover:bg-amber-500/30 disabled:opacity-50"
+                >
+                  <DowngradeIcon /> Hạ cấp về User
+                </button>
+                <button onClick={onClose} className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/10">
+                  Đóng
+                </button>
+              </>
+            ) : (
+              <div className="flex w-full flex-col gap-3">
+                <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+                  <p className="font-semibold">Xác nhận hạ cấp tài khoản?</p>
+                  <p className="mt-1 text-xs text-amber-200/70">
+                    Hành động này sẽ đổi role của <span className="font-bold text-amber-200">{resolveUser(app)?.name || resolveUser(app)?.userName}</span> về <span className="font-bold">Người dùng</span> và xóa trạng thái "Chủ sân đã được duyệt" khỏi hồ sơ của họ. Người dùng có thể đăng ký lại sau.
+                  </p>
+                </div>
+                <div className="flex items-center justify-end gap-3">
+                  <button
+                    onClick={() => setRevokeConfirm(false)}
+                    disabled={loading}
+                    className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/10"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    onClick={() => onRevoke(app._id)}
+                    disabled={loading}
+                    className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
+                  >
+                    <DowngradeIcon /> Xác nhận hạ cấp
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        {app.status === 'rejected' && (
           <div className="flex items-center justify-end border-t border-white/10 px-6 py-4 shrink-0">
             <button onClick={onClose} className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/10">
               Đóng
@@ -308,6 +363,20 @@ export const AdminManageOwnerApplicationPage: React.FC = () => {
       fetchData(page, statusFilter);
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : 'Không thể từ chối hồ sơ.', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRevoke = async (id: string) => {
+    setActionLoading(true);
+    try {
+      await adminRevokeOwnerApplication(id);
+      showToast('Đã hạ cấp về User. Trạng thái chủ sân đã bị xóa khỏi hồ sơ người dùng.');
+      setSelectedApp(null);
+      fetchData(page, statusFilter);
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : 'Không thể hạ cấp tài khoản.', 'error');
     } finally {
       setActionLoading(false);
     }
@@ -539,6 +608,7 @@ export const AdminManageOwnerApplicationPage: React.FC = () => {
           onClose={() => setSelectedApp(null)}
           onApprove={handleApprove}
           onReject={handleReject}
+          onRevoke={handleRevoke}
           loading={actionLoading}
         />
       )}
