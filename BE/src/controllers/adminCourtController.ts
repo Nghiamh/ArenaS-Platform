@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import Court, { CourtStatus, ICourtCoordinates, ISubCourt } from "../models/courtModel.js";
+import { createNotification } from "./notificationController.js";
 
 // ─── Helpers (mirrored from courtController, kept local to avoid coupling) ────
 
@@ -134,6 +135,16 @@ export async function adminApproveCourt(req: Request, res: Response): Promise<vo
 		court.status = "available";
 		await court.save();
 
+		// Notify owner
+		void createNotification({
+			recipientId: court.owner_id as mongoose.Types.ObjectId,
+			type: "court_approved",
+			title: "Sân được duyệt ✓",
+			message: `Sân "${court.name}" của bạn đã được Admin duyệt và hiện trên nền tảng.`,
+			link: "/owner/manage-courts",
+			metadata: { courtId: String(court._id) },
+		});
+
 		res.status(200).json({
 			message: "Court approved successfully.",
 			court: buildAdminCourtResponse(court),
@@ -169,6 +180,16 @@ export async function adminRejectCourt(req: Request, res: Response): Promise<voi
 
 		court.status = "closed";
 		await court.save();
+
+		// Notify owner
+		void createNotification({
+			recipientId: court.owner_id as mongoose.Types.ObjectId,
+			type: "court_rejected",
+			title: "Sân bị từ chối",
+			message: `Sân "${court.name}" của bạn chưa được duyệt. Vui lòng kiểm tra lại thông tin và gửi lại.`,
+			link: "/owner/manage-courts",
+			metadata: { courtId: String(court._id) },
+		});
 
 		res.status(200).json({
 			message: "Court rejected successfully.",

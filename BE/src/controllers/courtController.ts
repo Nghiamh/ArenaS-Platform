@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import Court, { CourtStatus, ICourtCoordinates, ISubCourt, SubCourtType, SubCourtStatus } from "../models/courtModel.js";
+import Subscription from "../models/subscriptionModel.js";
+import { createNotification } from "./notificationController.js";
 
 
 function normalizeOptionalText(value: unknown): string | undefined {
@@ -522,6 +524,17 @@ export async function createOwnerCourt(req: Request, res: Response): Promise<voi
 		const normalizedCloseTime = close_time ? close_time.trim() : "22:00";
 		const parsedSubCourts = parseSubCourts(sub_courts);
 
+		// Check active subscription — owner must have a paid plan to submit courts
+		const activeSub = await Subscription.findOne({
+			ownerId: user._id,
+			status: "active",
+			endDate: { $gt: new Date() },
+		});
+
+		if (!activeSub) {
+			throw new Error("subscription_required");
+		}
+
 		// New courts always start as "pending" — admin must approve before going public
 		const createdCourt = await Court.create({
 			owner_id: user._id,
@@ -540,6 +553,16 @@ export async function createOwnerCourt(req: Request, res: Response): Promise<voi
 			sub_courts: parsedSubCourts,
 		});
 
+		// Notify admin: new court pending review
+		void createNotification({
+			recipientRole: "admin",
+			type: "court_submitted",
+			title: "Sân mới chờ duyệt",
+			message: `Chủ sân đã gửi sân "${createdCourt.name}" để xét duyệt.`,
+			link: "/admin/manage-stadiums",
+			metadata: { courtId: String(createdCourt._id) },
+		});
+
 		res.status(201).json({
 			message: "court created successfully",
 			court: buildCourtResponse(createdCourt),
@@ -553,7 +576,7 @@ export async function createOwnerCourt(req: Request, res: Response): Promise<voi
 			errorMessage === "invalid_token" ||
 			errorMessage === "user_not_found"
 				? 401
-				: errorMessage === "courts_disabled_for_role"
+				: errorMessage === "courts_disabled_for_role" || errorMessage === "subscription_required"
 					? 403
 					: errorMessage.startsWith("invalid_")
 						? 400
@@ -565,13 +588,15 @@ export async function createOwnerCourt(req: Request, res: Response): Promise<voi
 			message:
 				statusCode === 401
 					? "unauthorized"
-					: statusCode === 403
-						? "courts are only available for owner accounts"
-						: statusCode === 400
-							? "invalid court data"
-							: statusCode === 409
-								? "court name already exists for this owner"
-								: "failed to create court",
+					: statusCode === 403 && errorMessage === "subscription_required"
+						? "Bạn cần mua gói dịch vụ để đăng ký sân. Vui lòng mua gói trước."
+						: statusCode === 403
+							? "courts are only available for owner accounts"
+							: statusCode === 400
+								? "invalid court data"
+								: statusCode === 409
+									? "court name already exists for this owner"
+									: "failed to create court",
 			error: errorMessage,
 		});
 	}

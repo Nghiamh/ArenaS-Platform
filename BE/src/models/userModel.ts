@@ -18,6 +18,9 @@ export interface IUser extends Document {
 	authProvider: "local" | "google";
 	resetPasswordTokenHash?: string;
 	resetPasswordExpiresAt?: Date;
+	isEmailVerified?: boolean;
+	emailVerificationTokenHash?: string;
+	emailVerificationExpiresAt?: Date;
 	xp?: number;
 	points?: number;
 	reliability_score?: number;
@@ -100,6 +103,19 @@ const userSchema = new Schema<IUser, IUserModel>(
 			required: false,
 		},
 		resetPasswordExpiresAt: {
+			type: Date,
+			required: false,
+		},
+		isEmailVerified: {
+			type: Boolean,
+			required: false,
+			default: false,
+		},
+		emailVerificationTokenHash: {
+			type: String,
+			required: false,
+		},
+		emailVerificationExpiresAt: {
 			type: Date,
 			required: false,
 		},

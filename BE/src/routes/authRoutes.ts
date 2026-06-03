@@ -6,6 +6,7 @@ import {
 	register,
 	resetPassword,
 	createAdmin,
+	verifyEmail,
 } from "../controllers/authController.js";
 import {
 	forgotPasswordRateLimiter,
@@ -19,6 +20,7 @@ authRoutes.post("/login", login);
 authRoutes.post("/google", loginWithGoogle);
 authRoutes.post("/forgot-password", forgotPasswordRateLimiter, forgotPassword);
 authRoutes.post("/reset-password", resetPasswordRateLimiter, resetPassword);
+authRoutes.post("/verify-email", verifyEmail);
 authRoutes.post("/create-admin", createAdmin);
 
 export default authRoutes;

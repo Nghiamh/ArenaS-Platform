@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ThemeSwitcher } from './ThemeSwitcher';
+import { NotificationBell } from './NotificationBell';
 type StoredUser = {
   name?: string;
   userName?: string;
@@ -115,6 +116,7 @@ export const Header: React.FC = () => {
           {/* Right Side */}
           <div className="flex items-center gap-3">
             <ThemeSwitcher />
+            <NotificationBell isLoggedIn={isLoggedIn} />
 
             {isLoggedIn ? (
               <div className="relative" ref={profileMenuRef}>
