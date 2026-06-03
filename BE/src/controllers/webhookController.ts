@@ -4,6 +4,7 @@ import SubscriptionCheckout from "../models/subscriptionCheckoutModel.js";
 import Subscription from "../models/subscriptionModel.js";
 import Plan from "../models/planModel.js";
 import PaymentWebhookLog from "../models/paymentWebhookLogModel.js";
+import { createNotification } from "./notificationController.js";
 
 // ─── Reusable Subscription Checkout Processor ─────────────────────────────────
 
@@ -120,6 +121,17 @@ export async function processSubscriptionCheckout(
 				success: true,
 				message: "Subscription successfully created and activated.",
 			};
+
+			// Notify owner: subscription activated
+			const cycleLabel = checkout.billingCycle === "monthly" ? "tháng" : "năm";
+			void createNotification({
+				recipientId: checkout.ownerId as mongoose.Types.ObjectId,
+				type: "subscription_activated",
+				title: "Gói dịch vụ đã kích hoạt ✓",
+				message: `Gói "${plan.displayName}" (${cycleLabel}) đã được kích hoạt thành công. Bạn có thể bắt đầu đăng ký sân ngay.`,
+				link: "/owner/dashboard",
+				metadata: { planName: plan.displayName, amount: String(finalAmount) },
+			});
 
 			console.log(
 				`[Subscription Checkout] Activated subscription ${newSubscription._id} for owner ${checkout.ownerId}, plan ${plan.name}, amount ${finalAmount} VND`

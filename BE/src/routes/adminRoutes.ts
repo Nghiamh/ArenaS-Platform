@@ -11,6 +11,7 @@ import {
 	adminGetAllOwnerApplications,
 	adminApproveOwnerApplication,
 	adminRejectOwnerApplication,
+	adminRevokeOwnerApplication,
 } from "../controllers/ownerApplicationController.js";
 import {
 	adminGetAllUsers,
@@ -48,6 +49,7 @@ adminRoutes.get("/income", ...adminOnly, adminGetIncome);
 adminRoutes.get("/owner-applications", ...adminOnly, adminGetAllOwnerApplications);
 adminRoutes.post("/owner-applications/:id/approve", ...adminOnly, adminApproveOwnerApplication);
 adminRoutes.post("/owner-applications/:id/reject",  ...adminOnly, adminRejectOwnerApplication);
+adminRoutes.post("/owner-applications/:id/revoke",  ...adminOnly, adminRevokeOwnerApplication);
 
 // GET  /api/admin/users            — list all users (paginated, searchable, filterable)
 // POST /api/admin/users            — create a new user account
