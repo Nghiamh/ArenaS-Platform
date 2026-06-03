@@ -400,7 +400,7 @@ export const FindFieldPage: React.FC = () => {
               className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-bold transition ${viewMode === mode ? 'bg-accent-primary text-deep shadow-[0_0_10px_rgba(var(--accent-primary-rgb),0.2)]' : 'text-slate-400 hover:text-white'
                 }`}
             >
-              {mode === 'list' ? '📋 Danh sách' : '🗺️ Bản đồ'}
+              {mode === 'list' ? ' Danh sách' : ' Bản đồ'}
             </button>
           ))}
         </div>
