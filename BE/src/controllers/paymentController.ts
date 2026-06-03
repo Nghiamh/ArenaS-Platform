@@ -5,6 +5,7 @@ import WalletTransaction from "../models/walletTransactionModel.js";
 import PaymentWebhookLog from "../models/paymentWebhookLogModel.js";
 import { generateTransferCode, buildVietQRUrl } from "../utils/vietqr.js";
 import { processSubscriptionCheckout } from "./webhookController.js";
+import { createNotification } from "./notificationController.js";
 
 const DEPOSIT_EXPIRY_MINUTES = 5;
 const MIN_DEPOSIT_AMOUNT = 2_000;
@@ -219,6 +220,16 @@ async function processWebhookTransfer(transferCode: string): Promise<{
 
 				wallet.balance += transaction.amount;
 				await wallet.save({ session });
+
+				// Notify user: deposit confirmed
+				void createNotification({
+					recipientId: wallet.userId as mongoose.Types.ObjectId,
+					type: "deposit_received",
+					title: "Nạp tiền thành công ✓",
+					message: `Ví của bạn đã được cộng ${transaction.amount.toLocaleString("vi-VN")}đ. Số dư mới: ${wallet.balance.toLocaleString("vi-VN")}đ.`,
+					link: "/wallet",
+					metadata: { amount: String(transaction.amount), txId: String(transaction._id) },
+				});
 			}
 
 			result = { success: true, message: transaction.type === "deposit" ? "deposit_confirmed" : "payment_confirmed" };

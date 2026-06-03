@@ -1,4 +1,5 @@
 export { Header } from './Header';
+export { NotificationBell } from './NotificationBell';
 export { Footer } from './Footer';
 export { Layout } from './Layout';
 export { AdminLayout } from './AdminLayout';

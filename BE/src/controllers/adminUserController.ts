@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import User from "../models/userModel.js";
+import OwnerApplication from "../models/ownerApplicationModel.js";
 
 // Safe projection — never expose sensitive fields
 const SAFE_SELECT = "-password -resetPasswordTokenHash -resetPasswordExpiresAt -googleId";
@@ -182,6 +183,13 @@ export async function adminUpdateUser(req: Request, res: Response): Promise<void
 				res.status(400).json({ message: "Role không hợp lệ." });
 				return;
 			}
+
+			// When demoting owner → user, clean up the approved OwnerApplication
+			// so the "Hồ sơ đã được duyệt" widget disappears from their ProfilePage
+			if (user.role === "owner" && role === "user") {
+				await OwnerApplication.deleteMany({ userId: user._id });
+			}
+
 			user.role = role as "user" | "owner" | "admin";
 		}
 

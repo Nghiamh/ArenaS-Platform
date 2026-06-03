@@ -1601,3 +1601,89 @@ export async function adminRejectOwnerApplication(
 	}
 }
 
+export async function adminRevokeOwnerApplication(
+	applicationId: string,
+): Promise<{ message: string }> {
+	try {
+		const { data } = await axiosClient.post<{ message: string }>(
+			`/admin/owner-applications/${applicationId}/revoke`,
+			{},
+		);
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+// ---------------------------------------------------------------------------
+// NOTIFICATIONS
+// ---------------------------------------------------------------------------
+
+export type NotificationType =
+	| 'owner_application_submitted'
+	| 'owner_application_approved'
+	| 'owner_application_rejected'
+	| 'court_submitted'
+	| 'court_approved'
+	| 'court_rejected'
+	| 'deposit_received'
+	| 'subscription_activated';
+
+export type FENotification = {
+	_id: string;
+	recipientId?: string;
+	recipientRole?: 'admin' | 'owner' | 'user';
+	type: NotificationType;
+	title: string;
+	message: string;
+	read: boolean;
+	link?: string;
+	metadata?: Record<string, string>;
+	createdAt: string;
+};
+
+export type NotificationsResponse = {
+	message: string;
+	notifications: FENotification[];
+	unreadCount: number;
+};
+
+export async function getMyNotifications(params?: {
+	limit?: number;
+	unread?: boolean;
+}): Promise<NotificationsResponse> {
+	try {
+		const { data } = await axiosClient.get<NotificationsResponse>('/notifications', {
+			params: { limit: params?.limit, unread: params?.unread },
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
+export async function getUnreadNotificationCount(): Promise<number> {
+	try {
+		const { data } = await axiosClient.get<{ count: number }>('/notifications/unread-count');
+		return data.count;
+	} catch {
+		return 0;
+	}
+}
+
+export async function markNotificationRead(notificationId: string): Promise<void> {
+	try {
+		await axiosClient.put(`/notifications/${notificationId}/read`);
+	} catch {
+		// ignore
+	}
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+	try {
+		await axiosClient.put('/notifications/read-all');
+	} catch {
+		// ignore
+	}
+}
+

@@ -1211,17 +1211,6 @@ export const ProfilePage: React.FC = () => {
                   <div className="bg-[#10111a] border border-white/[0.05] rounded-3xl p-4 flex items-center justify-center min-h-[74px]">
                     <div className="w-4 h-4 rounded-full border-2 border-slate-500 border-t-transparent animate-spin" />
                   </div>
-                ) : ownerApplication?.status === 'approved' ? (
-                  <div className="bg-[#10111a] border border-emerald-500/30 rounded-3xl p-4 flex items-center gap-3 relative overflow-hidden">
-                    <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent" />
-                    <div className="h-10 w-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
-                      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2"><path d="m5 12 5 5L20 7" /></svg>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-emerald-400 tracking-wider uppercase mb-0.5">Chủ sân</p>
-                      <p className="text-sm font-semibold text-slate-300">Hồ sơ đã được duyệt</p>
-                    </div>
-                  </div>
                 ) : ownerApplication?.status === 'pending' ? (
                   <div className="bg-[#10111a] border border-amber-500/30 rounded-3xl p-4 flex items-center gap-3 relative overflow-hidden">
                     <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-amber-500/40 to-transparent" />
@@ -1236,7 +1225,7 @@ export const ProfilePage: React.FC = () => {
                 ) : ownerApplication?.status === 'rejected' ? (
                   <button
                     type="button"
-                    onClick={() => setShowOwnerAppForm(true)}
+                    onClick={() => navigate('/cho-chu-san')}
                     className="w-full bg-[#10111a] border border-rose-500/30 rounded-3xl p-4 flex items-center gap-3 relative overflow-hidden hover:border-rose-500/55 transition text-left"
                   >
                     <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-rose-500/40 to-transparent" />
@@ -1251,7 +1240,7 @@ export const ProfilePage: React.FC = () => {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setShowOwnerAppForm(true)}
+                    onClick={() => navigate('/cho-chu-san')}
                     className="w-full bg-gradient-to-br from-[#10111a] to-[#111824] border border-violet-500/25 rounded-3xl p-4 flex items-center justify-between cursor-pointer hover:border-violet-500/50 transition-all group relative overflow-hidden text-left"
                   >
                     <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-violet-500/35 to-transparent" />
