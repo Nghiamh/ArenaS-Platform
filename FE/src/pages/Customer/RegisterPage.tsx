@@ -59,6 +59,7 @@ const EyeIcon = ({ hidden }: { hidden: boolean }) => (
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [fullName, setFullName] = useState('');
@@ -95,17 +96,13 @@ export const RegisterPage: React.FC = () => {
 
     try {
       setIsSubmitting(true);
-      const response = await registerApi({
+      await registerApi({
         name: fullName.trim(),
         userName: userName.trim(),
         email: email.trim(),
         password,
       });
-      localStorage.setItem('accessToken', response.token);
-      localStorage.setItem('currentUser', JSON.stringify(response.user));
-      navigate('/home', {
-        state: { toastMessage: `Đăng ký thành công. Chào mừng ${response.user.userName}!` },
-      });
+      setShowSuccessModal(true);
     } catch (error: unknown) {
       setErrorMessage(error instanceof Error ? error.message : 'Đăng ký thất bại.');
     } finally {
@@ -339,6 +336,35 @@ export const RegisterPage: React.FC = () => {
           </span>
         </div>
       </section>
+
+      {/* SUCCESS MODAL */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-deep border border-white/10 rounded-2xl max-w-md w-full p-8 shadow-2xl relative overflow-hidden text-center">
+            {/* Background Glow */}
+            <div className="absolute -top-24 -left-24 w-48 h-48 bg-accent-primary/20 blur-[60px] rounded-full z-0" />
+
+            <div className="relative z-10">
+              <div className="mx-auto w-16 h-16 bg-accent-primary/20 text-accent-primary rounded-full flex items-center justify-center mb-6">
+                <EnvelopeIcon />
+              </div>
+
+              <h3 className="text-2xl font-black text-white mb-2 font-montserrat">Kiểm tra Email</h3>
+              <p className="text-slate-400 text-sm mb-8 leading-relaxed">
+                Đăng ký thành công! Chúng tôi đã gửi một liên kết xác nhận đến địa chỉ email <span className="text-white font-bold">{email}</span>. Vui lòng kiểm tra hộp thư (hoặc mục Spam) để kích hoạt tài khoản.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => navigate('/login')}
+                className="w-full h-11 bg-accent-primary text-deep font-bold rounded-lg transition hover:bg-accent-primary/90 uppercase tracking-wider text-sm"
+              >
+                Đến trang Đăng Nhập
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

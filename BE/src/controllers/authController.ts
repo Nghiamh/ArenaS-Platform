@@ -2,9 +2,17 @@ import { Request, Response } from "express";
 import crypto from "crypto";
 import User, { IUserRole } from "../models/userModel.js";
 import { generateAccessToken } from "../utils/token.js";
-import { sendResetPasswordEmail } from "../utils/gmail.js";
+import { sendResetPasswordEmail, sendVerificationEmail } from "../utils/gmail.js";
 
 const RESET_PASSWORD_TOKEN_EXPIRES_IN_MS = 15 * 60 * 1000;
+const EMAIL_VERIFICATION_TOKEN_EXPIRES_IN_MS = 24 * 60 * 60 * 1000;
+
+function isValidPassword(password: string): boolean {
+	const minLength = 8;
+	const hasUppercase = /[A-Z]/.test(password);
+	const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+	return password.length >= minLength && hasUppercase && hasSpecialChar;
+}
 
 type GoogleTokenInfo = {
 	aud?: string;
@@ -226,9 +234,9 @@ export async function register(req: Request, res: Response): Promise<void> {
 			return;
 		}
 
-		if (password.length < 6) {
+		if (!isValidPassword(password)) {
 			res.status(400).json({
-				message: "password must be at least 6 characters",
+				message: "Mật khẩu phải có ít nhất 8 ký tự, bao gồm ít nhất 1 chữ in hoa và 1 ký tự đặc biệt",
 			});
 			return;
 		}
@@ -247,33 +255,72 @@ export async function register(req: Request, res: Response): Promise<void> {
 		});
 
 		if (existedUser) {
-			const conflictField =
-				existedUser.email === normalizedEmail ? "email" : "userName";
-			res.status(409).json({
-				message: `${conflictField} already exists`,
-			});
-			return;
+			if (existedUser.authProvider === "local" && existedUser.isEmailVerified === false) {
+				// Nếu tồn tại user nhưng chưa xác nhận email -> Xóa user cũ để đăng ký lại
+				await User.deleteOne({ _id: existedUser._id });
+			} else {
+				const conflictField =
+					existedUser.email === normalizedEmail ? "email" : "userName";
+				res.status(409).json({
+					message: `${conflictField} already exists`,
+				});
+				return;
+			}
 		}
 
-		const createdUser = await User.create({
-			name: normalizedName,
-			email: normalizedEmail,
-			phone: normalizedPhone || undefined,
-			userName: normalizedUserName,
-			password,
-			authProvider: "local",
-		});
+		const rawToken = crypto.randomBytes(32).toString("hex");
+		const tokenHash = hashResetToken(rawToken);
+		const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_TOKEN_EXPIRES_IN_MS);
 
-		const authResponse = buildAuthResponse(createdUser);
+		let createdUser;
+		try {
+			createdUser = await User.create({
+				name: normalizedName,
+				email: normalizedEmail,
+				phone: normalizedPhone || undefined,
+				userName: normalizedUserName,
+				password,
+				authProvider: "local",
+				isEmailVerified: false,
+				emailVerificationTokenHash: tokenHash,
+				emailVerificationExpiresAt: expiresAt,
+			});
 
-		res.status(201).json({
-			message: "register successful",
-			...authResponse,
-		});
-	} catch (error: unknown) {
+			const verificationBaseUrl =
+				process.env.RESET_PASSWORD_BASE_URL?.trim() ||
+				process.env.FRONTEND_URL?.trim() ||
+				"http://localhost:5173";
+
+			const verificationUrl = `${verificationBaseUrl.replace(/\/$/, "")}/verify-email?token=${rawToken}`;
+			const preferredLanguage = req.headers["accept-language"];
+			const locale = typeof preferredLanguage === "string" && preferredLanguage.toLowerCase().startsWith("en") ? "en" : "vi";
+
+			await sendVerificationEmail({
+				toEmail: createdUser.email,
+				toName: createdUser.userName,
+				verificationUrl,
+				locale,
+			});
+
+			const authResponse = buildAuthResponse(createdUser);
+
+			res.status(201).json({
+				message: "Đăng ký thành công. Vui lòng kiểm tra email để xác nhận tài khoản.",
+				status: "pending_verification",
+				user: authResponse.user,
+				redirectPath: authResponse.redirectPath,
+			});
+		} catch (error: any) {
+			if (createdUser && createdUser._id) {
+				await User.deleteOne({ _id: createdUser._id });
+			}
+			throw error;
+		}
+	} catch (error: any) {
+		console.error("Register error:", error);
 		res.status(500).json({
 			message: "failed to register",
-			error: error instanceof Error ? error.message : "unknown error",
+			error: error?.response?.data || error?.message || String(error),
 		});
 	}
 }
@@ -313,6 +360,11 @@ export async function login(req: Request, res: Response): Promise<void> {
 		const isPasswordCorrect = await user.comparePassword(password);
 		if (!isPasswordCorrect) {
 			res.status(401).json({ message: "invalid credentials" });
+			return;
+		}
+
+		if (user.authProvider === "local" && user.isEmailVerified === false && user.emailVerificationTokenHash) {
+			res.status(403).json({ message: "Vui lòng xác nhận email trước khi đăng nhập" });
 			return;
 		}
 
@@ -387,6 +439,7 @@ export async function loginWithGoogle(req: Request, res: Response): Promise<void
 				avatarUrl: googleProfile.picture,
 				googleId: googleProfile.sub,
 				authProvider: "google",
+				isEmailVerified: true,
 			});
 		} else {
 			let shouldSave = false;
@@ -532,8 +585,8 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
 			return;
 		}
 
-		if (password.length < 6) {
-			res.status(400).json({ message: "password must be at least 6 characters" });
+		if (!isValidPassword(password)) {
+			res.status(400).json({ message: "Mật khẩu phải có ít nhất 8 ký tự, bao gồm ít nhất 1 chữ in hoa và 1 ký tự đặc biệt" });
 			return;
 		}
 
@@ -557,6 +610,40 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
 	} catch (error: unknown) {
 		res.status(500).json({
 			message: "failed to reset password",
+			error: error instanceof Error ? error.message : "unknown error",
+		});
+	}
+}
+
+export async function verifyEmail(req: Request, res: Response): Promise<void> {
+	try {
+		const { token } = req.body as { token?: string };
+
+		if (!token) {
+			res.status(400).json({ message: "token is required" });
+			return;
+		}
+
+		const tokenHash = hashResetToken(token);
+		const user = await User.findOne({
+			emailVerificationTokenHash: tokenHash,
+			emailVerificationExpiresAt: { $gt: new Date() },
+		});
+
+		if (!user) {
+			res.status(400).json({ message: "invalid or expired verification token" });
+			return;
+		}
+
+		user.isEmailVerified = true;
+		user.emailVerificationTokenHash = undefined;
+		user.emailVerificationExpiresAt = undefined;
+		await user.save();
+
+		res.status(200).json({ message: "Xác nhận email thành công" });
+	} catch (error: unknown) {
+		res.status(500).json({
+			message: "failed to verify email",
 			error: error instanceof Error ? error.message : "unknown error",
 		});
 	}
@@ -589,9 +676,9 @@ export async function createAdmin(req: Request, res: Response): Promise<void> {
 			return;
 		}
 
-		if (password.length < 6) {
+		if (!isValidPassword(password)) {
 			res.status(400).json({
-				message: "password must be at least 6 characters",
+				message: "Mật khẩu phải có ít nhất 8 ký tự, bao gồm ít nhất 1 chữ in hoa và 1 ký tự đặc biệt",
 			});
 			return;
 		}

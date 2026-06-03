@@ -9,6 +9,7 @@ import { LoginPage } from './pages/LoginPage/LoginPage';
 import { RegisterPage } from './pages/Customer/RegisterPage';
 import { ForgotPasswordPage } from './pages/Customer/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/Customer/ResetPasswordPage';
+import { VerifyEmailPage } from './pages/Customer/VerifyEmailPage';
 import { ProfilePage } from './pages/Customer/ProfilePage';
 import { OwnerDashboardScreen } from './pages/Owner/OwnerDashboardScreen';
 import { OwnerLandingPage } from './pages/Owner/OwnerLandingPage';
@@ -50,6 +51,7 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/tim-san" element={<Layout><FindFieldPage /></Layout>} />
         <Route path="/bang-gia" element={<Layout><PriceListPage /></Layout>} />
         <Route path="/courts/:courtId" element={<Layout><CourtDetailPage /></Layout>} />

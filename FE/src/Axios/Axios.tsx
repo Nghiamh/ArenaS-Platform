@@ -194,6 +194,19 @@ export async function loginWithGoogle(payload: GoogleLoginPayload): Promise<Auth
 	}
 }
 
+export type VerifyEmailPayload = {
+	token: string;
+};
+
+export async function verifyEmail(payload: VerifyEmailPayload): Promise<BasicMessageResponse> {
+	try {
+		const { data } = await axiosClient.post<BasicMessageResponse>('/auth/verify-email', payload);
+		return data;
+	} catch (error: unknown) {
+		throw new Error(toErrorMessage(error));
+	}
+}
+
 export async function forgotPassword(payload: ForgotPasswordPayload): Promise<BasicMessageResponse> {
 	try {
 		const { data } = await axiosClient.post<BasicMessageResponse>('/auth/forgot-password', payload);
