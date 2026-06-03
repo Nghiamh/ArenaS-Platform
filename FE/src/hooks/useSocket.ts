@@ -112,188 +112,212 @@ type UseSocketReturn = {
 	onOpponentDepositRequired: (callback: (payload: OpponentDepositRequiredPayload) => void) => void;
 };
 
-export function useSocket(): UseSocketReturn {
-	const socketRef = useRef<Socket | null>(null);
-	const [isConnected, setIsConnected] = useState(false);
+let socketInstance: Socket | null = null;
+let connectedToken: string | null = null;
 
-	// Store callback refs so they survive re-renders
-	const matchFoundCb = useRef<((payload: MatchFoundPayload) => void) | null>(null);
-	const receiveMessageCb = useRef<((payload: ReceiveMessagePayload) => void) | null>(null);
-	const playerAcceptedCb = useRef<((payload: PlayerAcceptedPayload) => void) | null>(null);
-	const matchConfirmedCb = useRef<((payload: MatchConfirmedPayload) => void) | null>(null);
-	const matchCancelledCb = useRef<((payload: MatchCancelledPayload) => void) | null>(null);
-	const chatVoteUpdatedCb = useRef<((payload: ChatVoteUpdatedPayload) => void) | null>(null);
-	const playerCheckedInCb = useRef<((payload: PlayerCheckedInPayload) => void) | null>(null);
-	const matchCompletedCb = useRef<((payload: MatchCompletedPayload) => void) | null>(null);
-	const courtBookedCb = useRef<((payload: CourtBookedPayload) => void) | null>(null);
-	const courtCancelledCb = useRef<((payload: CourtCancelledPayload) => void) | null>(null);
-	const playerReportedCb = useRef<((payload: PlayerReportedPayload) => void) | null>(null);
-	const opponentDepositRequiredCb = useRef<((payload: OpponentDepositRequiredPayload) => void) | null>(null);
+const callbacksRegistry = {
+	matchFound: null as ((payload: MatchFoundPayload) => void) | null,
+	receiveMessage: null as ((payload: ReceiveMessagePayload) => void) | null,
+	playerAccepted: null as ((payload: PlayerAcceptedPayload) => void) | null,
+	matchConfirmed: null as ((payload: MatchConfirmedPayload) => void) | null,
+	matchCancelled: null as ((payload: MatchCancelledPayload) => void) | null,
+	chatVoteUpdated: null as ((payload: ChatVoteUpdatedPayload) => void) | null,
+	playerCheckedIn: null as ((payload: PlayerCheckedInPayload) => void) | null,
+	matchCompleted: null as ((payload: MatchCompletedPayload) => void) | null,
+	courtBooked: null as ((payload: CourtBookedPayload) => void) | null,
+	courtCancelled: null as ((payload: CourtCancelledPayload) => void) | null,
+	playerReported: null as ((payload: PlayerReportedPayload) => void) | null,
+	opponentDepositRequired: null as ((payload: OpponentDepositRequiredPayload) => void) | null,
+};
+
+export function useSocket(): UseSocketReturn {
+	const [isConnected, setIsConnected] = useState(socketInstance?.connected ?? false);
 
 	useEffect(() => {
 		const token = localStorage.getItem('accessToken')?.trim();
 		if (!token || token === 'undefined' || token === 'null') {
+			if (socketInstance) {
+				socketInstance.disconnect();
+				socketInstance = null;
+				connectedToken = null;
+			}
+			setIsConnected(false);
 			return;
 		}
 
-		const socket = io(SOCKET_URL, {
-			auth: { token },
-			transports: ['websocket', 'polling'],
-			reconnection: true,
-			reconnectionAttempts: 10,
-			reconnectionDelay: 2000,
-		});
+		// Reconnect if the token changes
+		if (socketInstance && connectedToken !== token) {
+			socketInstance.disconnect();
+			socketInstance = null;
+		}
 
-		socketRef.current = socket;
+		if (!socketInstance) {
+			connectedToken = token;
+			socketInstance = io(SOCKET_URL, {
+				auth: { token },
+				transports: ['websocket', 'polling'],
+				reconnection: true,
+				reconnectionAttempts: 10,
+				reconnectionDelay: 2000,
+			});
 
-		socket.on('connect', () => {
-			setIsConnected(true);
-			console.log('[Socket] Connected:', socket.id);
-		});
+			socketInstance.on('connect', () => {
+				setIsConnected(true);
+				console.log('[Socket] Connected:', socketInstance?.id);
+			});
 
-		socket.on('disconnect', () => {
-			setIsConnected(false);
-			console.log('[Socket] Disconnected');
-		});
+			socketInstance.on('disconnect', () => {
+				setIsConnected(false);
+				console.log('[Socket] Disconnected');
+			});
 
-		socket.on('connect_error', (err) => {
-			console.error('[Socket] Connection error:', err.message);
-			setIsConnected(false);
-		});
+			socketInstance.on('connect_error', (err) => {
+				console.error('[Socket] Connection error:', err.message);
+				setIsConnected(false);
+			});
 
-		socket.on('match_found', (payload: MatchFoundPayload) => {
-			console.log('[Socket] match_found:', payload);
-			matchFoundCb.current?.(payload);
-		});
+			socketInstance.on('match_found', (payload: MatchFoundPayload) => {
+				console.log('[Socket] match_found:', payload);
+				callbacksRegistry.matchFound?.(payload);
+			});
 
-		socket.on('receive_message', (payload: ReceiveMessagePayload) => {
-			receiveMessageCb.current?.(payload);
-		});
+			socketInstance.on('receive_message', (payload: ReceiveMessagePayload) => {
+				callbacksRegistry.receiveMessage?.(payload);
+			});
 
-		socket.on('player_accepted', (payload: PlayerAcceptedPayload) => {
-			console.log('[Socket] player_accepted:', payload);
-			playerAcceptedCb.current?.(payload);
-		});
+			socketInstance.on('player_accepted', (payload: PlayerAcceptedPayload) => {
+				console.log('[Socket] player_accepted:', payload);
+				callbacksRegistry.playerAccepted?.(payload);
+			});
 
-		socket.on('match_confirmed', (payload: MatchConfirmedPayload) => {
-			console.log('[Socket] match_confirmed:', payload);
-			matchConfirmedCb.current?.(payload);
-		});
+			socketInstance.on('match_confirmed', (payload: MatchConfirmedPayload) => {
+				console.log('[Socket] match_confirmed:', payload);
+				callbacksRegistry.matchConfirmed?.(payload);
+			});
 
-		socket.on('match_cancelled', (payload: MatchCancelledPayload) => {
-			console.log('[Socket] match_cancelled:', payload);
-			matchCancelledCb.current?.(payload);
-		});
+			socketInstance.on('match_cancelled', (payload: MatchCancelledPayload) => {
+				console.log('[Socket] match_cancelled:', payload);
+				callbacksRegistry.matchCancelled?.(payload);
+			});
 
-		socket.on('chat_vote_updated', (payload: ChatVoteUpdatedPayload) => {
-			console.log('[Socket] chat_vote_updated:', payload);
-			chatVoteUpdatedCb.current?.(payload);
-		});
+			socketInstance.on('chat_vote_updated', (payload: ChatVoteUpdatedPayload) => {
+				console.log('[Socket] chat_vote_updated:', payload);
+				callbacksRegistry.chatVoteUpdated?.(payload);
+			});
 
-		socket.on('player_checked_in', (payload: PlayerCheckedInPayload) => {
-			console.log('[Socket] player_checked_in:', payload);
-			playerCheckedInCb.current?.(payload);
-		});
+			socketInstance.on('player_checked_in', (payload: PlayerCheckedInPayload) => {
+				console.log('[Socket] player_checked_in:', payload);
+				callbacksRegistry.playerCheckedIn?.(payload);
+			});
 
-		socket.on('match_completed', (payload: MatchCompletedPayload) => {
-			console.log('[Socket] match_completed:', payload);
-			matchCompletedCb.current?.(payload);
-		});
+			socketInstance.on('match_completed', (payload: MatchCompletedPayload) => {
+				console.log('[Socket] match_completed:', payload);
+				callbacksRegistry.matchCompleted?.(payload);
+			});
 
-		socket.on('court_booked', (payload: CourtBookedPayload) => {
-			console.log('[Socket] court_booked:', payload);
-			courtBookedCb.current?.(payload);
-		});
+			socketInstance.on('court_booked', (payload: CourtBookedPayload) => {
+				console.log('[Socket] court_booked:', payload);
+				callbacksRegistry.courtBooked?.(payload);
+			});
 
-		socket.on('court_cancelled', (payload: CourtCancelledPayload) => {
-			console.log('[Socket] court_cancelled:', payload);
-			courtCancelledCb.current?.(payload);
-		});
+			socketInstance.on('court_cancelled', (payload: CourtCancelledPayload) => {
+				console.log('[Socket] court_cancelled:', payload);
+				callbacksRegistry.courtCancelled?.(payload);
+			});
 
-		socket.on('player_reported', (payload: PlayerReportedPayload) => {
-			console.log('[Socket] player_reported:', payload);
-			playerReportedCb.current?.(payload);
-		});
+			socketInstance.on('player_reported', (payload: PlayerReportedPayload) => {
+				console.log('[Socket] player_reported:', payload);
+				callbacksRegistry.playerReported?.(payload);
+			});
 
-		socket.on('opponent_deposit_required', (payload: OpponentDepositRequiredPayload) => {
-			console.log('[Socket] opponent_deposit_required:', payload);
-			opponentDepositRequiredCb.current?.(payload);
-		});
+			socketInstance.on('opponent_deposit_required', (payload: OpponentDepositRequiredPayload) => {
+				console.log('[Socket] opponent_deposit_required:', payload);
+				callbacksRegistry.opponentDepositRequired?.(payload);
+			});
 
-		socket.on('error', (err: { message: string }) => {
-			console.error('[Socket] Server error:', err.message);
-		});
+			socketInstance.on('error', (err: { message: string }) => {
+				console.error('[Socket] Server error:', err.message);
+			});
+		} else {
+			setIsConnected(socketInstance.connected);
+		}
+
+		const handleConnect = () => setIsConnected(true);
+		const handleDisconnect = () => setIsConnected(false);
+
+		socketInstance.on('connect', handleConnect);
+		socketInstance.on('disconnect', handleDisconnect);
 
 		return () => {
-			socket.removeAllListeners();
-			socket.disconnect();
-			socketRef.current = null;
-			setIsConnected(false);
+			if (socketInstance) {
+				socketInstance.off('connect', handleConnect);
+				socketInstance.off('disconnect', handleDisconnect);
+			}
 		};
 	}, []);
 
 	const joinMatchRoom = useCallback((matchId: string) => {
-		socketRef.current?.emit('join_match_room', { matchId });
+		socketInstance?.emit('join_match_room', { matchId });
 	}, []);
 
 	const leaveMatchRoom = useCallback((matchId: string) => {
-		socketRef.current?.emit('leave_match_room', { matchId });
+		socketInstance?.emit('leave_match_room', { matchId });
 	}, []);
 
 	const sendMessage = useCallback((matchId: string, message: string) => {
-		socketRef.current?.emit('send_message', { matchId, message });
+		socketInstance?.emit('send_message', { matchId, message });
 	}, []);
 
 	const onMatchFound = useCallback((callback: (payload: MatchFoundPayload) => void) => {
-		matchFoundCb.current = callback;
+		callbacksRegistry.matchFound = callback;
 	}, []);
 
 	const onReceiveMessage = useCallback((callback: (payload: ReceiveMessagePayload) => void) => {
-		receiveMessageCb.current = callback;
+		callbacksRegistry.receiveMessage = callback;
 	}, []);
 
 	const onPlayerAccepted = useCallback((callback: (payload: PlayerAcceptedPayload) => void) => {
-		playerAcceptedCb.current = callback;
+		callbacksRegistry.playerAccepted = callback;
 	}, []);
 
 	const onMatchConfirmed = useCallback((callback: (payload: MatchConfirmedPayload) => void) => {
-		matchConfirmedCb.current = callback;
+		callbacksRegistry.matchConfirmed = callback;
 	}, []);
 
 	const onMatchCancelled = useCallback((callback: (payload: MatchCancelledPayload) => void) => {
-		matchCancelledCb.current = callback;
+		callbacksRegistry.matchCancelled = callback;
 	}, []);
 
 	const onChatVoteUpdated = useCallback((callback: (payload: ChatVoteUpdatedPayload) => void) => {
-		chatVoteUpdatedCb.current = callback;
+		callbacksRegistry.chatVoteUpdated = callback;
 	}, []);
 
 	const onPlayerCheckedIn = useCallback((callback: (payload: PlayerCheckedInPayload) => void) => {
-		playerCheckedInCb.current = callback;
+		callbacksRegistry.playerCheckedIn = callback;
 	}, []);
 
 	const onMatchCompleted = useCallback((callback: (payload: MatchCompletedPayload) => void) => {
-		matchCompletedCb.current = callback;
+		callbacksRegistry.matchCompleted = callback;
 	}, []);
 
 	const onCourtBooked = useCallback((callback: (payload: CourtBookedPayload) => void) => {
-		courtBookedCb.current = callback;
+		callbacksRegistry.courtBooked = callback;
 	}, []);
 
 	const onCourtCancelled = useCallback((callback: (payload: CourtCancelledPayload) => void) => {
-		courtCancelledCb.current = callback;
+		callbacksRegistry.courtCancelled = callback;
 	}, []);
 
 	const onPlayerReported = useCallback((callback: (payload: PlayerReportedPayload) => void) => {
-		playerReportedCb.current = callback;
+		callbacksRegistry.playerReported = callback;
 	}, []);
 
 	const onOpponentDepositRequired = useCallback((callback: (payload: OpponentDepositRequiredPayload) => void) => {
-		opponentDepositRequiredCb.current = callback;
+		callbacksRegistry.opponentDepositRequired = callback;
 	}, []);
 
 	return {
-		socket: socketRef.current,
+		socket: socketInstance,
 		isConnected,
 		joinMatchRoom,
 		leaveMatchRoom,
