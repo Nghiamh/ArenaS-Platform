@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { NavLink } from 'react-router-dom';
 import { getCurrentUserProfile, getMySubscription, type AuthUser, type FESubscription } from '../../Axios/Axios';
 
-type OwnerSidebarKey = 'overview' | 'courts' | 'revenue' | 'bookings' | 'settings';
+type OwnerSidebarKey = 'overview' | 'courts' | 'revenue' | 'bookings' | 'settings' | 'wallet';
 
 type OwnerSidebarProps = {
   activeKey: OwnerSidebarKey;
@@ -54,6 +54,14 @@ const BookingIcon = () => (
   </svg>
 );
 
+const WalletIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+    <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+    <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+    <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
+  </svg>
+);
+
 const HomeIcon = () => (
   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
     <path d="m3 10 9-7 9 7" />
@@ -79,8 +87,9 @@ const LogoutIcon = () => (
 const menuItems: MenuItem[] = [
   { key: 'overview', label: 'Tổng Quan', to: '/owner/dashboard', icon: <OverviewIcon /> },
   { key: 'courts', label: 'Quản Lý Sân', to: '/owner/manage-courts', icon: <CourtIcon /> },
-  { key: 'revenue', label: 'Doanh Thu', to: '/owner/revenue', icon: <RevenueIcon /> },
   { key: 'bookings', label: 'Lịch Đặt Sân', to: '/owner/bookings', icon: <BookingIcon /> },
+  { key: 'wallet', label: 'Ví Chủ Sân', to: '/owner/wallet', icon: <WalletIcon /> },
+  { key: 'revenue', label: 'Doanh Thu', to: '/owner/revenue', icon: <RevenueIcon /> },
 ];
 
 const secondaryItems: Array<{ key: OwnerSidebarKey | 'home' | 'logout'; label: string; to: string; icon: React.ReactNode }> = [

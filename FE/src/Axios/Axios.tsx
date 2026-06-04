@@ -1643,7 +1643,10 @@ export type NotificationType =
 	| 'deposit_received'
 	| 'subscription_activated'
 	| 'booking_created'
-	| 'booking_cancelled';
+	| 'booking_cancelled'
+	| 'withdrawal_requested'
+	| 'withdrawal_approved'
+	| 'withdrawal_rejected';
 
 export type FENotification = {
 	_id: string;

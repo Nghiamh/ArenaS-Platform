@@ -16,7 +16,7 @@ export type WalletTransactionInfo = {
 	walletId: string;
 	bookingId?: string;
 	amount: number;
-	type: 'deposit' | 'payment' | 'refund';
+	type: 'deposit' | 'payment' | 'refund' | 'withdraw';
 	status: 'pending' | 'completed' | 'expired' | 'failed';
 	transferCode?: string;
 	expiredAt?: string;
@@ -53,6 +53,29 @@ type DepositStatusResponse = {
 type DeductResponse = {
 	message: string;
 	wallet: WalletInfo | null;
+};
+
+export type WithdrawalRequestInfo = {
+	_id: string;
+	ownerId: string | { _id: string; name: string; userName: string; email: string; phone: string };
+	amount: number;
+	bankName: string;
+	bankAccountName: string;
+	bankAccountNumber: string;
+	status: 'pending' | 'approved' | 'rejected';
+	adminNote?: string;
+	createdAt: string;
+	updatedAt: string;
+};
+
+type WithdrawalRequestsResponse = {
+	message: string;
+	requests: WithdrawalRequestInfo[];
+};
+
+type RequestWithdrawalResponse = {
+	message: string;
+	request: WithdrawalRequestInfo;
 };
 
 
@@ -111,6 +134,56 @@ export async function deductBalance(
 	} catch (error: unknown) {
 		throw new Error(
 			error instanceof Error ? error.message : 'Failed to deduct balance'
+		);
+	}
+}
+
+export async function requestWithdrawal(
+	amount: number,
+	bankName: string,
+	bankAccountName: string,
+	bankAccountNumber: string
+): Promise<RequestWithdrawalResponse> {
+	try {
+		const { data } = await axiosClient.post<RequestWithdrawalResponse>('/wallet/withdraw', {
+			amount,
+			bankName,
+			bankAccountName,
+			bankAccountNumber,
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(
+			error instanceof Error ? error.message : 'Failed to request withdrawal'
+		);
+	}
+}
+
+export async function getWithdrawalRequests(): Promise<WithdrawalRequestsResponse> {
+	try {
+		const { data } = await axiosClient.get<WithdrawalRequestsResponse>('/wallet/withdrawals');
+		return data;
+	} catch (error: unknown) {
+		throw new Error(
+			error instanceof Error ? error.message : 'Failed to get withdrawal requests'
+		);
+	}
+}
+
+export async function processWithdrawal(
+	id: string,
+	status: 'approved' | 'rejected',
+	adminNote?: string
+): Promise<RequestWithdrawalResponse> {
+	try {
+		const { data } = await axiosClient.put<RequestWithdrawalResponse>(`/wallet/withdrawals/${id}`, {
+			status,
+			adminNote,
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(
+			error instanceof Error ? error.message : 'Failed to process withdrawal'
 		);
 	}
 }

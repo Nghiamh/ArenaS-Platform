@@ -17,6 +17,7 @@ import { OwnerContactPage } from './pages/Owner/OwnerContactPage';
 import { OwnerManageCourtScreen } from './pages/Owner/OwnerManageCourtScreen';
 import { OwnerRevenueScreen } from './pages/Owner/OwnerRevenueScreen';
 import { OwnerBookingScheduleScreen } from './pages/Owner/OwnerBookingScheduleScreen';
+import { OwnerWalletScreen } from './pages/Owner/OwnerWalletScreen';
 import { OwnerSettingsScreen } from './pages/Owner/OwnerSettingsScreen';
 import { AdminDashboardPage } from './pages/Admin/AdminDashboardPage';
 import { AdminManageStadiumPage } from './pages/Admin/AdminManageStadiumPage';
@@ -25,6 +26,7 @@ import { AdminModerationPage } from './pages/Admin/AdminModerationPage';
 import { AdminVoucherPage } from './pages/Admin/AdminVoucherPage';
 import { AdminIncomePage } from './pages/Admin/AdminIncomePage';
 import { AdminManageOwnerApplicationPage } from './pages/Admin/AdminManageOwnerApplicationPage';
+import { AdminWithdrawalPage } from './pages/Admin/AdminWithdrawalPage';
 import { PriceListPage } from './pages/HomePage/PriceListPage';
 import CourtDetailPage from './pages/CourtDetailPage/CourtDetailPage';
 import { WalletPage } from './pages/WalletPage/WalletPage';
@@ -77,6 +79,7 @@ function App() {
         <Route path="/owner/manage-courts" element={<OwnerManageCourtScreen />} />
         <Route path="/owner/revenue" element={<OwnerRevenueScreen />} />
         <Route path="/owner/bookings" element={<OwnerBookingScheduleScreen />} />
+        <Route path="/owner/wallet" element={<OwnerWalletScreen />} />
         <Route path="/owner/settings" element={<OwnerSettingsScreen />} />
         <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
         <Route path="/admin/manage-stadiums" element={<AdminManageStadiumPage />} />
@@ -85,6 +88,7 @@ function App() {
         <Route path="/admin/vouchers" element={<AdminVoucherPage />} />
         <Route path="/admin/income" element={<AdminIncomePage />} />
         <Route path="/admin/owner-applications" element={<AdminManageOwnerApplicationPage />} />
+        <Route path="/admin/withdrawals" element={<AdminWithdrawalPage />} />
         <Route
           path="/profile"
           element={
