@@ -8,6 +8,7 @@ import Wallet from '../models/walletModel.js';
 import WalletTransaction from '../models/walletTransactionModel.js';
 import Match from '../models/matchModel.js';
 import ChatMessage from '../models/chatMessageModel.js';
+import { createNotification } from './notificationController.js';
 
 // Helper: Khởi tạo các mốc thời gian 30 phút
 function generateTimeSlots(openTime: string, closeTime: string): ISlot[] {
@@ -725,6 +726,17 @@ export async function userBookCourt(req: Request, res: Response) {
 			}
 		}
 
+		// --- Bước 11: Notify Owner about the new booking ---
+		const cycleLabel = isMatchBooking ? "đặt cọc 50%" : "đặt sân";
+		const courtDisplayName = subCourt?.name ? `${court.name} - ${subCourt.name}` : court.name;
+		void createNotification({
+			recipientId: court.owner_id.toString(),
+			type: "booking_created",
+			title: "Đơn đặt sân mới 🗓",
+			message: `Khách hàng ${user.name || user.userName} vừa ${cycleLabel} tại ${courtDisplayName} vào ${date} lúc ${start_time}.`,
+			link: "/owner/bookings",
+		});
+
 		return res.status(201).json({
 			message: isMatchBooking ? 'Đặt cọc 50% thành công! Đợi đối thủ thanh toán.' : 'Đặt sân thành công!',
 			booking: {
@@ -1277,6 +1289,19 @@ export async function cancelBooking(req: Request, res: Response) {
 		}
 
 		await session.commitTransaction();
+
+		// Notify Owner about the cancellation
+		const court = await Court.findById(booking.court_id);
+		if (court) {
+			void createNotification({
+				recipientId: court.owner_id.toString(),
+				type: "booking_cancelled",
+				title: "Lịch đặt sân đã bị hủy ✕",
+				message: `Lịch đặt của khách hàng ${booking.customer_name} vào ${bookingDateStr} lúc ${booking.start_time} đã bị hủy.`,
+				link: "/owner/bookings",
+			});
+		}
+
 		return res.status(200).json({
 			message: 'Hủy sân thành công',
 			refundPercentage: finalRefundPercentage,

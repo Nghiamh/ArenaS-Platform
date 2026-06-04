@@ -1641,7 +1641,9 @@ export type NotificationType =
 	| 'court_approved'
 	| 'court_rejected'
 	| 'deposit_received'
-	| 'subscription_activated';
+	| 'subscription_activated'
+	| 'booking_created'
+	| 'booking_cancelled';
 
 export type FENotification = {
 	_id: string;
