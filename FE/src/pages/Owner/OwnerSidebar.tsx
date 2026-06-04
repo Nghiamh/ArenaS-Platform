@@ -78,9 +78,9 @@ const LogoutIcon = () => (
 
 const menuItems: MenuItem[] = [
   { key: 'overview', label: 'Tổng Quan', to: '/owner/dashboard', icon: <OverviewIcon /> },
-  { key: 'courts', label: 'Quản Lý Sân', to: '/owner/manage-courts', count: 3, icon: <CourtIcon /> },
+  { key: 'courts', label: 'Quản Lý Sân', to: '/owner/manage-courts', icon: <CourtIcon /> },
   { key: 'revenue', label: 'Doanh Thu', to: '/owner/revenue', icon: <RevenueIcon /> },
-  { key: 'bookings', label: 'Lịch Đặt Sân', to: '/owner/bookings', count: 8, icon: <BookingIcon /> },
+  { key: 'bookings', label: 'Lịch Đặt Sân', to: '/owner/bookings', icon: <BookingIcon /> },
 ];
 
 const secondaryItems: Array<{ key: OwnerSidebarKey | 'home' | 'logout'; label: string; to: string; icon: React.ReactNode }> = [
