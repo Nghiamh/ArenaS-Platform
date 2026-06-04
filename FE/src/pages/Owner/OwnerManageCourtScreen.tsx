@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
   createOwnerCourt,
   deleteOwnerCourt,
@@ -599,6 +600,7 @@ const CourtCard: React.FC<{
 
 
 export const OwnerManageCourtScreen: React.FC = () => {
+  const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => localStorage.getItem('ownerSidebarCollapsed') === '1');
   const [courts, setCourts] = useState<OwnerCourt[]>([]);
@@ -614,6 +616,7 @@ export const OwnerManageCourtScreen: React.FC = () => {
     | { isOpen: false }
     | { isOpen: true; courtId: string; name: string }
   >({ isOpen: false });
+  const [subscriptionError, setSubscriptionError] = useState('');
 
   useEffect(() => {
     localStorage.setItem('ownerSidebarCollapsed', sidebarCollapsed ? '1' : '0');
@@ -710,7 +713,12 @@ export const OwnerManageCourtScreen: React.FC = () => {
       setCourtModal({ isOpen: false, mode: 'create' });
       await refreshCourts();
     } catch (error) {
-      setActionMessage(error instanceof Error ? error.message : 'Không thể lưu sân.');
+      const msg = error instanceof Error ? error.message : 'Không thể lưu sân.';
+      if (msg.includes('gói') || msg.includes('subscription')) {
+        setSubscriptionError(msg);
+      } else {
+        setActionMessage(msg);
+      }
     }
   };
 
@@ -1208,6 +1216,62 @@ export const OwnerManageCourtScreen: React.FC = () => {
                   className="rounded-full bg-gradient-to-r from-rose-500 to-orange-500 px-5 py-2.5 text-sm font-bold text-white transition hover:brightness-110"
                 >
                   Xóa ngay
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : null}
+
+        {subscriptionError ? (
+          <motion.div
+            variants={modalBackdropVariant}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-[#020617]/80 px-4 py-8 backdrop-blur-md"
+          >
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              variants={modalCardVariant}
+              className="w-full max-w-md rounded-3xl border border-amber-500/20 bg-[#0a1020] p-6 shadow-[0_24px_48px_-24px_rgba(245,158,11,0.25)] relative overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400 to-orange-500"></div>
+              
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20">
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Yêu cầu nâng cấp gói</h2>
+                </div>
+              </div>
+              
+              <p className="mt-4 text-sm leading-6 text-slate-300">
+                {subscriptionError}
+              </p>
+              
+              <div className="mt-6 flex flex-col sm:flex-row justify-end gap-3">
+                <button
+                  onClick={() => setSubscriptionError('')}
+                  className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white text-center"
+                >
+                  Đóng
+                </button>
+                <button
+                  onClick={() => {
+                    setSubscriptionError('');
+                    navigate('/bang-gia');
+                  }}
+                  className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition hover:brightness-110 text-center flex items-center justify-center gap-2"
+                >
+                  <span>Nâng cấp gói ngay</span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
                 </button>
               </div>
             </motion.div>

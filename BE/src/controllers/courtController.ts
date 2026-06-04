@@ -535,6 +535,28 @@ export async function createOwnerCourt(req: Request, res: Response): Promise<voi
 			throw new Error("subscription_required");
 		}
 
+		// Enforce plan limits
+		const maxLocations = activeSub.currentFeatures.max_locations;
+		const maxCourts = activeSub.currentFeatures.max_courts;
+
+		if (maxLocations !== -1) {
+			const currentLocationsCount = await Court.countDocuments({ owner_id: user._id });
+			if (currentLocationsCount >= maxLocations) {
+				throw new Error("max_locations_exceeded");
+			}
+		}
+
+		if (maxCourts !== -1) {
+			const ownerCourts = await Court.find({ owner_id: user._id });
+			let totalSubCourts = parsedSubCourts.length;
+			for (const c of ownerCourts) {
+				totalSubCourts += (c.sub_courts?.length || 0);
+			}
+			if (totalSubCourts > maxCourts) {
+				throw new Error("max_courts_exceeded");
+			}
+		}
+
 		// New courts always start as "pending" — admin must approve before going public
 		const createdCourt = await Court.create({
 			owner_id: user._id,
@@ -576,7 +598,7 @@ export async function createOwnerCourt(req: Request, res: Response): Promise<voi
 			errorMessage === "invalid_token" ||
 			errorMessage === "user_not_found"
 				? 401
-				: errorMessage === "courts_disabled_for_role" || errorMessage === "subscription_required"
+				: errorMessage === "courts_disabled_for_role" || errorMessage === "subscription_required" || errorMessage === "max_locations_exceeded" || errorMessage === "max_courts_exceeded"
 					? 403
 					: errorMessage.startsWith("invalid_")
 						? 400
@@ -590,6 +612,10 @@ export async function createOwnerCourt(req: Request, res: Response): Promise<voi
 					? "unauthorized"
 					: statusCode === 403 && errorMessage === "subscription_required"
 						? "Bạn cần mua gói dịch vụ để đăng ký sân. Vui lòng mua gói trước."
+						: statusCode === 403 && errorMessage === "max_locations_exceeded"
+							? "Bạn đã đạt giới hạn số lượng cơ sở của gói hiện tại."
+						: statusCode === 403 && errorMessage === "max_courts_exceeded"
+							? "Bạn đã đạt giới hạn số lượng sân nhỏ của gói hiện tại."
 						: statusCode === 403
 							? "courts are only available for owner accounts"
 							: statusCode === 400
@@ -727,7 +753,36 @@ export async function updateOwnerCourt(req: Request, res: Response): Promise<voi
 			const currentSubCourts = JSON.stringify(court.sub_courts ?? []);
 			const nextSubCourts = JSON.stringify(parsedSubCourts);
 			if (currentSubCourts !== nextSubCourts) {
+				// Enforce max courts limit if sub_courts count increases
+				const oldLength = court.sub_courts?.length || 0;
+				const newLength = parsedSubCourts.length;
+				
+				if (newLength > oldLength) {
+					const activeSub = await Subscription.findOne({
+						ownerId: user._id,
+						status: "active",
+						endDate: { $gt: new Date() },
+					});
+					
+					if (activeSub) {
+						const maxCourts = activeSub.currentFeatures.max_courts;
+						if (maxCourts !== -1) {
+							const ownerCourts = await Court.find({ owner_id: user._id });
+							let totalSubCourts = newLength;
+							for (const c of ownerCourts) {
+								if (String(c._id) !== String(court._id)) {
+									totalSubCourts += (c.sub_courts?.length || 0);
+								}
+							}
+							if (totalSubCourts > maxCourts) {
+								throw new Error("max_courts_exceeded");
+							}
+						}
+					}
+				}
+
 				court.sub_courts = parsedSubCourts;
+				court.number_of_courts = parsedSubCourts.length;
 				shouldSave = true;
 			}
 		}
@@ -748,7 +803,7 @@ export async function updateOwnerCourt(req: Request, res: Response): Promise<voi
 			errorMessage === "invalid_token" ||
 			errorMessage === "user_not_found"
 				? 401
-				: errorMessage === "courts_disabled_for_role"
+				: errorMessage === "courts_disabled_for_role" || errorMessage === "max_courts_exceeded"
 					? 403
 					: errorMessage === "invalid_court_id"
 						? 400
@@ -762,6 +817,8 @@ export async function updateOwnerCourt(req: Request, res: Response): Promise<voi
 			message:
 				statusCode === 401
 					? "unauthorized"
+					: statusCode === 403 && errorMessage === "max_courts_exceeded"
+						? "Bạn đã đạt giới hạn số lượng sân nhỏ của gói hiện tại."
 					: statusCode === 403
 						? "courts are only available for owner accounts"
 						: statusCode === 400

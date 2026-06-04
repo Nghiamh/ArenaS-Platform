@@ -973,6 +973,7 @@ export type FESubscription = {
 export type CheckoutResponse = {
 	success: boolean;
 	message: string;
+	isFree?: boolean;
 	checkout: {
 		paymentCode: string;
 		qrUrl: string;

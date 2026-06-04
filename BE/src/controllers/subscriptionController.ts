@@ -3,7 +3,10 @@ import mongoose from "mongoose";
 import Plan from "../models/planModel.js";
 import Subscription, { BillingCycle } from "../models/subscriptionModel.js";
 import SubscriptionCheckout from "../models/subscriptionCheckoutModel.js";
+import User from "../models/userModel.js";
 import { BANK_ID, ACCOUNT_NO, ACCOUNT_NAME, generateTransferCode } from "../utils/vietqr.js";
+import { createNotification } from "./notificationController.js";
+import { sendSubscriptionEmail } from "../utils/gmail.js";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -44,7 +47,7 @@ export async function createCheckoutSession(req: Request, res: Response): Promis
 			return;
 		}
 
-		const { planId, billingCycle } = req.body as {
+		let { planId, billingCycle } = req.body as {
 			planId?: string;
 			billingCycle?: "monthly" | "yearly";
 		};
@@ -59,23 +62,25 @@ export async function createCheckoutSession(req: Request, res: Response): Promis
 			return;
 		}
 
-		if (!billingCycle || !["monthly", "yearly"].includes(billingCycle)) {
-			res.status(400).json({
-				success: false,
-				message: "billingCycle must be either 'monthly' or 'yearly'.",
-				error: "invalid_billing_cycle",
-			});
-			return;
-		}
-
-		// a) Fetch the selected Plan from the database. Return 404 if not found or inactive.
-		// Return 400 if plan.isCustom is true (Enterprise plans are handled offline).
 		const plan = await Plan.findById(planId);
 		if (!plan) {
 			res.status(404).json({
 				success: false,
 				message: "Plan not found.",
 				error: "plan_not_found",
+			});
+			return;
+		}
+
+		if (plan.pricing && plan.pricing.monthly === 0) {
+			billingCycle = "monthly"; // Force monthly for free plans
+		}
+
+		if (!billingCycle || !["monthly", "yearly"].includes(billingCycle)) {
+			res.status(400).json({
+				success: false,
+				message: "billingCycle must be either 'monthly' or 'yearly'.",
+				error: "invalid_billing_cycle",
 			});
 			return;
 		}
@@ -139,6 +144,112 @@ export async function createCheckoutSession(req: Request, res: Response): Promis
 						netAmount = 0;
 					}
 				}
+			}
+		}
+
+		// Handle Free Trial / 0đ Plan Logic
+		if (netAmount === 0 && basePrice === 0) {
+			const previousFreeSub = await Subscription.findOne({
+				ownerId,
+				planId: plan._id,
+			});
+
+			if (previousFreeSub) {
+				res.status(400).json({
+					success: false,
+					message: "Bạn đã sử dụng gói dùng thử này trước đây. Mỗi tài khoản chỉ được sử dụng 1 lần.",
+					error: "trial_already_used",
+				});
+				return;
+			}
+		}
+
+		// If netAmount is 0 (either Free Trial or 100% covered upgrade), bypass QR and activate immediately
+		if (netAmount === 0) {
+			const startDate = new Date();
+			const endDate = computeEndDate(startDate, billingCycle);
+			
+			const session = await mongoose.startSession();
+			let newSubscription;
+			
+			try {
+				await session.withTransaction(async () => {
+					// Cancel current active subscription
+					await Subscription.updateMany(
+						{ ownerId, status: "active" },
+						{ $set: { status: "cancelled", cancelledAt: startDate } },
+						{ session }
+					);
+
+					// Create new subscription
+					[newSubscription] = await Subscription.create(
+						[{
+							ownerId,
+							planId: plan._id,
+							status: "active",
+							billingCycle,
+							startDate,
+							endDate,
+							currentFeatures: plan.features.toObject ? plan.features.toObject() : { ...plan.features },
+							amountPaid: 0,
+						}],
+						{ session }
+					);
+				});
+
+				// Notify owner
+				const cycleLabel = billingCycle === "monthly" ? "tháng" : "năm";
+				void createNotification({
+					recipientId: ownerId as mongoose.Types.ObjectId,
+					type: "subscription_activated",
+					title: "Gói dịch vụ đã kích hoạt ✓",
+					message: `Gói "${plan.displayName}" (${cycleLabel}) đã được kích hoạt thành công. Bạn có thể bắt đầu đăng ký sân ngay.`,
+					link: "/owner/dashboard",
+					metadata: { planName: plan.displayName, amount: "0" },
+				});
+
+				// Send Email
+				const user = await User.findById(ownerId);
+				if (user && user.email) {
+					const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+					void sendSubscriptionEmail({
+						toEmail: user.email,
+						toName: user.name || user.userName,
+						planName: plan.displayName,
+						amount: 0,
+						billingCycle,
+						actionUrl: `${frontendUrl}/owner/dashboard`,
+						locale: "vi",
+					}).catch((err) => {
+						console.error("[Subscription Email Error]", err);
+					});
+				}
+
+				res.status(200).json({
+					success: true,
+					message: "Free trial activated successfully.",
+					isFree: true,
+					checkout: {
+						paymentCode: "FREE_TRIAL",
+						qrUrl: "",
+						amount: 0,
+						basePrice: 0,
+						unusedCredit: 0,
+						isUpgrade: false,
+						billingCycle,
+						plan: {
+							id: String(plan._id),
+							name: plan.name,
+							displayName: plan.displayName,
+						},
+						expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+					}
+				});
+				return;
+			} catch (error) {
+				throw error; // Let the outer catch block handle it
+			} finally {
+				await session.endSession();
 			}
 		}
 

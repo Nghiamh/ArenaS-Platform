@@ -42,7 +42,7 @@ export async function getCurrentSubscriptionStatus(req: Request, res: Response):
 
     // Fallback: If no active subscription is found in DB, query the seeded "starter" plan
     const starterPlan = (await Plan.findOne({ name: "starter" }).lean()) as any;
-    
+
     const simulatedFeatures = starterPlan?.features || {
       max_locations: 1,
       max_courts: 3,
@@ -238,7 +238,7 @@ export async function validateSubscriptionAction(req: Request, res: Response): P
         action: "renew",
         allowed: true,
         message: currentPlan.name === "starter"
-          ? "Gói Khởi Nghiệp là gói miễn phí trọn đời, không cần gia hạn."
+          ? "Gói Khởi Nghiệp là gói miễn phí cho tháng đầu tiên, sau đó cần gia hạn."
           : "Yêu cầu gia hạn gói hợp lệ.",
         billingCycle: chosenCycle,
         closeToExpiry,
@@ -319,7 +319,7 @@ export async function validateSubscriptionAction(req: Request, res: Response): P
     if (targetSortOrder < currentSortOrder) {
       // 1. Fetch location (Court documents) footprint
       const locationCount = await Court.countDocuments({ owner_id: new mongoose.Types.ObjectId(String(ownerId)) });
-      
+
       // 2. Fetch individual sub-courts footprint
       const courtsList = await Court.find({ owner_id: new mongoose.Types.ObjectId(String(ownerId)) });
       let subCourtsCount = 0;
@@ -367,8 +367,8 @@ export async function validateSubscriptionAction(req: Request, res: Response): P
         action: "downgrade",
         allowed: false,
         message: "Yêu cầu hạ cấp gói đã bị từ chối tự động.",
-        reason: errors.length > 0 
-          ? "Dữ liệu hiện tại vượt quá giới hạn tối đa cho phép của gói hạ cấp." 
+        reason: errors.length > 0
+          ? "Dữ liệu hiện tại vượt quá giới hạn tối đa cho phép của gói hạ cấp."
           : "Hạ cấp sẽ làm vô hiệu hóa một số tính năng nâng cao.",
         details: {
           currentUsage: {

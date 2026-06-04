@@ -406,7 +406,10 @@ export const PriceListPage: React.FC = () => {
     setSelectedActionType(actionType);
 
     try {
-      const result = await validateSubscriptionAction(plan.id, billingCycle);
+      const actualBillingCycle = plan.rawMonthlyPrice === 0 ? 'monthly' : billingCycle;
+      const result = await validateSubscriptionAction(plan.id, actualBillingCycle);
+      // Ensure the returned validationResult also reflects the forced monthly cycle if needed, 
+      // but the API will respond with the cycle we passed.
       setValidationResult(result);
     } catch (err: any) {
       if (err.message === 'missing_token' || err.message === 'unauthorized') {
@@ -425,6 +428,7 @@ export const PriceListPage: React.FC = () => {
   const handleProceedToCheckout = () => {
     if (!selectedPlanForValidation || !validationResult) return;
 
+    const actualBillingCycle = selectedPlanForValidation.rawMonthlyPrice === 0 ? 'monthly' : billingCycle;
     const netAmountStr = validationResult.pricing.netAmount.toLocaleString('vi-VN') + 'đ';
     const originalPriceStr = validationResult.pricing.basePrice.toLocaleString('vi-VN') + 'đ';
 
@@ -434,10 +438,10 @@ export const PriceListPage: React.FC = () => {
           id: selectedPlanForValidation.id,
           name: selectedPlanForValidation.name,
           price: netAmountStr,
-          period: billingCycle === 'yearly' ? '/ năm' : '/ tháng',
-          originalPrice: billingCycle === 'yearly' && validationResult.pricing.unusedCredit > 0 ? originalPriceStr : null,
+          period: actualBillingCycle === 'yearly' ? '/ năm' : '/ tháng',
+          originalPrice: actualBillingCycle === 'yearly' && validationResult.pricing.unusedCredit > 0 ? originalPriceStr : null,
           unusedCredit: validationResult.pricing.unusedCredit,
-          billingCycle
+          billingCycle: actualBillingCycle
         }
       }
     });

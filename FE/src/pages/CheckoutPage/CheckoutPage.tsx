@@ -62,15 +62,20 @@ export const CheckoutPage: React.FC = () => {
         const response = await createSubscriptionCheckout(plan.id || '65b2a3a4c5d6e7f8a9b0c1d2', billingCycle);
 
         if (response.success && response.checkout) {
-          navigate('/payment-qr', {
-            state: {
-              planName: plan.name,
-              price: plan.price,
-              paymentCode: response.checkout.paymentCode,
-              qrUrl: response.checkout.qrUrl,
-              totalAmount: response.checkout.amount
-            }
-          });
+          if (response.isFree) {
+            // For free trial, skip QR entirely and go to success page
+            navigate('/payment-success');
+          } else {
+            navigate('/payment-qr', {
+              state: {
+                planName: plan.name,
+                price: plan.price,
+                paymentCode: response.checkout.paymentCode,
+                qrUrl: response.checkout.qrUrl,
+                totalAmount: response.checkout.amount
+              }
+            });
+          }
         }
       } catch (err: any) {
         if (err.message === 'missing_token' || err.message === 'unauthorized') {
