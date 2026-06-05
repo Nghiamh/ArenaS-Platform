@@ -92,6 +92,10 @@ type OpponentDepositRequiredPayload = {
 	deadline: string;
 };
 
+type NewNotificationPayload = {
+	type: string;
+};
+
 type UseSocketReturn = {
 	socket: Socket | null;
 	isConnected: boolean;
@@ -110,6 +114,7 @@ type UseSocketReturn = {
 	onCourtCancelled: (callback: (payload: CourtCancelledPayload) => void) => void;
 	onPlayerReported: (callback: (payload: PlayerReportedPayload) => void) => void;
 	onOpponentDepositRequired: (callback: (payload: OpponentDepositRequiredPayload) => void) => void;
+	onNewNotification: (callback: (payload: NewNotificationPayload) => void) => () => void;
 };
 
 let socketInstance: Socket | null = null;
@@ -128,6 +133,7 @@ const callbacksRegistry = {
 	courtCancelled: null as ((payload: CourtCancelledPayload) => void) | null,
 	playerReported: null as ((payload: PlayerReportedPayload) => void) | null,
 	opponentDepositRequired: null as ((payload: OpponentDepositRequiredPayload) => void) | null,
+	newNotificationListeners: new Set<(payload: NewNotificationPayload) => void>(),
 };
 
 export function useSocket(): UseSocketReturn {
@@ -235,6 +241,11 @@ export function useSocket(): UseSocketReturn {
 				callbacksRegistry.opponentDepositRequired?.(payload);
 			});
 
+			socketInstance.on('new_notification', (payload: NewNotificationPayload) => {
+				console.log('[Socket] new_notification:', payload);
+				callbacksRegistry.newNotificationListeners.forEach((cb) => cb(payload));
+			});
+
 			socketInstance.on('error', (err: { message: string }) => {
 				console.error('[Socket] Server error:', err.message);
 			});
@@ -316,6 +327,13 @@ export function useSocket(): UseSocketReturn {
 		callbacksRegistry.opponentDepositRequired = callback;
 	}, []);
 
+	const onNewNotification = useCallback((callback: (payload: NewNotificationPayload) => void) => {
+		callbacksRegistry.newNotificationListeners.add(callback);
+		return () => {
+			callbacksRegistry.newNotificationListeners.delete(callback);
+		};
+	}, []);
+
 	return {
 		socket: socketInstance,
 		isConnected,
@@ -334,5 +352,6 @@ export function useSocket(): UseSocketReturn {
 		onCourtCancelled,
 		onPlayerReported,
 		onOpponentDepositRequired,
+		onNewNotification,
 	};
 }

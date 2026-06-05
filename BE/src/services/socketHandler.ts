@@ -44,10 +44,18 @@ async function isUserInMatch(userId: string, matchId: string): Promise<boolean> 
 	return isParticipant;
 }
 
+let ioInstance: SocketServer | null = null;
+
+export function getIo(): SocketServer | null {
+	return ioInstance;
+}
+
 /**
  * Setup all Socket.IO event handlers.
  */
 export function setupSocketHandlers(io: SocketServer): void {
+	ioInstance = io;
+
 	io.use((socket, next) => {
 		const userId = authenticateSocket(socket);
 		if (!userId) {
@@ -60,11 +68,21 @@ export function setupSocketHandlers(io: SocketServer): void {
 		next();
 	});
 
-	io.on("connection", (socket: Socket) => {
+	io.on("connection", async (socket: Socket) => {
 		const userId = socket.data.userId as string;
 
 		// Join personal room for targeted notifications (match_found, etc.)
 		void socket.join(`user:${userId}`);
+
+		try {
+			const User = (await import("../models/userModel.js")).default;
+			const user = await User.findById(userId);
+			if (user) {
+				void socket.join(`role:${user.role}`);
+			}
+		} catch (error) {
+			console.error("Failed to join role room:", error);
+		}
 
 		console.log(`Socket connected: user=${userId} socket=${socket.id}`);
 

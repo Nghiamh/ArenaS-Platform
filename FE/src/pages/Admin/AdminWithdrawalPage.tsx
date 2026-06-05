@@ -1,18 +1,33 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AdminSidebar } from './AdminSidebar';
-import { getWithdrawalRequests, processWithdrawal, type WithdrawalRequestInfo } from '../../Axios/walletApi';
+import { getWithdrawalRequests, processWithdrawal, resolveReport, type WithdrawalRequestInfo } from '../../Axios/walletApi';
 import { NotificationBell } from '../../components/NotificationBell';
+import { useSocket } from '../../hooks/useSocket';
 
 export const AdminWithdrawalPage: React.FC = () => {
   const [requests, setRequests] = useState<WithdrawalRequestInfo[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Process Modal
   const [selectedRequest, setSelectedRequest] = useState<WithdrawalRequestInfo | null>(null);
   const [adminNote, setAdminNote] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [actionType, setActionType] = useState<'approved' | 'rejected' | null>(null);
+
+  // View Report Modal
+  const [viewReportModalOpen, setViewReportModalOpen] = useState(false);
+  const [reportReq, setReportReq] = useState<WithdrawalRequestInfo | null>(null);
+  const [resolutionMessage, setResolutionMessage] = useState('');
+  const [isResolving, setIsResolving] = useState(false);
+
+  // Toast Notification State
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const fetchRequests = async () => {
     setLoading(true);
@@ -30,12 +45,26 @@ export const AdminWithdrawalPage: React.FC = () => {
     fetchRequests();
   }, []);
 
+  const { onNewNotification } = useSocket();
+  useEffect(() => {
+    const unsubscribe = onNewNotification((payload) => {
+      if (
+        payload.type === 'withdrawal_requested' || 
+        payload.type === 'withdrawal_reported' ||
+        payload.type === 'withdrawal_receipt_confirmed'
+      ) {
+        fetchRequests();
+      }
+    });
+    return unsubscribe;
+  }, [onNewNotification]);
+
   const handleProcess = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedRequest || !actionType) return;
-    
+
     if (actionType === 'rejected' && !adminNote.trim()) {
-      alert("Vui lòng nhập lý do từ chối");
+      showToast("Vui lòng nhập lý do từ chối", "error");
       return;
     }
 
@@ -46,8 +75,9 @@ export const AdminWithdrawalPage: React.FC = () => {
       setSelectedRequest(null);
       setAdminNote('');
       setActionType(null);
+      showToast(actionType === 'approved' ? 'Đã duyệt yêu cầu rút tiền' : 'Đã từ chối yêu cầu rút tiền', 'success');
     } catch (error: any) {
-      alert(error.message || "Lỗi xử lý yêu cầu");
+      showToast(error.message || "Lỗi xử lý yêu cầu", "error");
     } finally {
       setIsProcessing(false);
     }
@@ -73,6 +103,28 @@ export const AdminWithdrawalPage: React.FC = () => {
     setSelectedRequest(req);
     setActionType(action);
     setAdminNote('');
+  };
+
+  const openViewReportModal = (req: WithdrawalRequestInfo) => {
+    setReportReq(req);
+    setResolutionMessage('');
+    setViewReportModalOpen(true);
+  };
+
+  const handleResolveReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reportReq) return;
+    setIsResolving(true);
+    try {
+      await resolveReport(reportReq._id, resolutionMessage);
+      await fetchRequests();
+      setViewReportModalOpen(false);
+      showToast('Đã xử lý báo cáo thành công!', 'success');
+    } catch (error: any) {
+      showToast(error.message || 'Có lỗi xảy ra khi xử lý báo cáo', 'error');
+    } finally {
+      setIsResolving(false);
+    }
   };
 
   return (
@@ -155,6 +207,13 @@ export const AdminWithdrawalPage: React.FC = () => {
                                   Lý do: {req.adminNote}
                                 </div>
                               )}
+                              {req.isReported && (
+                                <div className="mt-1 text-xs max-w-[200px] truncate" title={req.reportMessage}>
+                                  <span className={req.isReceiptConfirmed ? "text-blue-400" : req.isReportResolved ? "text-emerald-400" : "text-rose-400"}>
+                                    {req.isReceiptConfirmed ? '✔️ Đã nhận tiền' : req.isReportResolved ? ' Đã xử lý báo cáo' : `⚠️ Báo cáo: ${req.reportMessage}`}
+                                  </span>
+                                </div>
+                              )}
                             </td>
                             <td className="px-6 py-4 text-right">
                               {req.status === 'pending' && (
@@ -170,6 +229,19 @@ export const AdminWithdrawalPage: React.FC = () => {
                                     className="px-3 py-1.5 rounded bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 transition text-xs font-bold"
                                   >
                                     Từ chối
+                                  </button>
+                                </div>
+                              )}
+                              {req.isReported && (
+                                <div className="flex justify-end mt-2">
+                                  <button
+                                    onClick={() => openViewReportModal(req)}
+                                    className={`px-3 py-1.5 rounded transition text-xs font-bold ${req.isReportResolved
+                                        ? "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
+                                        : "bg-white/10 text-white hover:bg-white/20"
+                                      }`}
+                                  >
+                                    {req.isReportResolved ? 'Xem lại xử lý' : 'Xử lý báo cáo'}
                                   </button>
                                 </div>
                               )}
@@ -206,7 +278,7 @@ export const AdminWithdrawalPage: React.FC = () => {
               <h2 className="text-2xl font-black text-white">
                 {actionType === 'approved' ? 'Duyệt yêu cầu rút tiền' : 'Từ chối yêu cầu'}
               </h2>
-              
+
               <div className="mt-4 rounded-xl bg-white/5 p-4 space-y-2 text-sm text-slate-300">
                 <p>Số tiền: <strong className="text-white text-lg">{selectedRequest.amount.toLocaleString('vi-VN')} đ</strong></p>
                 <p>Ngân hàng: <strong className="text-white">{selectedRequest.bankName}</strong></p>
@@ -244,11 +316,10 @@ export const AdminWithdrawalPage: React.FC = () => {
                   <button
                     type="submit"
                     disabled={isProcessing}
-                    className={`flex-1 rounded-xl py-3 text-sm font-bold shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed ${
-                      actionType === 'approved' 
-                        ? 'bg-emerald-500 text-white hover:bg-emerald-400' 
-                        : 'bg-rose-500 text-white hover:bg-rose-400'
-                    }`}
+                    className={`flex-1 rounded-xl py-3 text-sm font-bold shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed ${actionType === 'approved'
+                      ? 'bg-emerald-500 text-white hover:bg-emerald-400'
+                      : 'bg-rose-500 text-white hover:bg-rose-400'
+                      }`}
                   >
                     {isProcessing ? 'Đang xử lý...' : actionType === 'approved' ? 'Đã Chuyển Khoản & Duyệt' : 'Từ Chối'}
                   </button>
@@ -256,6 +327,116 @@ export const AdminWithdrawalPage: React.FC = () => {
               </form>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* View Report Modal */}
+      <AnimatePresence>
+        {viewReportModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setViewReportModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md overflow-hidden rounded-3xl border border-rose-500/20 bg-[#081734] p-6 shadow-2xl"
+            >
+              <div className="flex items-center gap-3 text-rose-400 mb-6">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <h2 className="text-2xl font-black text-white">Nội dung báo cáo</h2>
+              </div>
+
+              <div className="rounded-xl bg-white/5 border border-white/10 p-4 text-sm text-white/90 whitespace-pre-wrap leading-relaxed mb-6">
+                {reportReq?.reportMessage || 'Không có nội dung.'}
+              </div>
+
+              {reportReq?.isReportResolved ? (
+                <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-4">
+                  <div className="text-emerald-400 font-bold mb-1">Lời nhắn đã gửi:</div>
+                  <div className="text-sm text-emerald-300/90 whitespace-pre-wrap">
+                    {reportReq.reportResolutionMessage}
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleResolveReport} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1.5">Lời nhắn phản hồi Chủ sân</label>
+                    <textarea
+                      required
+                      rows={3}
+                      value={resolutionMessage}
+                      onChange={(e) => setResolutionMessage(e.target.value)}
+                      placeholder="VD: Đã kiểm tra lại hệ thống và hoàn tiền..."
+                      className="w-full rounded-xl border border-white/10 bg-white/5 p-3 text-white placeholder:text-slate-500 focus:border-emerald-500/50 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition resize-none"
+                    />
+                  </div>
+                  <div className="pt-2 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setViewReportModalOpen(false)}
+                      className="flex-1 rounded-xl bg-white/5 py-3 text-sm font-bold text-white hover:bg-white/10 transition"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isResolving}
+                      className="flex-1 rounded-xl bg-emerald-500 py-3 text-sm font-bold text-white shadow-lg hover:bg-emerald-400 transition disabled:opacity-50"
+                    >
+                      {isResolving ? 'Đang xử lý...' : 'Xử lý & Gửi'}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {reportReq?.isReportResolved && (
+                <div className="mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setViewReportModalOpen(false)}
+                    className="w-full rounded-xl bg-white/10 py-3 text-sm font-bold text-white hover:bg-white/20 transition"
+                  >
+                    Đóng
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-2xl shadow-2xl font-bold flex items-center gap-3 ${
+              toast.type === 'success' 
+                ? 'bg-emerald-500 text-white shadow-emerald-500/20' 
+                : 'bg-rose-500 text-white shadow-rose-500/20'
+            }`}
+          >
+            {toast.type === 'success' ? (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            )}
+            {toast.message}
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
