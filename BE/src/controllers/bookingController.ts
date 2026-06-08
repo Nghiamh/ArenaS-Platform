@@ -626,6 +626,9 @@ export async function userBookCourt(req: Request, res: Response) {
 		await session.commitTransaction();
 		session.endSession();
 
+		// Award points for booking a court (non-matchmaking = full booking, matchmaking = 50% deposit)
+		User.findByIdAndUpdate(userId, { $inc: { points: 10, xp: 15 } }).catch(() => {});
+
 		// --- Bước 10: Notify qua Socket ---
 		if (isMatchBooking) {
 			try {
@@ -868,6 +871,9 @@ export async function opponentPayBooking(req: Request, res: Response) {
 		await tx.save({ session });
 
 		await session.commitTransaction();
+
+		// Award points to opponent for completing their booking payment
+		User.findByIdAndUpdate(userId, { $inc: { points: 10, xp: 15 } }).catch(() => {});
 
 		// --- Socket notifications ---
 		if (booking.match_id) {

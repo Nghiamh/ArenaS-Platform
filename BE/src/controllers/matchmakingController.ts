@@ -634,10 +634,10 @@ export async function completeMatch(req: Request, res: Response): Promise<void> 
 		match.status = "COMPLETED";
 		await match.save();
 
-		// Increment completed_matches_count for both participants
+		// Increment completed_matches_count and award points for both participants
 		for (const pId of match.participants) {
 			await User.findByIdAndUpdate(pId, {
-				$inc: { completed_matches_count: 1 }
+				$inc: { completed_matches_count: 1, points: 20, xp: 30 }
 			});
 		}
 
