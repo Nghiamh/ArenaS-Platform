@@ -20,6 +20,7 @@ import {
   type OwnerApplication,
   type OwnerApplicationPayload,
 } from "../../Axios/Axios";
+import { getPublicVouchers, type VoucherItem } from "../../Axios/voucherApi";
 import { useWallet } from "../../hooks/useWallet";
 import { DepositModal } from "../WalletPage/DepositModal";
 
@@ -450,6 +451,22 @@ export const ProfilePage: React.FC = () => {
   const [isAppealing, setIsAppealing] = useState(false);
   const [showReportsModal, setShowReportsModal] = useState(false);
 
+  // Voucher/reward state
+  const [publicVouchers, setPublicVouchers] = useState<VoucherItem[]>([]);
+  const [vouchersLoading, setVouchersLoading] = useState(false);
+
+  const fetchPublicVouchers = async () => {
+    try {
+      setVouchersLoading(true);
+      const data = await getPublicVouchers();
+      setPublicVouchers(data);
+    } catch {
+      // silently ignore
+    } finally {
+      setVouchersLoading(false);
+    }
+  };
+
   const isAnyModalOpen =
     isEditModalOpen ||
     showDeposit ||
@@ -636,6 +653,7 @@ export const ProfilePage: React.FC = () => {
     fetchBookings();
     fetchReports();
     fetchOwnerApplication();
+    fetchPublicVouchers();
   }, []);
 
   const handleDepositSuccess = () => {
@@ -1259,6 +1277,32 @@ export const ProfilePage: React.FC = () => {
                   </button>
                 )
               )}
+
+              {/* Points & XP Widget */}
+              <div className="bg-[#10111a] border border-violet-500/20 rounded-3xl p-5 relative overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.15)]">
+                <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-violet-500/40 to-transparent" />
+                <div className="flex items-center gap-2.5 mb-4">
+                  <svg viewBox="0 0 24 24" className="h-4 w-4 text-violet-400" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                  </svg>
+                  <p className="text-[11px] font-bold text-violet-400 tracking-wider uppercase">Điểm thưởng</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl bg-violet-500/10 border border-violet-500/20 p-3 text-center">
+                    <p className="text-2xl font-black text-violet-300">{currentUser?.points ?? 0}</p>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Điểm</p>
+                  </div>
+                  <div className="rounded-2xl bg-amber-500/10 border border-amber-500/20 p-3 text-center">
+                    <p className="text-2xl font-black text-amber-300">{currentUser?.xp ?? 0}</p>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">XP</p>
+                  </div>
+                </div>
+                <div className="mt-3 space-y-1.5 text-[11px] text-slate-500">
+                  <p className="flex justify-between"><span>Đặt sân</span><span className="text-violet-400 font-bold">+10 pts · +15 XP</span></p>
+                  <p className="flex justify-between"><span>Kết thúc trận</span><span className="text-violet-400 font-bold">+20 pts · +30 XP</span></p>
+                  <p className="flex justify-between"><span>Review đối thủ</span><span className="text-violet-400 font-bold">+5 pts · +10 XP</span></p>
+                </div>
+              </div>
 
             </aside>
 
@@ -1990,6 +2034,140 @@ export const ProfilePage: React.FC = () => {
                     </tbody>
                   </table>
                 </div>
+              </div>
+
+              {/* ─── Voucher Section ───────────────────────────────────────── */}
+              <div className="bg-[#10111a] border border-white/[0.05] rounded-3xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.15)] relative overflow-hidden">
+                <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-violet-500/20 to-transparent" />
+
+                {/* Header */}
+                <div className="flex items-center justify-between border-b border-white/[0.05] pb-4 mb-6">
+                  <div className="flex items-center gap-2.5">
+                    <svg viewBox="0 0 24 24" className="h-5 w-5 text-violet-400" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/>
+                      <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/>
+                      <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
+                    </svg>
+                    <h3 className="text-base font-bold text-white tracking-wide">Voucher khả dụng</h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 rounded-full bg-violet-500/10 border border-violet-500/20 px-3 py-1">
+                      <svg viewBox="0 0 24 24" className="h-3 w-3 text-violet-400" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                      </svg>
+                      <span className="text-[11px] font-bold text-violet-300">{currentUser?.points ?? 0} điểm</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void fetchPublicVouchers()}
+                      className="w-6 h-6 rounded bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition active:scale-95"
+                      title="Làm mới"
+                    >
+                      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Earn points guide */}
+                <div className="mb-5 rounded-2xl bg-gradient-to-r from-violet-500/10 to-purple-500/5 border border-violet-500/20 p-4">
+                  <p className="text-[11px] font-bold text-violet-400 tracking-wider uppercase mb-2.5">Cách tích điểm</p>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    {[
+                      { label: 'Đặt sân', pts: '+10', xp: '+15 XP' },
+                      { label: 'Kết thúc trận', pts: '+20', xp: '+30 XP' },
+                      { label: 'Review đối thủ', pts: '+5', xp: '+10 XP' },
+                    ].map(item => (
+                      <div key={item.label} className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-2.5">
+                        <p className="text-lg font-black text-violet-300">{item.pts}</p>
+                        <p className="text-[10px] font-bold text-slate-400 mt-0.5">{item.label}</p>
+                        <p className="text-[9px] text-slate-600 mt-0.5">{item.xp}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Voucher list */}
+                {vouchersLoading ? (
+                  <div className="flex items-center justify-center py-10">
+                    <div className="w-6 h-6 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
+                  </div>
+                ) : publicVouchers.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <svg viewBox="0 0 24 24" className="h-10 w-10 text-slate-700 mb-3" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/>
+                    </svg>
+                    <p className="text-sm text-slate-500 font-semibold">Hiện chưa có voucher khả dụng</p>
+                    <p className="text-xs text-slate-600 mt-1">Hãy tích điểm và quay lại sau nhé!</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {publicVouchers.map(v => {
+                      const fmt = (n: number) => new Intl.NumberFormat('vi-VN').format(n);
+                      const discountLabel = v.discountType === 'percent'
+                        ? `Giảm ${v.discountValue}%`
+                        : `Giảm ${fmt(v.discountValue)}đ`;
+                      const expDate = new Date(v.expiryDate).toLocaleDateString('vi-VN');
+                      const isSystemVoucher = v.source === 'system';
+
+                      return (
+                        <div key={v._id} className="group relative rounded-2xl border border-white/[0.07] bg-gradient-to-br from-[#141e2b] to-[#10111a] p-4 overflow-hidden hover:border-violet-500/30 transition-all">
+                          {/* Dashed divider decoration */}
+                          <div className="absolute left-[30%] top-0 bottom-0 border-l border-dashed border-white/[0.06]" />
+
+                          {/* Left: icon */}
+                          <div className="flex gap-3">
+                            <div className={`shrink-0 h-10 w-10 rounded-xl flex items-center justify-center ${isSystemVoucher ? 'bg-violet-500/15 border border-violet-500/25 text-violet-400' : 'bg-amber-500/15 border border-amber-500/25 text-amber-400'}`}>
+                              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/>
+                              </svg>
+                            </div>
+
+                            {/* Right: info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isSystemVoucher ? 'bg-violet-500/15 text-violet-400' : 'bg-amber-500/15 text-amber-400'}`}>
+                                  {isSystemVoucher ? 'ArenaS' : v.partnerName || 'Đối tác'}
+                                </span>
+                              </div>
+                              <p className="text-sm font-bold text-white truncate">{v.name}</p>
+                              <p className="text-lg font-black text-[#c7f200] mt-0.5">{discountLabel}</p>
+                              {v.minOrderValue > 0 && (
+                                <p className="text-[10px] text-slate-500 mt-0.5">Đơn tối thiểu {fmt(v.minOrderValue)}đ</p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Code + expiry */}
+                          <div className="mt-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <code className="text-[13px] font-black tracking-widest text-white bg-white/[0.06] border border-white/10 px-2.5 py-1 rounded-lg">{v.code}</code>
+                              <button
+                                type="button"
+                                onClick={() => { navigator.clipboard.writeText(v.code); }}
+                                className="text-slate-500 hover:text-white transition p-1 rounded"
+                                title="Sao chép mã"
+                              >
+                                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                                </svg>
+                              </button>
+                            </div>
+                            <p className="text-[10px] text-slate-600">HSD: {expDate}</p>
+                          </div>
+
+                          {/* Remaining uses badge */}
+                          <div className="mt-2 flex justify-between items-center">
+                            <p className="text-[10px] text-slate-600">Còn {v.maxUses - v.usedCount} lượt</p>
+                            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">Khả dụng</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
             </main>

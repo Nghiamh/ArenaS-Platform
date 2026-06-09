@@ -353,13 +353,13 @@ export async function login(req: Request, res: Response): Promise<void> {
 
 		const user = await User.findOne(query);
 		if (!user) {
-			res.status(401).json({ message: "invalid credentials" });
+			res.status(401).json({ message: "Sai tên đăng nhập hoặc mật khẩu" });
 			return;
 		}
 
 		const isPasswordCorrect = await user.comparePassword(password);
 		if (!isPasswordCorrect) {
-			res.status(401).json({ message: "invalid credentials" });
+			res.status(401).json({ message: "Sai tên đăng nhập hoặc mật khẩu" });
 			return;
 		}
 

@@ -8,6 +8,9 @@ import Wallet from '../models/walletModel.js';
 import WalletTransaction from '../models/walletTransactionModel.js';
 import Match from '../models/matchModel.js';
 import ChatMessage from '../models/chatMessageModel.js';
+import { createNotification } from './notificationController.js';
+import { consumeVoucher } from './voucherController.js';
+import User from '../models/userModel.js';
 
 // Helper: Khởi tạo các mốc thời gian 30 phút
 function generateTimeSlots(openTime: string, closeTime: string): ISlot[] {
@@ -408,7 +411,7 @@ export async function userBookCourt(req: Request, res: Response) {
 	try {
 		const user = req.user!;
 		const userId = user._id;
-		const { court_id, sub_court_id, date, start_time, end_time, match_id } = req.body;
+		const { court_id, sub_court_id, date, start_time, end_time, match_id, voucher_code } = req.body;
 
 		// --- Validate input ---
 		if (!court_id || !mongoose.Types.ObjectId.isValid(court_id)) {
@@ -502,7 +505,17 @@ export async function userBookCourt(req: Request, res: Response) {
 
 		// Determine if this is a matchmaking booking (split 50/50)
 		const isMatchBooking = !!(match_id && mongoose.Types.ObjectId.isValid(match_id));
-		const chargeAmount = isMatchBooking ? Math.ceil(total_price / 2) : total_price;
+
+		// --- Apply voucher (only for non-matchmaking, full-price bookings) ---
+		let voucherDiscount = 0;
+		if (!isMatchBooking && voucher_code) {
+			const vResult = await consumeVoucher(voucher_code, total_price);
+			if (vResult) voucherDiscount = vResult.discountAmount;
+		}
+
+		const chargeAmount = isMatchBooking
+			? Math.ceil(total_price / 2)
+			: Math.max(0, total_price - voucherDiscount);
 
 		// --- Bước 5: Kiểm tra và trừ tiền ví ---
 		const wallet = await Wallet.findOne({ userId }).session(session);
@@ -625,6 +638,9 @@ export async function userBookCourt(req: Request, res: Response) {
 		await session.commitTransaction();
 		session.endSession();
 
+		// Award points for booking a court (non-matchmaking = full booking, matchmaking = 50% deposit)
+		User.findByIdAndUpdate(userId, { $inc: { points: 10, xp: 15 } }).catch(() => {});
+
 		// --- Bước 10: Notify qua Socket ---
 		if (isMatchBooking) {
 			try {
@@ -725,6 +741,17 @@ export async function userBookCourt(req: Request, res: Response) {
 			}
 		}
 
+		// --- Bước 11: Notify Owner about the new booking ---
+		const cycleLabel = isMatchBooking ? "đặt cọc 50%" : "đặt sân";
+		const courtDisplayName = subCourt?.name ? `${court.name} - ${subCourt.name}` : court.name;
+		void createNotification({
+			recipientId: court.owner_id.toString(),
+			type: "booking_created",
+			title: "Đơn đặt sân mới 🗓",
+			message: `Khách hàng ${user.name || user.userName} vừa ${cycleLabel} tại ${courtDisplayName} vào ${date} lúc ${start_time}.`,
+			link: "/owner/bookings",
+		});
+
 		return res.status(201).json({
 			message: isMatchBooking ? 'Đặt cọc 50% thành công! Đợi đối thủ thanh toán.' : 'Đặt sân thành công!',
 			booking: {
@@ -737,6 +764,8 @@ export async function userBookCourt(req: Request, res: Response) {
 				start_time,
 				end_time,
 				total_price,
+				charged_amount: chargeAmount,
+				voucher_discount: voucherDiscount,
 				status: bookingStatus,
 				slots_booked: numberOfSlotsBooked,
 				wallet_balance: wallet.balance,
@@ -856,6 +885,9 @@ export async function opponentPayBooking(req: Request, res: Response) {
 		await tx.save({ session });
 
 		await session.commitTransaction();
+
+		// Award points to opponent for completing their booking payment
+		User.findByIdAndUpdate(userId, { $inc: { points: 10, xp: 15 } }).catch(() => {});
 
 		// --- Socket notifications ---
 		if (booking.match_id) {
@@ -1277,6 +1309,19 @@ export async function cancelBooking(req: Request, res: Response) {
 		}
 
 		await session.commitTransaction();
+
+		// Notify Owner about the cancellation
+		const court = await Court.findById(booking.court_id);
+		if (court) {
+			void createNotification({
+				recipientId: court.owner_id.toString(),
+				type: "booking_cancelled",
+				title: "Lịch đặt sân đã bị hủy ✕",
+				message: `Lịch đặt của khách hàng ${booking.customer_name} vào ${bookingDateStr} lúc ${booking.start_time} đã bị hủy.`,
+				link: "/owner/bookings",
+			});
+		}
+
 		return res.status(200).json({
 			message: 'Hủy sân thành công',
 			refundPercentage: finalRefundPercentage,

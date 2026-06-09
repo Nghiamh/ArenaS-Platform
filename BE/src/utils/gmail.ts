@@ -16,6 +16,16 @@ type VerificationEmailPayload = {
 	locale?: EmailLocale;
 };
 
+type SubscriptionActivatedEmailPayload = {
+	toEmail: string;
+	toName?: string;
+	planName: string;
+	amount: number;
+	billingCycle: string;
+	actionUrl: string;
+	locale?: EmailLocale;
+};
+
 type EmailTemplate = {
 	subject: string;
 	preheader: string;
@@ -114,6 +124,50 @@ function getVerificationTemplate(locale: EmailLocale, displayName: string): Emai
 		expires: "Liên kết này sẽ hết hạn trong 24 giờ.",
 		fallback: "Nếu nút bấm không hoạt động, hãy sao chép liên kết sau vào trình duyệt:",
 		ignore: "Nếu bạn không tạo tài khoản, bạn có thể bỏ qua email này.",
+		signOff: "Trân trọng,",
+		team: "ArenaS Team",
+	};
+}
+
+function getSubscriptionTemplate(
+	locale: EmailLocale,
+	displayName: string,
+	planName: string,
+	amount: number,
+	billingCycle: string
+): EmailTemplate {
+	const formattedAmount = new Intl.NumberFormat("vi-VN", {
+		style: "currency",
+		currency: "VND",
+	}).format(amount);
+	const cycleStr = billingCycle === "monthly" ? "tháng" : "năm";
+
+	if (locale === "en") {
+		return {
+			subject: "ArenaS - Payment Successful",
+			preheader: "Your subscription has been activated successfully.",
+			headline: "Payment Successful",
+			greeting: `Hi ${displayName},`,
+			intro: `Thank you for your payment! Your subscription to the "${planName}" plan (${cycleStr}) has been activated successfully. Amount paid: ${formattedAmount}.`,
+			action: "Go to Dashboard",
+			expires: "You can start managing your courts right away.",
+			fallback: "If the button does not work, copy and paste this link into your browser:",
+			ignore: "If you have any questions, please contact our support.",
+			signOff: "Best regards,",
+			team: "ArenaS Team",
+		};
+	}
+
+	return {
+		subject: "ArenaS - THANH TOÁN THÀNH CÔNG",
+		preheader: "Gói dịch vụ của bạn đã được kích hoạt thành công.",
+		headline: "Thanh Toán Thành Công",
+		greeting: `Xin chào ${displayName},`,
+		intro: `Cảm ơn bạn đã tin tưởng ArenaS! Gói dịch vụ "${planName}" (${cycleStr}) của bạn đã được kích hoạt thành công. Số tiền thanh toán: ${formattedAmount}.`,
+		action: "Truy Cập Bảng Điều Khiển",
+		expires: "Bạn có thể bắt đầu quản lý sân của bạn ngay bây giờ.",
+		fallback: "Nếu nút bấm không hoạt động, hãy sao chép liên kết sau vào trình duyệt:",
+		ignore: "Nếu bạn có bất kỳ thắc mắc nào, vui lòng liên hệ với bộ phận hỗ trợ của chúng tôi.",
 		signOff: "Trân trọng,",
 		team: "ArenaS Team",
 	};
@@ -305,6 +359,64 @@ export async function sendVerificationEmail({
 	].join("\n");
 
 	const html = buildHtmlEmail(template, verificationUrl);
+
+	const raw = buildRawEmail(toEmail, template.subject, html, text);
+
+	await gmail.users.messages.send({
+		userId: "me",
+		requestBody: {
+			raw,
+		},
+	});
+}
+
+export async function sendSubscriptionEmail({
+	toEmail,
+	toName,
+	planName,
+	amount,
+	billingCycle,
+	actionUrl,
+	locale = "vi",
+}: SubscriptionActivatedEmailPayload): Promise<void> {
+	const clientId = getOauthClientId();
+	const clientSecret = getOauthClientSecret();
+
+	const refreshToken =
+		process.env.GMAIL_REFRESH_TOKEN?.trim() || process.env.GOOGLE_REFRESH_TOKEN?.trim();
+
+	if (!refreshToken) {
+		throw new Error("Missing GMAIL_REFRESH_TOKEN in environment variables");
+	}
+
+	const oauth2Client = new google.auth.OAuth2(clientId, clientSecret);
+	oauth2Client.setCredentials({
+		refresh_token: refreshToken,
+	});
+
+	const gmail = google.gmail({ version: "v1", auth: oauth2Client });
+	const displayName = toName?.trim() || "chủ sân";
+	const template = getSubscriptionTemplate(
+		locale,
+		displayName,
+		planName,
+		amount,
+		billingCycle
+	);
+	const text = [
+		template.headline,
+		"",
+		template.greeting,
+		template.intro,
+		template.expires,
+		"",
+		`${template.action}: ${actionUrl}`,
+		"",
+		template.ignore,
+		`${template.signOff} ${template.team}`,
+	].join("\n");
+
+	const html = buildHtmlEmail(template, actionUrl);
 
 	const raw = buildRawEmail(toEmail, template.subject, html, text);
 

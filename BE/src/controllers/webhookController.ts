@@ -4,7 +4,9 @@ import SubscriptionCheckout from "../models/subscriptionCheckoutModel.js";
 import Subscription from "../models/subscriptionModel.js";
 import Plan from "../models/planModel.js";
 import PaymentWebhookLog from "../models/paymentWebhookLogModel.js";
+import User from "../models/userModel.js";
 import { createNotification } from "./notificationController.js";
+import { sendSubscriptionEmail } from "../utils/gmail.js";
 
 // ─── Reusable Subscription Checkout Processor ─────────────────────────────────
 
@@ -132,6 +134,23 @@ export async function processSubscriptionCheckout(
 				link: "/owner/dashboard",
 				metadata: { planName: plan.displayName, amount: String(finalAmount) },
 			});
+
+			// Send email notification
+			const user = await User.findById(checkout.ownerId).session(session);
+			if (user && user.email) {
+				const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+				void sendSubscriptionEmail({
+					toEmail: user.email,
+					toName: user.name || user.userName,
+					planName: plan.displayName,
+					amount: finalAmount,
+					billingCycle: checkout.billingCycle,
+					actionUrl: `${frontendUrl}/owner/dashboard`,
+					locale: "vi", // Defaulting to vi for now
+				}).catch((err) => {
+					console.error("[Subscription Email Error]", err);
+				});
+			}
 
 			console.log(
 				`[Subscription Checkout] Activated subscription ${newSubscription._id} for owner ${checkout.ownerId}, plan ${plan.name}, amount ${finalAmount} VND`

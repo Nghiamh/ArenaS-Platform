@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema } from "mongoose";
 
-export type TransactionType = "deposit" | "payment" | "refund";
+export type TransactionType = "deposit" | "payment" | "refund" | "withdraw";
 export type TransactionStatus = "pending" | "completed" | "expired" | "failed";
 
 export interface IWalletTransaction extends Document {
@@ -34,7 +34,7 @@ const walletTransactionSchema = new Schema<IWalletTransaction>(
 		type: {
 			type: String,
 			required: true,
-			enum: ["deposit", "payment", "refund"],
+			enum: ["deposit", "payment", "refund", "withdraw"],
 		},
 		status: {
 			type: String,

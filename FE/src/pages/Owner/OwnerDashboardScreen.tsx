@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { OwnerSidebar } from './OwnerSidebar';
 import { getOwnerCourts, getOwnerBookings, getOwnerRevenue, type OwnerCourt, type OwnerBooking, type OwnerRevenueResponse } from '../../Axios/Axios';
+import { NotificationBell } from '../../components/NotificationBell';
 
 type StatCard = {
   title: string;
@@ -241,9 +242,7 @@ export const OwnerDashboardScreen: React.FC = () => {
                 <p className="mt-1 text-sm text-slate-400">Dữ liệu thực tế trực tiếp từ hệ thống ArenaS</p>
               </div>
               <div className="flex items-center gap-3">
-                <button className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-slate-300 transition hover:bg-white/10 hover:text-white">
-                  🔔
-                </button>
+                <NotificationBell isLoggedIn={true} />
               </div>
             </motion.header>
 

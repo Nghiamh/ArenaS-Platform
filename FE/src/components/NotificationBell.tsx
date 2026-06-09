@@ -29,9 +29,13 @@ function getNotificationStyle(type: FENotification['type']) {
     case 'court_approved':
     case 'subscription_activated':
       return { dot: 'bg-emerald-400', icon: '✓', bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20' };
+    case 'booking_created':
+      return { dot: 'bg-emerald-400', icon: '🗓', bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20' };
     case 'owner_application_rejected':
     case 'court_rejected':
       return { dot: 'bg-rose-400', icon: '✗', bg: 'bg-rose-500/10', text: 'text-rose-400', border: 'border-rose-500/20' };
+    case 'booking_cancelled':
+      return { dot: 'bg-rose-400', icon: '✕', bg: 'bg-rose-500/10', text: 'text-rose-400', border: 'border-rose-500/20' };
     case 'owner_application_submitted':
     case 'court_submitted':
       return { dot: 'bg-amber-400', icon: '📋', bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20' };

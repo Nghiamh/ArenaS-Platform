@@ -50,6 +50,8 @@ export type AuthUser = {
 	userName: string;
 	role: 'user' | 'owner' | 'admin';
 	createdAt: string;
+	points?: number;
+	xp?: number;
 };
 
 export type AuthResponse = {
@@ -973,6 +975,7 @@ export type FESubscription = {
 export type CheckoutResponse = {
 	success: boolean;
 	message: string;
+	isFree?: boolean;
 	checkout: {
 		paymentCode: string;
 		qrUrl: string;
@@ -1161,6 +1164,7 @@ export type UserBookingPayload = {
 	start_time: string;
 	end_time: string;
 	match_id?: string;
+	voucher_code?: string;
 };
 
 export type UserBookingResponse = {
@@ -1175,6 +1179,8 @@ export type UserBookingResponse = {
 		start_time: string;
 		end_time: string;
 		total_price: number;
+		charged_amount: number;
+		voucher_discount: number;
 		status: string;
 		slots_booked: number;
 		wallet_balance: number;
@@ -1640,7 +1646,12 @@ export type NotificationType =
 	| 'court_approved'
 	| 'court_rejected'
 	| 'deposit_received'
-	| 'subscription_activated';
+	| 'subscription_activated'
+	| 'booking_created'
+	| 'booking_cancelled'
+	| 'withdrawal_requested'
+	| 'withdrawal_approved'
+	| 'withdrawal_rejected';
 
 export type FENotification = {
 	_id: string;

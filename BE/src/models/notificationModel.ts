@@ -8,7 +8,12 @@ export type NotificationType =
 	| "court_approved"                // owner receives: admin approved their court
 	| "court_rejected"                // owner receives: admin rejected their court
 	| "deposit_received"              // user receives: wallet deposit confirmed
-	| "subscription_activated";       // owner receives: subscription plan activated
+	| "subscription_activated"        // owner receives: subscription plan activated
+	| "booking_created"               // owner receives: someone booked a court
+	| "booking_cancelled"             // owner receives: someone cancelled a court
+	| "withdrawal_requested"          // admin receives: owner requested withdrawal
+	| "withdrawal_approved"           // owner receives: admin approved withdrawal
+	| "withdrawal_rejected";          // owner receives: admin rejected withdrawal
 
 export interface INotification extends Document {
 	recipientId?: mongoose.Types.ObjectId;  // specific user (null = target by role)
@@ -48,6 +53,11 @@ const notificationSchema = new Schema<INotification>(
 				"court_rejected",
 				"deposit_received",
 				"subscription_activated",
+				"booking_created",
+				"booking_cancelled",
+				"withdrawal_requested",
+				"withdrawal_approved",
+				"withdrawal_rejected",
 			],
 		},
 		title: { type: String, required: true, trim: true },

@@ -9,12 +9,13 @@ export type AdminSectionKey =
   | 'moderation'
   | 'vouchers'
   | 'income'
-  | 'owner-applications';
+  | 'owner-applications'
+  | 'withdrawals';
 
 type AdminSidebarProps = {
   activeKey: AdminSectionKey;
-  collapsed: boolean;
-  onToggleCollapse: () => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 };
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -83,6 +84,13 @@ const navIcons: Record<AdminSectionKey, React.ReactNode> = {
       <path d="m13 17 2-2 2 2" />
     </svg>
   ),
+  withdrawals: (
+    <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+      <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+      <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
+    </svg>
+  ),
 };
 
 // ─── Nav config ───────────────────────────────────────────────────────────────
@@ -99,6 +107,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'stadiums',           label: 'Quản lý sân',    sub: 'Duyệt và cập nhật sân',  to: '/admin/manage-stadiums'    },
   { key: 'users',              label: 'Người dùng',     sub: 'Tài khoản & phân quyền', to: '/admin/manage-users'       },
   { key: 'owner-applications', label: 'Duyệt chủ sân',  sub: 'Hồ sơ đăng ký',          to: '/admin/owner-applications' },
+  { key: 'withdrawals',        label: 'Rút tiền',       sub: 'Duyệt yêu cầu rút tiền', to: '/admin/withdrawals'        },
   { key: 'moderation',         label: 'Kiểm duyệt',     sub: 'Đánh giá & báo cáo',     to: '/admin/moderation'         },
   { key: 'vouchers',           label: 'Kho Voucher',    sub: 'Hệ thống & đối tác',     to: '/admin/vouchers'           },
   { key: 'income',             label: 'Thu nhập',       sub: 'Nạp ví & mua gói',       to: '/admin/income'             },
