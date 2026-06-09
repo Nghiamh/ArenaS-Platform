@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { userBookCourt, type UserBookingPayload, type UserBookingResponse } from '../Axios/Axios';
-import { validateVoucher } from '../Axios/voucherApi';
+import { userBookCourt, type UserBookingPayload, type UserBookingResponse, getCurrentUserProfile } from '../Axios/Axios';
+import { validateVoucher, getPublicVouchers, redeemVoucher, type VoucherItem } from '../Axios/voucherApi';
 import { useWallet } from '../hooks/useWallet';
 import { DepositModal } from '../pages/WalletPage/DepositModal';
 
@@ -38,12 +38,18 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   // Voucher state
   const [voucherCode, setVoucherCode] = useState('');
-  const [voucherInput, setVoucherInput] = useState('');
   const [voucherDiscount, setVoucherDiscount] = useState(0);
   const [voucherName, setVoucherName] = useState('');
   const [voucherError, setVoucherError] = useState('');
   const [voucherLoading, setVoucherLoading] = useState(false);
-  const voucherInputRef = useRef<HTMLInputElement>(null);
+
+  // Voucher picker modal
+  const [showVoucherPicker, setShowVoucherPicker] = useState(false);
+  const [availableVouchers, setAvailableVouchers] = useState<VoucherItem[]>([]);
+  const [vouchersListLoading, setVouchersListLoading] = useState(false);
+  const [voucherTab, setVoucherTab] = useState<'free' | 'points'>('free');
+  const [confirmingVoucher, setConfirmingVoucher] = useState<VoucherItem | null>(null);
+  const [userPoints, setUserPoints] = useState(0);
 
   // Calculate estimated price
   const startParts = payload.start_time.split(':').map(Number);
@@ -59,33 +65,75 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     return `${dayNames[d.getDay()]}, ${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
   };
 
-  const handleApplyVoucher = async () => {
-    const code = voucherInput.trim().toUpperCase();
-    if (!code) return;
+  const handleOpenVoucherPicker = async () => {
+    setShowVoucherPicker(true);
+    setVouchersListLoading(true);
+    setConfirmingVoucher(null);
+    try {
+      const [vouchers, profileRes] = await Promise.all([
+        getPublicVouchers(),
+        getCurrentUserProfile().catch(() => null),
+      ]);
+      if (profileRes?.user) setUserPoints(profileRes.user.points ?? 0);
+      setAvailableVouchers(vouchers.filter(v => estimatedPrice >= v.minOrderValue));
+    } catch {
+      setAvailableVouchers([]);
+    } finally {
+      setVouchersListLoading(false);
+    }
+  };
+
+  const handleSelectVoucher = async (voucher: VoucherItem) => {
+    // Nếu cần đổi điểm và chưa đổi → hiện xác nhận inline
+    if ((voucher.pointsCost ?? 0) > 0 && !voucher.isUsedByMe) {
+      setConfirmingVoucher(voucher);
+      return;
+    }
+    await applyVoucher(voucher);
+  };
+
+  const handleConfirmRedeem = async () => {
+    if (!confirmingVoucher) return;
+    const voucher = confirmingVoucher;
+    setConfirmingVoucher(null);
+    setVouchersListLoading(true);
+    try {
+      await redeemVoucher(voucher._id);
+      await applyVoucher(voucher);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Đổi voucher thất bại. Bạn không đủ điểm?';
+      setVoucherError(msg);
+      setVouchersListLoading(false);
+    }
+  };
+
+  const applyVoucher = async (voucher: VoucherItem) => {
+    setShowVoucherPicker(false);
+    setConfirmingVoucher(null);
     setVoucherError('');
     setVoucherLoading(true);
     try {
-      const res = await validateVoucher(code, estimatedPrice);
+      const res = await validateVoucher(voucher.code, estimatedPrice);
       if (res.valid) {
-        setVoucherCode(code);
+        setVoucherCode(voucher.code);
         setVoucherDiscount(res.discountAmount);
         setVoucherName(res.voucher.name);
         setVoucherError('');
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Mã voucher không hợp lệ';
+      const msg = err?.response?.data?.message || 'Voucher không hợp lệ';
       setVoucherError(msg);
       setVoucherCode('');
       setVoucherDiscount(0);
       setVoucherName('');
     } finally {
       setVoucherLoading(false);
+      setVouchersListLoading(false);
     }
   };
 
   const handleRemoveVoucher = () => {
     setVoucherCode('');
-    setVoucherInput('');
     setVoucherDiscount(0);
     setVoucherName('');
     setVoucherError('');
@@ -113,7 +161,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     setResult(null);
     setErrorMsg('');
     setVoucherCode('');
-    setVoucherInput('');
     setVoucherDiscount(0);
     setVoucherName('');
     setVoucherError('');
@@ -200,7 +247,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 <div className="hidden sm:flex items-center text-sm font-bold text-white">
                   {step === 'confirm' && (
                     <div className="flex items-center gap-1.5 bg-rose-500/10 text-rose-400 px-3 py-1.5 rounded-lg border border-rose-500/20 mr-4">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
                       {formatLockTime(lockTimeLeft)}
                     </div>
                   )}
@@ -258,7 +305,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     {/* Voucher Input */}
                     <div className="rounded-2xl bg-[#141E2B] p-5 mb-4">
                       <p className="text-[10px] text-slate-400 font-bold tracking-wider uppercase mb-3 flex items-center gap-1.5">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 12V22H4V12" /><path d="M22 7H2v5h20V7z" /><path d="M12 22V7" /><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" /><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" /></svg>
                         MÃ GIẢM GIÁ
                       </p>
 
@@ -273,34 +320,26 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                             onClick={handleRemoveVoucher}
                             className="text-slate-400 hover:text-rose-400 transition ml-3 shrink-0"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                           </button>
                         </div>
                       ) : (
-                        // Voucher input
-                        <div className="flex gap-2">
-                          <input
-                            ref={voucherInputRef}
-                            type="text"
-                            value={voucherInput}
-                            onChange={e => { setVoucherInput(e.target.value.toUpperCase()); setVoucherError(''); }}
-                            onKeyDown={e => e.key === 'Enter' && handleApplyVoucher()}
-                            placeholder="Nhập mã voucher..."
-                            className="flex-1 rounded-xl bg-[#0F172A] border border-white/10 px-4 py-2.5 text-[13px] font-bold text-white placeholder:text-slate-600 focus:outline-none focus:border-[#c7f200]/50 transition"
-                          />
-                          <button
-                            onClick={handleApplyVoucher}
-                            disabled={!voucherInput.trim() || voucherLoading}
-                            className="rounded-xl bg-[#c7f200] px-4 py-2.5 text-[13px] font-bold text-[#0B1221] disabled:opacity-40 transition hover:brightness-110 whitespace-nowrap"
-                          >
-                            {voucherLoading ? '...' : 'Áp dụng'}
-                          </button>
-                        </div>
+                        // Open voucher picker button
+                        <button
+                          onClick={handleOpenVoucherPicker}
+                          disabled={voucherLoading}
+                          className="w-full flex items-center justify-between rounded-xl bg-[#0F172A] border border-white/10 hover:border-violet-500/40 px-4 py-3 transition group"
+                        >
+                          <span className="text-[13px] text-slate-400 group-hover:text-violet-300 transition">
+                            {voucherLoading ? 'Đang xác thực...' : 'Voucher '}
+                          </span>
+                          <svg viewBox="0 0 24 24" className="h-4 w-4 text-slate-500 group-hover:text-violet-400 transition" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
+                        </button>
                       )}
 
                       {voucherError && (
                         <p className="text-[12px] text-rose-400 mt-2 flex items-center gap-1">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
                           {voucherError}
                         </p>
                       )}
@@ -316,7 +355,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                         {voucherDiscount > 0 && (
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-emerald-400 flex items-center gap-1">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                               Voucher ({voucherCode})
                             </span>
                             <span className="text-sm font-bold text-emerald-400">-{fmt(voucherDiscount)} đ</span>
@@ -328,11 +367,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                         </div>
                       </div>
 
-                      {/* Points reward hint */}
-                      <div className="flex items-center gap-2 rounded-xl bg-violet-500/10 border border-violet-500/20 px-3 py-2 mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-violet-400 shrink-0"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                        <span className="text-[12px] text-violet-300 font-medium">Đặt sân thành công sẽ nhận <strong>+10 điểm</strong> thưởng</span>
-                      </div>
 
                       <div className="border-t border-white/5 pt-4">
                         <div className="flex justify-between items-center">
@@ -393,7 +427,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     </div>
                     <div className="text-center">
                       <h3 className="text-xl font-bold text-white mb-2">Đang xử lý đặt sân...</h3>
-                      <p className="text-[13px] text-slate-400 leading-relaxed">Hệ thống đang giữ chỗ cho bạn. Vui<br/>lòng không đóng trang.</p>
+                      <p className="text-[13px] text-slate-400 leading-relaxed">Hệ thống đang giữ chỗ cho bạn. Vui<br />lòng không đóng trang.</p>
                     </div>
                   </motion.div>
                 )}
@@ -416,19 +450,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       </div>
                     </div>
 
-                    {/* Points reward banner */}
-                    <motion.div
-                      initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-                      className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-violet-500/20 to-purple-600/10 border border-violet-500/30 px-4 py-3"
-                    >
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-500/20 shrink-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-violet-400"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                      </div>
-                      <div>
-                        <p className="text-[13px] font-bold text-violet-300">+10 điểm thưởng đã được cộng!</p>
-                        <p className="text-[11px] text-slate-400 mt-0.5">Tích điểm để đổi voucher hấp dẫn</p>
-                      </div>
-                    </motion.div>
 
                     <div className="relative rounded-2xl bg-[#141E2B] p-5 space-y-5">
                       <div className="absolute left-0 top-[55%] -translate-x-1/2 -translate-y-1/2 w-4 h-6 bg-[#0F172A] rounded-r-full" />
@@ -502,6 +523,155 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   </motion.div>
                 )}
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Voucher Picker Modal */}
+      <AnimatePresence>
+        {showVoucherPicker && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9010] flex items-end sm:items-center justify-center"
+            onClick={() => setShowVoucherPicker(false)}
+          >
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <motion.div
+              initial={{ y: '100%', opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: '100%', opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              onClick={e => e.stopPropagation()}
+              className="relative w-full sm:max-w-2xl bg-[#0F172A] rounded-t-3xl sm:rounded-3xl border border-white/[0.08] shadow-2xl max-h-[80vh] flex flex-col overflow-hidden"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
+                <div className="flex items-center gap-2.5">
+                  <svg viewBox="0 0 24 24" className="h-5 w-5 text-violet-400" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20 12V22H4V12" /><path d="M22 7H2v5h20V7z" />
+                  </svg>
+                  <h3 className="text-base font-bold text-white">Kho Voucher</h3>
+                </div>
+                <button
+                  onClick={() => setShowVoucherPicker(false)}
+                  className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition"
+                >
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                </button>
+              </div>
+
+              {/* Tabs */}
+              <div className="flex items-center p-2 bg-[#0F172A] border-b border-white/[0.06]">
+                <button
+                  onClick={() => setVoucherTab('free')}
+                  className={`flex-1 py-2 text-sm font-bold rounded-xl transition ${voucherTab === 'free' ? 'bg-emerald-500/10 text-emerald-400' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>
+                    Tất cả
+                  </div>
+                </button>
+                <button
+                  onClick={() => setVoucherTab('points')}
+                  className={`flex-1 py-2 text-sm font-bold rounded-xl transition ${voucherTab === 'points' ? 'bg-violet-500/10 text-violet-400' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
+                    Đổi Điểm
+                  </div>
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="flex-1 overflow-y-auto px-5 py-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                {vouchersListLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="w-6 h-6 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
+                  </div>
+                ) : availableVouchers.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <svg viewBox="0 0 24 24" className="h-10 w-10 text-slate-700 mb-3" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M20 12V22H4V12" /><path d="M22 7H2v5h20V7z" />
+                    </svg>
+                    <p className="text-sm text-slate-500 font-semibold">Không có voucher phù hợp</p>
+                    <p className="text-xs text-slate-600 mt-1">Đơn hàng {fmt(estimatedPrice)}đ chưa đủ điều kiện</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    {(() => {
+                      const displayedVouchers = availableVouchers.filter(v =>
+                        voucherTab === 'free' ? (v.pointsCost ?? 0) === 0 : (v.pointsCost ?? 0) > 0
+                      );
+
+                      if (displayedVouchers.length === 0) {
+                        return (
+                          <div className="col-span-2 flex flex-col items-center justify-center py-8 text-center opacity-70">
+                            <p className="text-sm text-slate-500 font-semibold">
+                              Không có voucher {voucherTab === 'free' ? 'có sẵn' : 'đổi điểm'}.
+                            </p>
+                          </div>
+                        );
+                      }
+
+                      return displayedVouchers.map(v => {
+                        const discountLabel = v.discountType === 'percent' ? `Giảm ${v.discountValue}%` : `Giảm ${fmt(v.discountValue)}đ`;
+                        const isSystem = v.source === 'system';
+                        const isUsed = v.isUsedByMe;
+                        const canAfford = voucherTab === 'free' ? !isUsed : (userPoints >= (v.pointsCost ?? 0) || isUsed);
+                        const missingPoints = (v.pointsCost ?? 0) - userPoints;
+
+                        return (
+                          <button
+                            key={v._id}
+                            onClick={() => canAfford && handleSelectVoucher(v)}
+                            disabled={!canAfford || (voucherTab === 'free' && isUsed)}
+                            className={`text-left rounded-xl border border-white/[0.07] bg-gradient-to-br from-[#141e2b] to-[#10111a] p-3 transition-all group relative overflow-hidden ${(!canAfford || (voucherTab === 'free' && isUsed)) ? 'opacity-40 cursor-not-allowed' : voucherTab === 'free' ? 'hover:border-emerald-500/40' : 'hover:border-violet-500/40'}`}
+                          >
+                            {isUsed && voucherTab === 'free' && (
+                              <div className="absolute inset-0 bg-[#0F172A]/60 flex items-center justify-center z-10 backdrop-blur-[1px]">
+                                <span className="text-white font-bold text-xs bg-rose-500/80 px-2 py-1 rounded">Đã sử dụng</span>
+                              </div>
+                            )}
+                            {voucherTab === 'points' && (
+                              <div className={`absolute top-0 right-0 text-[9px] font-bold px-2 py-0.5 rounded-bl-lg border-l border-b ${isUsed ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20' : canAfford ? 'bg-violet-500/20 text-violet-300 border-violet-500/20' : 'bg-rose-500/20 text-rose-400 border-rose-500/20'}`}>
+                                {isUsed ? 'Đã đổi (Sẵn sàng)' : canAfford ? `${v.pointsCost} Điểm` : `Thiếu ${fmt(missingPoints)}`}
+                              </div>
+                            )}
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full mb-1.5 inline-block ${isSystem ? 'bg-violet-500/15 text-violet-400' : 'bg-amber-500/15 text-amber-400'}`}>
+                              {isSystem ? 'ArenaS' : v.partnerName || 'Đối tác'}
+                            </span>
+                            <p className="text-[12px] font-bold text-white truncate leading-tight">{v.name}</p>
+                            <p className="text-base font-black text-[#c7f200] mt-1">{discountLabel}</p>
+                          </button>
+                        );
+                      });
+                    })()}
+                  </div>
+                )}
+              </div>
+
+              {/* Inline confirm for point redemption */}
+              <AnimatePresence>
+                {confirmingVoucher && (
+                  <motion.div
+                    initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }}
+                    className="border-t border-white/[0.06] bg-[#0c1322] px-5 py-4"
+                  >
+                    <p className="text-[13px] text-slate-300 mb-3 text-center">
+                      Dùng <strong className="text-violet-400">{confirmingVoucher.pointsCost} điểm</strong> để đổi <strong className="text-white">{confirmingVoucher.name}</strong>?
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setConfirmingVoucher(null)}
+                        className="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-bold text-slate-300 transition"
+                      >Hủy</button>
+                      <button
+                        onClick={handleConfirmRedeem}
+                        className="flex-1 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-sm font-bold text-white transition"
+                      >Xác nhận đổi</button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           </motion.div>
         )}

@@ -21,6 +21,7 @@ export type VoucherItem = {
   expiryDate: string;
   status: VoucherStatus;
   pointsCost: number;
+  isUsedByMe?: boolean;
   createdAt?: string;
   updatedAt?: string;
 };

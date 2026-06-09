@@ -1199,6 +1199,8 @@ export type UserBooking = {
 	customer_phone?: string;
 	note?: string;
 	total_price: number;
+	voucher_discount?: number;
+	participants?: { userId: string; amount: number; status: string }[];
 	status: string;
 	source: string;
 	tone?: string;
