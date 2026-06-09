@@ -13,6 +13,8 @@ import {
 } from '../../Axios/matchmakingApi';
 import { getPublicCourts, type PublicCourt, opponentPayBooking, getMatchPendingDeposit } from '../../Axios/Axios';
 import { useSocket } from '../../hooks/useSocket';
+import { useWallet } from '../../hooks/useWallet';
+import { DepositModal } from '../WalletPage/DepositModal';
 import './MatchmakingPage.css';
 
 type MatchmakingState = 'IDLE' | 'WAITING' | 'MATCHED';
@@ -38,7 +40,8 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
 
 export const MatchmakingPage: React.FC = () => {
 	const navigate = useNavigate();
-	const { onMatchFound, onPlayerAccepted, onMatchConfirmed, onMatchCancelled, onPlayerCheckedIn, onMatchCompleted, onPlayerReported, onCourtBooked, onCourtCancelled, onOpponentDepositRequired } = useSocket();
+	const { isConnected, onMatchFound, onPlayerAccepted, onMatchConfirmed, onMatchCancelled, onPlayerCheckedIn, onMatchCompleted, onPlayerReported, onCourtBooked, onCourtCancelled, onOpponentDepositRequired } = useSocket();
+	const { wallet, fetchWallet } = useWallet();
 	const mapRef = useRef<MapRef | null>(null);
 
 	const [currentUser, setCurrentUser] = useState<{ id: string; name?: string } | null>(null);
@@ -57,6 +60,7 @@ export const MatchmakingPage: React.FC = () => {
 	const [error, setError] = useState('');
 	const [initialLoading, setInitialLoading] = useState(true);
 	const [resolvedMatchId, setResolvedMatchId] = useState<string>('');
+	const [showDeposit, setShowDeposit] = useState(false);
 
 	const [hasAccepted, setHasAccepted] = useState(false);
 	const [opponentAccepted, setOpponentAccepted] = useState(false);
@@ -198,8 +202,7 @@ export const MatchmakingPage: React.FC = () => {
 			.catch(() => setCourts([]));
 	}, [selectedSport]);
 
-	// Check existing matchmaking status on mount
-	useEffect(() => {
+	const fetchStatus = useCallback(() => {
 		let curId = '';
 		try {
 			const stored = localStorage.getItem('currentUser');
@@ -289,7 +292,19 @@ export const MatchmakingPage: React.FC = () => {
 			})
 			.catch(() => { })
 			.finally(() => setInitialLoading(false));
-	}, []);
+	}, [selectedSport]);
+
+	// Check existing matchmaking status on mount AND when socket reconnects
+	useEffect(() => {
+		if (isConnected) {
+			fetchStatus();
+		}
+	}, [isConnected, fetchStatus]);
+
+	// Also run once on mount regardless of socket (so initial load works)
+	useEffect(() => {
+		fetchStatus();
+	}, [fetchStatus]);
 
 	// Wait timer
 	useEffect(() => {
@@ -564,6 +579,7 @@ export const MatchmakingPage: React.FC = () => {
 		if (!selectedSport) { setError('Vui lòng chọn môn thể thao.'); return; }
 		if (!userLocation) { setError('Đang lấy vị trí. Vui lòng đợi...'); return; }
 		setError(''); setLoading(true);
+		isCancellingRef.current = false; // Reset the ref so we can receive socket events again
 		try {
 			const res = await joinMatchmaking({
 				sport: selectedSport, longitude: userLocation.lng, latitude: userLocation.lat,
@@ -1139,7 +1155,12 @@ export const MatchmakingPage: React.FC = () => {
 															setOpponentDeposit(null);
 															showToast('Thanh toán thành công! Đặt sân đã xác nhận ✅');
 														} catch (err: any) {
-															setError(err.message || 'Thanh toán thất bại');
+															const msg = err.message || 'Thanh toán thất bại';
+															if (msg.toLowerCase().includes('số dư') || msg.toLowerCase().includes('insufficient')) {
+																setShowDeposit(true);
+															} else {
+																setError(msg);
+															}
 														} finally {
 															setDepositPayLoading(false);
 														}
@@ -1553,6 +1574,17 @@ export const MatchmakingPage: React.FC = () => {
 					{toastMessage}
 				</div>
 			)}
+
+			<DepositModal 
+				isOpen={showDeposit} 
+				onClose={() => setShowDeposit(false)} 
+				onSuccess={() => {
+					setShowDeposit(false);
+					fetchWallet();
+					showToast('Nạp tiền thành công! Vui lòng ấn Thanh toán lại.');
+				}}
+				initialAmount={opponentDeposit ? Math.max(10000, opponentDeposit.opponent_amount - (wallet?.balance || 0)) : 0}
+			/>
 		</div>
 	);
 };
