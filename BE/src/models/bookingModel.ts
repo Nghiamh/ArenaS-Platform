@@ -26,6 +26,10 @@ export interface IBooking extends Document {
   match_id?: Types.ObjectId;
   participants?: IBookingParticipant[];
   opponent_deadline?: Date;
+  voucher_id?: Types.ObjectId;
+  voucher_code?: string;
+  voucher_points_used?: number;
+  voucher_discount?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -52,6 +56,10 @@ const bookingSchema = new Schema<IBooking>(
       status: { type: String, enum: ['paid', 'unpaid', 'refunded'], default: 'unpaid' }
     }],
     opponent_deadline: { type: Date, required: false },
+    voucher_id: { type: Schema.Types.ObjectId, ref: 'Voucher' },
+    voucher_code: { type: String },
+    voucher_points_used: { type: Number, default: 0 },
+    voucher_discount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

@@ -11,6 +11,7 @@ import ChatMessage from '../models/chatMessageModel.js';
 import { createNotification } from './notificationController.js';
 import { consumeVoucher } from './voucherController.js';
 import User from '../models/userModel.js';
+import Voucher from '../models/voucherModel.js';
 
 // Helper: Khởi tạo các mốc thời gian 30 phút
 function generateTimeSlots(openTime: string, closeTime: string): ISlot[] {
@@ -508,9 +509,15 @@ export async function userBookCourt(req: Request, res: Response) {
 
 		// --- Apply voucher (only for non-matchmaking, full-price bookings) ---
 		let voucherDiscount = 0;
+		let voucherId: string | undefined;
+		let voucherPointsUsed = 0;
 		if (!isMatchBooking && voucher_code) {
-			const vResult = await consumeVoucher(voucher_code, total_price);
-			if (vResult) voucherDiscount = vResult.discountAmount;
+			const vResult = await consumeVoucher(voucher_code, total_price, userId.toString(), session);
+			if (vResult) {
+				voucherDiscount = vResult.discountAmount;
+				voucherId = vResult.voucherId;
+				voucherPointsUsed = vResult.pointsCost;
+			}
 		}
 
 		const chargeAmount = isMatchBooking
@@ -558,14 +565,18 @@ export async function userBookCourt(req: Request, res: Response) {
 			total_price,
 			status: bookingStatus,
 			source: 'app',
-			tone: 'blue',
-			match_id: match_id || undefined,
+			match_id: isMatchBooking ? match_id : undefined,
 			participants: isMatchBooking ? [
 				{ userId: new mongoose.Types.ObjectId(userId), amount: chargeAmount, status: 'paid' },
 				...(opponentId ? [{ userId: new mongoose.Types.ObjectId(opponentId), amount: total_price - chargeAmount, status: 'unpaid' as const }] : []),
 			] : undefined,
 			opponent_deadline: opponentDeadline,
+			voucher_id: voucherId,
+			voucher_code: voucherId ? voucher_code : undefined,
+			voucher_points_used: voucherPointsUsed,
+			voucher_discount: voucherDiscount,
 		});
+
 		await newBooking.save({ session });
 
 		// Cập nhật giờ hẹn của Trận đấu — CHỈ khi booking thường (matchmaking chờ đối thủ thanh toán)
@@ -1248,6 +1259,31 @@ export async function cancelBooking(req: Request, res: Response) {
 							}
 						}
 					}
+				}
+			}
+		}
+
+		// --- VOUCHER REFUND ---
+		if (booking.voucher_id) {
+			const voucher = await Voucher.findById(booking.voucher_id).session(session);
+			if (voucher) {
+				if (voucher.pointsCost === 0) {
+					// Free voucher: Remove user from usedBy, decrement usedCount
+					voucher.usedBy = voucher.usedBy.filter((id: any) => id.toString() !== booking.user_id?.toString());
+					if (voucher.usedCount > 0) voucher.usedCount -= 1;
+					if (voucher.status === 'expired' && voucher.usedCount < voucher.maxUses) {
+						// Only reactivate if it hasn't passed expiryDate
+						const today = new Date().toISOString().split('T')[0];
+						if (voucher.expiryDate >= today) voucher.status = 'active';
+					}
+					await voucher.save({ session });
+				} else {
+					// Points voucher: Do NOT refund points. Add user back to usedBy so they can use it again.
+					// Note: usedCount is NOT decremented because the user still owns the "redeemed" status.
+					if (booking.user_id) {
+						voucher.usedBy.push(new mongoose.Types.ObjectId(booking.user_id));
+					}
+					await voucher.save({ session });
 				}
 			}
 		}

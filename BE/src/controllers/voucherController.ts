@@ -216,6 +216,18 @@ export async function validateVoucher(req: Request, res: Response): Promise<void
       res.status(400).json({ error: 'voucher_exhausted', message: 'Voucher đã hết lượt sử dụng' });
       return;
     }
+    
+    if (voucher.pointsCost === 0) {
+      if (voucher.usedBy?.some((id: any) => id.toString() === req.user!._id.toString())) {
+        res.status(400).json({ error: 'voucher_already_used', message: 'Bạn đã sử dụng voucher này rồi' });
+        return;
+      }
+    } else {
+      if (!voucher.usedBy?.some((id: any) => id.toString() === req.user!._id.toString())) {
+        res.status(400).json({ error: 'voucher_not_redeemed', message: 'Bạn chưa đổi voucher này' });
+        return;
+      }
+    }
 
     const amount = Number(orderValue) || 0;
     if (voucher.minOrderValue > 0 && amount < voucher.minOrderValue) {
@@ -253,13 +265,32 @@ export async function validateVoucher(req: Request, res: Response): Promise<void
 
 // ─── Shared helper for booking controller to consume a voucher slot ───────────
 
-export async function consumeVoucher(code: string, orderValue: number): Promise<{ discountAmount: number; voucherId: string } | null> {
+export async function consumeVoucher(code: string, orderValue: number, userId: string, session?: mongoose.ClientSession): Promise<{ discountAmount: number; voucherId: string; pointsCost: number } | null> {
   const today = new Date().toISOString().split('T')[0];
-  const voucher = await Voucher.findOne({ code: String(code).toUpperCase().trim() });
+  const voucher = await Voucher.findOne({ code: String(code).toUpperCase().trim() }).session(session || null);
   if (!voucher || voucher.status !== 'active') return null;
   if (voucher.startDate > today || voucher.expiryDate < today) return null;
   if (voucher.usedCount >= voucher.maxUses) return null;
   if (voucher.minOrderValue > 0 && orderValue < voucher.minOrderValue) return null;
+
+  const user = await User.findById(userId).session(session || null);
+  if (!user) return null;
+
+  if (voucher.pointsCost === 0) {
+    if (voucher.usedBy?.some((id: any) => id.toString() === userId.toString())) {
+      return null;
+    }
+    voucher.usedBy.push(new mongoose.Types.ObjectId(userId));
+    voucher.usedCount += 1;
+    if (voucher.usedCount >= voucher.maxUses) voucher.status = 'expired';
+  } else {
+    // Points voucher: user must have redeemed it (must be in usedBy)
+    const userIndex = voucher.usedBy.findIndex((id: any) => id.toString() === userId.toString());
+    if (userIndex === -1) return null; // Not redeemed
+    // Consume the redeemed voucher by removing from usedBy
+    voucher.usedBy.splice(userIndex, 1);
+    // Note: usedCount was already incremented during redeemVoucherWithPoints
+  }
 
   let discountAmount = 0;
   if (voucher.discountType === 'percent') {
@@ -268,11 +299,9 @@ export async function consumeVoucher(code: string, orderValue: number): Promise<
     discountAmount = Math.min(voucher.discountValue, orderValue);
   }
 
-  voucher.usedCount += 1;
-  if (voucher.usedCount >= voucher.maxUses) voucher.status = 'expired';
-  await voucher.save();
+  await voucher.save({ session });
 
-  return { discountAmount, voucherId: (voucher._id as any).toString() };
+  return { discountAmount, voucherId: (voucher._id as any).toString(), pointsCost: voucher.pointsCost };
 }
 
 // ─── USER: Redeem voucher with points ────────────────────────────────────────
@@ -332,6 +361,8 @@ export async function redeemVoucherWithPoints(req: Request, res: Response): Prom
     await User.findByIdAndUpdate(userId, { $inc: { points: -voucher.pointsCost } });
     voucher.usedCount += 1;
     if (voucher.usedCount >= voucher.maxUses) voucher.status = 'expired';
+    if (!voucher.usedBy) voucher.usedBy = [];
+    voucher.usedBy.push(new mongoose.Types.ObjectId(userId));
     await voucher.save();
 
     res.json({
@@ -369,7 +400,11 @@ export async function getPublicVouchers(req: Request, res: Response): Promise<vo
       .lean();
 
     // Normalise legacy documents that predate the pointsCost field
-    const vouchers = raw.map(v => ({ ...v, pointsCost: v.pointsCost ?? 0 }));
+    const userIdStr = req.user?._id?.toString();
+    const vouchers = raw.map(v => {
+      const isUsedByMe = userIdStr && v.usedBy ? v.usedBy.some((id: any) => id.toString() === userIdStr) : false;
+      return { ...v, pointsCost: v.pointsCost ?? 0, isUsedByMe };
+    });
 
     res.json({ message: 'ok', vouchers });
   } catch (err) {
