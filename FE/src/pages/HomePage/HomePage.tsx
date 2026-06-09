@@ -303,12 +303,12 @@ export const HomePage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <section className="relative overflow-hidden px-4 pb-14 pt-16 md:px-8 md:pt-24 border-b border-white/5 force-dark-mode">
+      <section className="relative overflow-hidden px-4 pb-10 pt-10 md:px-8 md:pt-16 border-b border-white/5 force-dark-mode">
         <div 
-          className="absolute inset-0 z-0 bg-cover bg-center" 
-          style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1552674605-db6ffd4facb5?q=80&w=1600&auto=format&fit=crop)' }}
+          className="absolute inset-0 z-0 bg-cover bg-top" 
+          style={{ backgroundImage: 'url(/hero-bg-v2.png)' }}
         />
-        <div className="absolute inset-0 z-0 bg-gradient-to-b from-[#0A0A0B]/60 to-[#0A0A0B]/95" />
+        <div className="absolute inset-0 z-0 bg-gradient-to-b from-[#0A0A0B]/70 via-[#0A0A0B]/60 to-[#0A0A0B]" />
         
         <div className="mx-auto max-w-7xl relative z-10">
           <motion.div

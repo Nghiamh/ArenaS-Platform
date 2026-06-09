@@ -17,8 +17,8 @@ function discountLabel(type: DiscountType, value: number) {
 type Toast = { msg: string; type: 'success' | 'error' };
 
 const EARN_RULES = [
+  { action: 'Hoàn thành trận đấu', pts: 20, xp: 30, icon: '⚔️' },
   { action: 'Đặt sân thành công', pts: 10, xp: 15, icon: '🏟️' },
-  { action: 'Kết thúc trận đấu', pts: 20, xp: 30, icon: '⚔️' },
   { action: 'Review đối thủ sau trận', pts: 5, xp: 10, icon: '⭐' },
 ];
 
