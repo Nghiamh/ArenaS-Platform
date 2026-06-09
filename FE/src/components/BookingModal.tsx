@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { userBookCourt, type UserBookingPayload, type UserBookingResponse } from '../Axios/Axios';
+import { validateVoucher } from '../Axios/voucherApi';
 import { useWallet } from '../hooks/useWallet';
 import { DepositModal } from '../pages/WalletPage/DepositModal';
 
@@ -35,14 +36,22 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [timeLeft, setTimeLeft] = useState(5);
   const [lockTimeLeft, setLockTimeLeft] = useState(600);
 
+  // Voucher state
+  const [voucherCode, setVoucherCode] = useState('');
+  const [voucherInput, setVoucherInput] = useState('');
+  const [voucherDiscount, setVoucherDiscount] = useState(0);
+  const [voucherName, setVoucherName] = useState('');
+  const [voucherError, setVoucherError] = useState('');
+  const [voucherLoading, setVoucherLoading] = useState(false);
+  const voucherInputRef = useRef<HTMLInputElement>(null);
+
   // Calculate estimated price
-  // Formula: pricePerHour × durationHours (same as backend: (price/2) × numberOfSlots where 1 slot = 30 min)
   const startParts = payload.start_time.split(':').map(Number);
   const endParts = payload.end_time.split(':').map(Number);
   const durationHours = (endParts[0] + endParts[1] / 60) - (startParts[0] + startParts[1] / 60);
-  // Round to nearest 1,000đ to avoid decimal noise
   const estimatedPrice = Math.round((pricePerHour * durationHours) / 1000) * 1000;
   const durationMinutes = Math.round(durationHours * 60);
+  const finalPrice = Math.max(0, estimatedPrice - voucherDiscount);
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -50,10 +59,44 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     return `${dayNames[d.getDay()]}, ${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
   };
 
+  const handleApplyVoucher = async () => {
+    const code = voucherInput.trim().toUpperCase();
+    if (!code) return;
+    setVoucherError('');
+    setVoucherLoading(true);
+    try {
+      const res = await validateVoucher(code, estimatedPrice);
+      if (res.valid) {
+        setVoucherCode(code);
+        setVoucherDiscount(res.discountAmount);
+        setVoucherName(res.voucher.name);
+        setVoucherError('');
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Mã voucher không hợp lệ';
+      setVoucherError(msg);
+      setVoucherCode('');
+      setVoucherDiscount(0);
+      setVoucherName('');
+    } finally {
+      setVoucherLoading(false);
+    }
+  };
+
+  const handleRemoveVoucher = () => {
+    setVoucherCode('');
+    setVoucherInput('');
+    setVoucherDiscount(0);
+    setVoucherName('');
+    setVoucherError('');
+  };
+
   const handleConfirm = async () => {
     setStep('processing');
     try {
-      const response = await userBookCourt(payload);
+      const bookingPayload: UserBookingPayload = { ...payload };
+      if (voucherCode) bookingPayload.voucher_code = voucherCode;
+      const response = await userBookCourt(bookingPayload);
       setResult(response);
       setStep('success');
       await fetchWallet();
@@ -69,6 +112,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     setStep('confirm');
     setResult(null);
     setErrorMsg('');
+    setVoucherCode('');
+    setVoucherInput('');
+    setVoucherDiscount(0);
+    setVoucherName('');
+    setVoucherError('');
     onClose();
   };
 
@@ -108,11 +156,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     return () => {
       if (lockInterval) clearInterval(lockInterval);
     };
-  }, [isOpen, step, handleClose]);
+  }, [isOpen, step]);
 
   if (!isOpen) return null;
 
-  const balanceSufficient = (wallet?.balance ?? 0) >= estimatedPrice;
+  const balanceSufficient = (wallet?.balance ?? 0) >= finalPrice;
 
   const formatLockTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -207,11 +255,83 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       </div>
                     </div>
 
+                    {/* Voucher Input */}
+                    <div className="rounded-2xl bg-[#141E2B] p-5 mb-4">
+                      <p className="text-[10px] text-slate-400 font-bold tracking-wider uppercase mb-3 flex items-center gap-1.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+                        MÃ GIẢM GIÁ
+                      </p>
+
+                      {voucherCode ? (
+                        // Applied voucher display
+                        <div className="flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3">
+                          <div>
+                            <p className="text-[13px] font-bold text-emerald-400">{voucherCode}</p>
+                            <p className="text-[11px] text-slate-400 mt-0.5">{voucherName} — Giảm {fmt(voucherDiscount)}đ</p>
+                          </div>
+                          <button
+                            onClick={handleRemoveVoucher}
+                            className="text-slate-400 hover:text-rose-400 transition ml-3 shrink-0"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                          </button>
+                        </div>
+                      ) : (
+                        // Voucher input
+                        <div className="flex gap-2">
+                          <input
+                            ref={voucherInputRef}
+                            type="text"
+                            value={voucherInput}
+                            onChange={e => { setVoucherInput(e.target.value.toUpperCase()); setVoucherError(''); }}
+                            onKeyDown={e => e.key === 'Enter' && handleApplyVoucher()}
+                            placeholder="Nhập mã voucher..."
+                            className="flex-1 rounded-xl bg-[#0F172A] border border-white/10 px-4 py-2.5 text-[13px] font-bold text-white placeholder:text-slate-600 focus:outline-none focus:border-[#c7f200]/50 transition"
+                          />
+                          <button
+                            onClick={handleApplyVoucher}
+                            disabled={!voucherInput.trim() || voucherLoading}
+                            className="rounded-xl bg-[#c7f200] px-4 py-2.5 text-[13px] font-bold text-[#0B1221] disabled:opacity-40 transition hover:brightness-110 whitespace-nowrap"
+                          >
+                            {voucherLoading ? '...' : 'Áp dụng'}
+                          </button>
+                        </div>
+                      )}
+
+                      {voucherError && (
+                        <p className="text-[12px] text-rose-400 mt-2 flex items-center gap-1">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                          {voucherError}
+                        </p>
+                      )}
+                    </div>
+
                     {/* Price Card */}
                     <div className="rounded-2xl border border-[#ffb020]/20 bg-[#ffb020]/5 p-5 mb-6">
-                      <div className="flex items-center justify-between mb-5">
-                        <span className="text-base font-bold text-white">Tạm tính</span>
-                        <span className="text-2xl font-black text-[#ffb020]">{fmt(estimatedPrice)} đ</span>
+                      <div className="space-y-3 mb-5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-slate-400">Giá sân</span>
+                          <span className="text-sm font-bold text-white">{fmt(estimatedPrice)} đ</span>
+                        </div>
+                        {voucherDiscount > 0 && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-emerald-400 flex items-center gap-1">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                              Voucher ({voucherCode})
+                            </span>
+                            <span className="text-sm font-bold text-emerald-400">-{fmt(voucherDiscount)} đ</span>
+                          </div>
+                        )}
+                        <div className="border-t border-white/10 pt-3 flex items-center justify-between">
+                          <span className="text-base font-bold text-white">Thanh toán</span>
+                          <span className="text-2xl font-black text-[#ffb020]">{fmt(finalPrice)} đ</span>
+                        </div>
+                      </div>
+
+                      {/* Points reward hint */}
+                      <div className="flex items-center gap-2 rounded-xl bg-violet-500/10 border border-violet-500/20 px-3 py-2 mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-violet-400 shrink-0"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        <span className="text-[12px] text-violet-300 font-medium">Đặt sân thành công sẽ nhận <strong>+10 điểm</strong> thưởng</span>
                       </div>
 
                       <div className="border-t border-white/5 pt-4">
@@ -226,7 +346,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                           <div className="mt-4 rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 flex items-start gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-rose-400 flex-shrink-0 mt-0.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
                             <div>
-                              <p className="text-[13px] font-bold text-rose-400">Số dư không đủ (thiếu {fmt(estimatedPrice - wallet.balance)} đ)</p>
+                              <p className="text-[13px] font-bold text-rose-400">Số dư không đủ (thiếu {fmt(finalPrice - wallet.balance)} đ)</p>
                             </div>
                           </div>
                         )}
@@ -292,9 +412,23 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       </div>
                       <div>
                         <h2 className="text-xl font-bold text-white mb-1">Đặt sân thành công!</h2>
-                        <p className="text-slate-400 text-[13px]">Đặt sân thành công!</p>
+                        <p className="text-slate-400 text-[13px]">Thông tin đặt sân của bạn đã được xác nhận</p>
                       </div>
                     </div>
+
+                    {/* Points reward banner */}
+                    <motion.div
+                      initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                      className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-violet-500/20 to-purple-600/10 border border-violet-500/30 px-4 py-3"
+                    >
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-500/20 shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-violet-400"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                      </div>
+                      <div>
+                        <p className="text-[13px] font-bold text-violet-300">+10 điểm thưởng đã được cộng!</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">Tích điểm để đổi voucher hấp dẫn</p>
+                      </div>
+                    </motion.div>
 
                     <div className="relative rounded-2xl bg-[#141E2B] p-5 space-y-5">
                       <div className="absolute left-0 top-[55%] -translate-x-1/2 -translate-y-1/2 w-4 h-6 bg-[#0F172A] rounded-r-full" />
@@ -304,7 +438,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                         <span className="text-[10px] font-bold text-slate-400 tracking-wider">SÂN</span>
                         <span className="text-[13px] font-bold text-white">{result.booking.court_name} - {result.booking.sub_court_name}</span>
                       </div>
-                      
+
                       <div className="border-t border-dashed border-white/10 pt-5 px-1 flex justify-between items-start">
                         <span className="text-[10px] font-bold text-slate-400 tracking-wider mt-0.5">THỜI GIAN</span>
                         <div className="text-right">
@@ -313,9 +447,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                         </div>
                       </div>
 
+                      {(result.booking.voucher_discount ?? 0) > 0 && (
+                        <div className="border-t border-white/5 pt-5 px-1 flex justify-between items-center">
+                          <span className="text-[10px] font-bold text-slate-400 tracking-wider">GIẢM GIÁ VOUCHER</span>
+                          <span className="text-[13px] font-bold text-emerald-400">-{fmt(result.booking.voucher_discount)} đ</span>
+                        </div>
+                      )}
+
                       <div className="border-t border-white/5 pt-5 px-1 flex justify-between items-center">
                         <span className="text-[10px] font-bold text-slate-400 tracking-wider">ĐÃ THANH TOÁN</span>
-                        <span className="text-lg font-black text-[#c7f200]">{fmt(result.booking.total_price)} đ</span>
+                        <span className="text-lg font-black text-[#c7f200]">{fmt(result.booking.charged_amount ?? result.booking.total_price)} đ</span>
                       </div>
                     </div>
 
@@ -373,7 +514,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           setShowDeposit(false);
           fetchWallet();
         }}
-        initialAmount={wallet ? Math.max(10000, estimatedPrice - wallet.balance) : estimatedPrice}
+        initialAmount={wallet ? Math.max(10000, finalPrice - wallet.balance) : finalPrice}
         autoCreate={true}
       />
     </>

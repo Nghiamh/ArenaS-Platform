@@ -9,6 +9,8 @@ import WalletTransaction from '../models/walletTransactionModel.js';
 import Match from '../models/matchModel.js';
 import ChatMessage from '../models/chatMessageModel.js';
 import { createNotification } from './notificationController.js';
+import { consumeVoucher } from './voucherController.js';
+import User from '../models/userModel.js';
 
 // Helper: Khởi tạo các mốc thời gian 30 phút
 function generateTimeSlots(openTime: string, closeTime: string): ISlot[] {
@@ -409,7 +411,7 @@ export async function userBookCourt(req: Request, res: Response) {
 	try {
 		const user = req.user!;
 		const userId = user._id;
-		const { court_id, sub_court_id, date, start_time, end_time, match_id } = req.body;
+		const { court_id, sub_court_id, date, start_time, end_time, match_id, voucher_code } = req.body;
 
 		// --- Validate input ---
 		if (!court_id || !mongoose.Types.ObjectId.isValid(court_id)) {
@@ -503,7 +505,17 @@ export async function userBookCourt(req: Request, res: Response) {
 
 		// Determine if this is a matchmaking booking (split 50/50)
 		const isMatchBooking = !!(match_id && mongoose.Types.ObjectId.isValid(match_id));
-		const chargeAmount = isMatchBooking ? Math.ceil(total_price / 2) : total_price;
+
+		// --- Apply voucher (only for non-matchmaking, full-price bookings) ---
+		let voucherDiscount = 0;
+		if (!isMatchBooking && voucher_code) {
+			const vResult = await consumeVoucher(voucher_code, total_price);
+			if (vResult) voucherDiscount = vResult.discountAmount;
+		}
+
+		const chargeAmount = isMatchBooking
+			? Math.ceil(total_price / 2)
+			: Math.max(0, total_price - voucherDiscount);
 
 		// --- Bước 5: Kiểm tra và trừ tiền ví ---
 		const wallet = await Wallet.findOne({ userId }).session(session);
@@ -752,6 +764,8 @@ export async function userBookCourt(req: Request, res: Response) {
 				start_time,
 				end_time,
 				total_price,
+				charged_amount: chargeAmount,
+				voucher_discount: voucherDiscount,
 				status: bookingStatus,
 				slots_booked: numberOfSlotsBooked,
 				wallet_balance: wallet.balance,

@@ -21,7 +21,7 @@ type VoucherTab = 'system' | 'partner';
 type VoucherForm = {
   code: string; name: string; source: VoucherSource; partnerName: string;
   discountType: DiscountType; discountValue: string; minOrderValue: string;
-  maxUses: string; startDate: string; expiryDate: string;
+  maxUses: string; startDate: string; expiryDate: string; pointsCost: string;
 };
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -39,7 +39,7 @@ const fmtDiscount = (type: DiscountType, v: number) => type === 'percent' ? `${v
 const usagePct   = (used: number, max: number) => max === 0 ? 0 : Math.min(100, Math.round((used / max) * 100));
 
 function blankForm(source: VoucherSource = 'system'): VoucherForm {
-  return { code: '', name: '', source, partnerName: '', discountType: 'percent', discountValue: '', minOrderValue: '', maxUses: '', startDate: '', expiryDate: '' };
+  return { code: '', name: '', source, partnerName: '', discountType: 'percent', discountValue: '', minOrderValue: '', maxUses: '', startDate: '', expiryDate: '', pointsCost: '0' };
 }
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -191,6 +191,9 @@ const VoucherFormModal: React.FC<FormModalProps> = ({ mode, initial, saving, onS
           </Field>
           <Field name="maxUses" label="Số lần dùng tối đa">
             <input className={inputCls} type="number" min={1} value={form.maxUses} onChange={e => set({ maxUses: e.target.value })} placeholder="500" />
+          </Field>
+          <Field name="pointsCost" label="Chi phí đổi bằng điểm (0 = miễn phí)">
+            <input className={inputCls} type="number" min={0} value={form.pointsCost} onChange={e => set({ pointsCost: e.target.value })} placeholder="0 = không cần điểm" />
           </Field>
           <Field name="startDate" label="Ngày bắt đầu">
             <input className={inputCls} type="date" value={form.startDate} onChange={e => set({ startDate: e.target.value })} />
@@ -408,6 +411,7 @@ export const AdminVoucherPage: React.FC = () => {
       maxUses: Number(form.maxUses),
       startDate: form.startDate,
       expiryDate: form.expiryDate,
+      pointsCost: Number(form.pointsCost) || 0,
     };
 
     try {
@@ -436,7 +440,7 @@ export const AdminVoucherPage: React.FC = () => {
       code: v.code, name: v.name, source: v.source, partnerName: v.partnerName ?? '',
       discountType: v.discountType, discountValue: String(v.discountValue),
       minOrderValue: String(v.minOrderValue), maxUses: String(v.maxUses),
-      startDate: v.startDate, expiryDate: v.expiryDate,
+      startDate: v.startDate, expiryDate: v.expiryDate, pointsCost: String(v.pointsCost ?? 0),
     },
   });
 

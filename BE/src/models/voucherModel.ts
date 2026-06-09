@@ -17,6 +17,7 @@ export interface IVoucher extends Document {
   startDate: string;
   expiryDate: string;
   status: VoucherStatus;
+  pointsCost: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -35,6 +36,7 @@ const voucherSchema = new Schema<IVoucher>(
     startDate: { type: String, required: true },
     expiryDate: { type: String, required: true },
     status: { type: String, enum: ['active', 'expired', 'disabled'], required: true, default: 'active' },
+    pointsCost: { type: Number, required: true, default: 0, min: 0 },
   },
   { timestamps: true }
 );

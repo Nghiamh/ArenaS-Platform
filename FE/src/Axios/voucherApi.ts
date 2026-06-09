@@ -20,6 +20,7 @@ export type VoucherItem = {
   startDate: string;
   expiryDate: string;
   status: VoucherStatus;
+  pointsCost: number;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -35,6 +36,7 @@ export type VoucherPayload = {
   maxUses: number;
   startDate: string;
   expiryDate: string;
+  pointsCost?: number;
 };
 
 type VoucherListResponse = {
@@ -102,5 +104,17 @@ export async function getPublicVouchers(): Promise<VoucherItem[]> {
 
 export async function validateVoucher(code: string, orderValue: number): Promise<ValidateVoucherResponse> {
   const { data } = await axiosClient.post<ValidateVoucherResponse>('/vouchers/validate', { code, orderValue });
+  return data;
+}
+
+export type RedeemVoucherResponse = {
+  message: string;
+  voucher: { _id: string; code: string; name: string; discountType: DiscountType; discountValue: number; expiryDate: string };
+  pointsDeducted: number;
+  remainingPoints: number;
+};
+
+export async function redeemVoucher(voucherId: string): Promise<RedeemVoucherResponse> {
+  const { data } = await axiosClient.post<RedeemVoucherResponse>('/vouchers/redeem', { voucherId });
   return data;
 }

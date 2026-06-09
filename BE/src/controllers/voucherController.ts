@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import Voucher from '../models/voucherModel.js';
+import User from '../models/userModel.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -274,12 +275,90 @@ export async function consumeVoucher(code: string, orderValue: number): Promise<
   return { discountAmount, voucherId: (voucher._id as any).toString() };
 }
 
+// ─── USER: Redeem voucher with points ────────────────────────────────────────
+
+export async function redeemVoucherWithPoints(req: Request, res: Response): Promise<void> {
+  try {
+    const userId = req.user!._id;
+    const { voucherId } = req.body;
+
+    if (!voucherId || !mongoose.Types.ObjectId.isValid(voucherId)) {
+      res.status(400).json({ error: 'invalid_voucher_id' });
+      return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const voucher = await Voucher.findById(voucherId);
+
+    if (!voucher) {
+      res.status(404).json({ error: 'voucher_not_found', message: 'Voucher không tồn tại' });
+      return;
+    }
+    if (voucher.pointsCost <= 0) {
+      res.status(400).json({ error: 'not_redeemable', message: 'Voucher này không thể đổi bằng điểm' });
+      return;
+    }
+    if (voucher.status !== 'active') {
+      res.status(400).json({ error: 'voucher_inactive', message: 'Voucher không còn hiệu lực' });
+      return;
+    }
+    if (voucher.startDate > today) {
+      res.status(400).json({ error: 'voucher_not_started', message: 'Voucher chưa đến ngày sử dụng' });
+      return;
+    }
+    if (voucher.expiryDate < today) {
+      res.status(400).json({ error: 'voucher_expired', message: 'Voucher đã hết hạn' });
+      return;
+    }
+    if (voucher.usedCount >= voucher.maxUses) {
+      res.status(400).json({ error: 'voucher_exhausted', message: 'Voucher đã hết lượt sử dụng' });
+      return;
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      res.status(404).json({ error: 'user_not_found' });
+      return;
+    }
+    if ((user.points ?? 0) < voucher.pointsCost) {
+      res.status(400).json({
+        error: 'insufficient_points',
+        message: `Bạn cần ${voucher.pointsCost} điểm để đổi voucher này (hiện có ${user.points ?? 0} điểm)`,
+      });
+      return;
+    }
+
+    // Deduct points & consume voucher slot atomically
+    await User.findByIdAndUpdate(userId, { $inc: { points: -voucher.pointsCost } });
+    voucher.usedCount += 1;
+    if (voucher.usedCount >= voucher.maxUses) voucher.status = 'expired';
+    await voucher.save();
+
+    res.json({
+      message: `Đổi voucher thành công! Đã trừ ${voucher.pointsCost} điểm.`,
+      voucher: {
+        _id: voucher._id,
+        code: voucher.code,
+        name: voucher.name,
+        discountType: voucher.discountType,
+        discountValue: voucher.discountValue,
+        expiryDate: voucher.expiryDate,
+      },
+      pointsDeducted: voucher.pointsCost,
+      remainingPoints: (user.points ?? 0) - voucher.pointsCost,
+    });
+  } catch (err) {
+    console.error('redeemVoucherWithPoints:', err);
+    res.status(500).json({ error: 'internal_server_error' });
+  }
+}
+
 // ─── USER: Get active public vouchers (for user display) ──────────────────────
 
 export async function getPublicVouchers(req: Request, res: Response): Promise<void> {
   try {
     const today = new Date().toISOString().split('T')[0];
-    const vouchers = await Voucher.find({
+    const raw = await Voucher.find({
       status: 'active',
       startDate: { $lte: today },
       expiryDate: { $gte: today },
@@ -288,6 +367,9 @@ export async function getPublicVouchers(req: Request, res: Response): Promise<vo
       .select('-__v')
       .sort({ createdAt: -1 })
       .lean();
+
+    // Normalise legacy documents that predate the pointsCost field
+    const vouchers = raw.map(v => ({ ...v, pointsCost: v.pointsCost ?? 0 }));
 
     res.json({ message: 'ok', vouchers });
   } catch (err) {
