@@ -57,7 +57,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const durationHours = (endParts[0] + endParts[1] / 60) - (startParts[0] + startParts[1] / 60);
   const estimatedPrice = Math.round((pricePerHour * durationHours) / 1000) * 1000;
   const durationMinutes = Math.round(durationHours * 60);
-  const finalPrice = Math.max(0, estimatedPrice - voucherDiscount);
+  
+  const isMatchBooking = !!payload.match_id;
+  const discountedTotalPrice = Math.max(0, estimatedPrice - voucherDiscount);
+  const finalPrice = isMatchBooking ? Math.ceil(discountedTotalPrice / 2) : discountedTotalPrice;
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -361,6 +364,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                             <span className="text-sm font-bold text-emerald-400">-{fmt(voucherDiscount)} đ</span>
                           </div>
                         )}
+                        {isMatchBooking && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-cyan-400 flex items-center gap-1">
+                              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                              Chia đôi (50%)
+                            </span>
+                            <span className="text-sm font-bold text-cyan-400">{fmt(discountedTotalPrice)} đ / 2</span>
+                          </div>
+                        )}
+
                         <div className="border-t border-white/10 pt-3 flex items-center justify-between">
                           <span className="text-base font-bold text-white">Thanh toán</span>
                           <span className="text-2xl font-black text-[#ffb020]">{fmt(finalPrice)} đ</span>

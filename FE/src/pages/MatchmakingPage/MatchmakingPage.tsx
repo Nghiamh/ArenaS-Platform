@@ -11,7 +11,7 @@ import {
 	acceptMatch, declineMatch, completeMatch, submitMatchFeedback, reportOpponent,
 	type MatchData, type MatchmakingTicket,
 } from '../../Axios/matchmakingApi';
-import { getPublicCourts, type PublicCourt, opponentPayBooking } from '../../Axios/Axios';
+import { getPublicCourts, type PublicCourt, opponentPayBooking, getMatchPendingDeposit } from '../../Axios/Axios';
 import { useSocket } from '../../hooks/useSocket';
 import './MatchmakingPage.css';
 
@@ -260,6 +260,26 @@ export const MatchmakingPage: React.FC = () => {
 									status: 'PENDING',
 								} as any);
 							}
+						}
+						
+						// Hydrate pending deposit if any
+						const rMid = typeof mid === 'object' ? String((mid as any)._id) : String(mid);
+						if (rMid && !rMid.includes('[object')) {
+							getMatchPendingDeposit(rMid).then((depRes) => {
+								if (depRes.pending_deposit) {
+									setOpponentDeposit({
+										bookingId: depRes.pending_deposit.bookingId,
+										courtName: typeof mid === 'object' ? (mid as any).court_id?.name || 'Sân đấu' : 'Sân đấu',
+										date: '', start_time: '', end_time: '', total_price: 0,
+										opponent_amount: depRes.pending_deposit.amount,
+										deadline: depRes.pending_deposit.deadline || '',
+									});
+									if (depRes.pending_deposit.deadline) {
+										const remainingSec = Math.max(0, Math.floor((new Date(depRes.pending_deposit.deadline).getTime() - Date.now()) / 1000));
+										setDepositCountdown(remainingSec);
+									}
+								}
+							}).catch(() => {});
 						}
 					} else {
 						// Match object doesn't exist, fall back to IDLE
@@ -1093,7 +1113,6 @@ export const MatchmakingPage: React.FC = () => {
 										{opponentDeposit && depositCountdown > 0 && (
 											<div className="relative z-10 rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-500/10 to-orange-500/5 p-5 mb-4">
 												<div className="flex items-center gap-2 mb-3">
-													<span className="text-lg">💳</span>
 													<h4 className="text-base font-bold text-amber-300">Thanh toán 50% còn lại</h4>
 												</div>
 												<p className="text-sm text-slate-300 mb-2">

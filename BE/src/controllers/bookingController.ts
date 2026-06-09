@@ -507,11 +507,11 @@ export async function userBookCourt(req: Request, res: Response) {
 		// Determine if this is a matchmaking booking (split 50/50)
 		const isMatchBooking = !!(match_id && mongoose.Types.ObjectId.isValid(match_id));
 
-		// --- Apply voucher (only for non-matchmaking, full-price bookings) ---
+		// --- Apply voucher ---
 		let voucherDiscount = 0;
 		let voucherId: string | undefined;
 		let voucherPointsUsed = 0;
-		if (!isMatchBooking && voucher_code) {
+		if (voucher_code) {
 			const vResult = await consumeVoucher(voucher_code, total_price, userId.toString(), session);
 			if (vResult) {
 				voucherDiscount = vResult.discountAmount;
@@ -520,9 +520,8 @@ export async function userBookCourt(req: Request, res: Response) {
 			}
 		}
 
-		const chargeAmount = isMatchBooking
-			? Math.ceil(total_price / 2)
-			: Math.max(0, total_price - voucherDiscount);
+		const discountedTotalPrice = Math.max(0, total_price - voucherDiscount);
+		const chargeAmount = isMatchBooking ? Math.ceil(discountedTotalPrice / 2) : discountedTotalPrice;
 
 		// --- Bước 5: Kiểm tra và trừ tiền ví ---
 		const wallet = await Wallet.findOne({ userId }).session(session);
@@ -568,7 +567,7 @@ export async function userBookCourt(req: Request, res: Response) {
 			match_id: isMatchBooking ? match_id : undefined,
 			participants: isMatchBooking ? [
 				{ userId: new mongoose.Types.ObjectId(userId), amount: chargeAmount, status: 'paid' },
-				...(opponentId ? [{ userId: new mongoose.Types.ObjectId(opponentId), amount: total_price - chargeAmount, status: 'unpaid' as const }] : []),
+				...(opponentId ? [{ userId: new mongoose.Types.ObjectId(opponentId), amount: discountedTotalPrice - chargeAmount, status: 'unpaid' as const }] : []),
 			] : undefined,
 			opponent_deadline: opponentDeadline,
 			voucher_id: voucherId,
@@ -690,7 +689,7 @@ export async function userBookCourt(req: Request, res: Response) {
 							start_time,
 							end_time,
 							total_price,
-							opponent_amount: total_price - chargeAmount,
+							opponent_amount: discountedTotalPrice - chargeAmount,
 							deadline: opponentDeadline?.toISOString(),
 						});
 					}
