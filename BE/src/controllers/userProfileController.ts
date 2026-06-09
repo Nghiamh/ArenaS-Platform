@@ -26,6 +26,8 @@ function buildUserProfileResponse(user: {
 	userName: string;
 	role?: IUserRole;
 	createdAt?: Date;
+	points?: number;
+	xp?: number;
 }) {
 	const userId = String(user._id);
 	const role = user.role ?? "user";
@@ -42,6 +44,8 @@ function buildUserProfileResponse(user: {
 		role,
 		redirectPath: resolveRedirectPathByRole(role),
 		createdAt: user.createdAt?.toISOString() ?? new Date().toISOString(),
+		points: user.points ?? 0,
+		xp: user.xp ?? 0,
 	};
 }
 

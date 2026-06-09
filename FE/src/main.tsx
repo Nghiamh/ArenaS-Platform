@@ -35,6 +35,7 @@ import { PaymentSuccessPage } from './pages/CheckoutPage/PaymentSuccessPage';
 import { VietQRPaymentPage } from './pages/CheckoutPage/VietQRPaymentPage';
 import { MatchmakingPage } from './pages/MatchmakingPage/MatchmakingPage';
 import { ChatPage } from './pages/ChatPage/ChatPage';
+import { UserVoucherPage } from './pages/VoucherPage/UserVoucherPage';
 import './index.css';
 
 function App() {
@@ -118,6 +119,14 @@ function App() {
           element={
             <PrivateRoute>
               <Layout><WalletPage /></Layout>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/vouchers"
+          element={
+            <PrivateRoute>
+              <Layout><UserVoucherPage /></Layout>
             </PrivateRoute>
           }
         />

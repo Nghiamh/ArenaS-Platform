@@ -101,6 +101,14 @@ export const Header: React.FC = () => {
                 Tìm Đối Thủ
               </Link>
             )}
+            {isPlayerAccount && (
+              <Link to="/vouchers" className="flex items-center gap-1.5 text-sm font-semibold text-white/75 transition hover:text-accent-primary">
+                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/>
+                </svg>
+                Voucher
+              </Link>
+            )}
             {!isManagementAccount && (
               <Link to="/cho-chu-san" className="text-sm font-semibold text-white/75 transition hover:text-accent-secondary">
                 Liên Hệ Chủ Sân
@@ -246,6 +254,7 @@ export const Header: React.FC = () => {
             {[
               { to: '/tim-san', label: 'Tìm Sân', show: true },
               { to: '/matchmaking', label: 'Tìm Đối Thủ', show: isPlayerAccount },
+              { to: '/vouchers', label: 'Voucher', show: isPlayerAccount },
               { to: '/cho-chu-san', label: 'Liên Hệ Chủ Sân', show: !isManagementAccount },
               { to: '/bang-gia', label: 'Bảng Giá', show: !isPlayerAccount },
             ].filter(i => i.show).map(item => (

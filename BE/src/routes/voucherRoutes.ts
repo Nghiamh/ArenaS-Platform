@@ -8,6 +8,7 @@ import {
   adminDeleteVoucher,
   validateVoucher,
   getPublicVouchers,
+  redeemVoucherWithPoints,
 } from '../controllers/voucherController.js';
 
 const router = Router();
@@ -27,5 +28,6 @@ router.delete('/:id',     ...adminOnly, adminDeleteVoucher);
 // User-facing routes — /api/vouchers
 router.get('/public',           requireAuth, getPublicVouchers);
 router.post('/validate',        requireAuth, validateVoucher);
+router.post('/redeem',          requireAuth, redeemVoucherWithPoints);
 
 export default router;
