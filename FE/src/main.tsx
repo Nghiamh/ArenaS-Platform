@@ -59,7 +59,7 @@ function App() {
         <Route path="/bang-gia" element={<Layout><PriceListPage /></Layout>} />
         <Route path="/courts/:courtId" element={<Layout><CourtDetailPage /></Layout>} />
 
-        {/* ─── Any logged-in user ────────────────────────────── */}
+        {/* ─── Public (informational) pages ────────────────── */}
         <Route
           path="/for-owners"
           element={
@@ -76,20 +76,8 @@ function App() {
             </Layout>
           }
         />
-        <Route path="/owner/dashboard" element={<OwnerDashboardScreen />} />
-        <Route path="/owner/manage-courts" element={<OwnerManageCourtScreen />} />
-        <Route path="/owner/revenue" element={<OwnerRevenueScreen />} />
-        <Route path="/owner/bookings" element={<OwnerBookingScheduleScreen />} />
-        <Route path="/owner/wallet" element={<OwnerWalletScreen />} />
-        <Route path="/owner/settings" element={<OwnerSettingsScreen />} />
-        <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-        <Route path="/admin/manage-stadiums" element={<AdminManageStadiumPage />} />
-        <Route path="/admin/manage-users" element={<AdminManageUsersPage />} />
-        <Route path="/admin/moderation" element={<AdminModerationPage />} />
-        <Route path="/admin/vouchers" element={<AdminVoucherPage />} />
-        <Route path="/admin/income" element={<AdminIncomePage />} />
-        <Route path="/admin/owner-applications" element={<AdminManageOwnerApplicationPage />} />
-        <Route path="/admin/withdrawals" element={<AdminWithdrawalPage />} />
+
+        {/* ─── Any logged-in user ────────────────────────────── */}
         <Route
           path="/profile"
           element={
@@ -101,17 +89,21 @@ function App() {
         <Route
           path="/matchmaking"
           element={
-            <Layout>
-              <MatchmakingPage />
-            </Layout>
+            <PrivateRoute>
+              <Layout>
+                <MatchmakingPage />
+              </Layout>
+            </PrivateRoute>
           }
         />
         <Route
           path="/chat/:matchId"
           element={
-            <Layout>
-              <ChatPage />
-            </Layout>
+            <PrivateRoute>
+              <Layout>
+                <ChatPage />
+              </Layout>
+            </PrivateRoute>
           }
         />
         <Route
@@ -189,6 +181,14 @@ function App() {
           }
         />
         <Route
+          path="/owner/wallet"
+          element={
+            <PrivateRoute allowedRoles={['owner']}>
+              <OwnerWalletScreen />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/owner/settings"
           element={
             <PrivateRoute allowedRoles={['owner']}>
@@ -243,6 +243,22 @@ function App() {
           element={
             <PrivateRoute allowedRoles={['admin']}>
               <AdminIncomePage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/owner-applications"
+          element={
+            <PrivateRoute allowedRoles={['admin']}>
+              <AdminManageOwnerApplicationPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/withdrawals"
+          element={
+            <PrivateRoute allowedRoles={['admin']}>
+              <AdminWithdrawalPage />
             </PrivateRoute>
           }
         />
