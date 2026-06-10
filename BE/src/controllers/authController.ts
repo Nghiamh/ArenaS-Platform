@@ -192,6 +192,8 @@ function buildAuthResponse(user: {
 	userName: string;
 	role?: IUserRole;
 	createdAt?: Date;
+	xp?: number;
+	points?: number;
 }) {
 	const userId = String(user._id);
 	const role = user.role ?? "user";
@@ -211,6 +213,8 @@ function buildAuthResponse(user: {
 			userName: user.userName,
 			role,
 			createdAt: user.createdAt?.toISOString() ?? new Date().toISOString(),
+			xp: user.xp ?? 0,
+			points: user.points ?? 0,
 		},
 	};
 }

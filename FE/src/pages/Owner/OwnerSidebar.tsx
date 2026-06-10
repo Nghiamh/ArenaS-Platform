@@ -218,25 +218,25 @@ export const OwnerSidebar: React.FC<OwnerSidebarProps> = ({ activeKey, collapsed
                 whileTap={{ scale: 0.9 }}
                 whileHover={{ scale: 1.03 }}
                 onClick={handleLogoToggle}
-                className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-accent-primary font-extrabold text-white shadow-[0_10px_30px_-16px_rgba(var(--accent-primary-rgb),1)]"
+                className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-white/20 shadow-[0_10px_30px_-16px_rgba(255,255,255,0.4)]"
                 aria-label="Thu gọn hoặc mở rộng thanh điều hướng"
               >
                 <motion.span
                   aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 rounded-xl border border-accent-primary/35"
+                  className="pointer-events-none absolute inset-0 rounded-full border border-white/30"
                   animate={{ scale: [1, 1.07, 1], opacity: [0.28, 0.62, 0.28] }}
                   transition={{ duration: 2.4, ease: 'easeInOut', repeat: Infinity }}
                 />
-                <motion.span
-                  className="relative z-10 inline-block origin-center transform-gpu"
+                <motion.div
+                  className="relative z-10 h-full w-full transform-gpu"
                   animate={{ rotate: logoSpinTurns * 360, y: [0, -1.2, 0] }}
                   transition={{
                     rotate: { duration: 0.72, ease: [0.22, 1, 0.36, 1] },
                     y: { duration: 2.8, ease: 'easeInOut', repeat: Infinity },
                   }}
                 >
-                  A
-                </motion.span>
+                  <img src="/logo.jpg" alt="ArenaS Logo" className="h-full w-full object-cover scale-[1.15]" />
+                </motion.div>
               </motion.button>
 
               <AnimatePresence initial={false}>

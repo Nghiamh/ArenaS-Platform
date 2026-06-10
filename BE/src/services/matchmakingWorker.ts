@@ -311,7 +311,8 @@ async function createMatch(
 	const populatedMatch = await Match.findById(match._id)
 		.populate("participants", "name userName avatarUrl")
 		.populate("court_id", "name location sports price_per_hour coordinates")
-		.populate("owner_id", "name userName");
+		.populate("owner_id", "name userName")
+		.lean();
 
 	// Emit match_found to both players via Socket.IO
 	const matchPayload = {

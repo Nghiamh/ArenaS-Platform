@@ -19,6 +19,13 @@ import {
 	adminUpdateUser,
 	adminDeleteUser,
 } from "../controllers/adminUserController.js";
+import {
+	adminListVouchers,
+	adminCreateVoucher,
+	adminUpdateVoucher,
+	adminToggleVoucher,
+	adminDeleteVoucher,
+} from "../controllers/voucherController.js";
 
 const adminRoutes = Router();
 
@@ -59,5 +66,16 @@ adminRoutes.get("/users",      ...adminOnly, adminGetAllUsers);
 adminRoutes.post("/users",     ...adminOnly, adminCreateUser);
 adminRoutes.put("/users/:id",  ...adminOnly, adminUpdateUser);
 adminRoutes.delete("/users/:id", ...adminOnly, adminDeleteUser);
+
+// GET  /api/admin/vouchers         — list all vouchers
+// POST /api/admin/vouchers         — create new voucher
+// PUT  /api/admin/vouchers/:id     — update voucher
+// POST /api/admin/vouchers/:id/toggle — toggle active/disabled
+// DELETE /api/admin/vouchers/:id   — delete voucher
+adminRoutes.get("/vouchers",              ...adminOnly, adminListVouchers);
+adminRoutes.post("/vouchers",             ...adminOnly, adminCreateVoucher);
+adminRoutes.put("/vouchers/:id",          ...adminOnly, adminUpdateVoucher);
+adminRoutes.post("/vouchers/:id/toggle",  ...adminOnly, adminToggleVoucher);
+adminRoutes.delete("/vouchers/:id",       ...adminOnly, adminDeleteVoucher);
 
 export default adminRoutes;

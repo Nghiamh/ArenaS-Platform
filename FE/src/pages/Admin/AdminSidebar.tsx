@@ -152,11 +152,11 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeKey, collapsed
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 text-xs font-black text-white shadow-lg shadow-cyan-500/25 transition hover:shadow-cyan-500/40 hover:scale-105"
+          className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full overflow-hidden shadow-lg shadow-white/10 transition hover:shadow-white/20 hover:scale-105"
           aria-label={collapsed ? 'Mở sidebar' : 'Thu gọn sidebar'}
         >
-          AS
-          <span className="absolute inset-0 rounded-xl border border-white/20" />
+          <img src="/logo.jpg" alt="ArenaS Logo" className="h-full w-full object-cover scale-[1.15]" />
+          <span className="absolute inset-0 rounded-full border border-white/20" />
         </button>
 
         <AnimatePresence initial={false}>

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
 import {
   createCurrentUserSkill,
   deleteCurrentUserSkill,
@@ -20,6 +21,7 @@ import {
   type OwnerApplication,
   type OwnerApplicationPayload,
 } from "../../Axios/Axios";
+
 import { useWallet } from "../../hooks/useWallet";
 import { DepositModal } from "../WalletPage/DepositModal";
 
@@ -429,6 +431,7 @@ export const ProfilePage: React.FC = () => {
   const [bookingsLoading, setBookingsLoading] = useState(false);
   const [cancellingBookingId, setCancellingBookingId] = useState<string | null>(null);
   const [bookingToCancel, setBookingToCancel] = useState<UserBooking | null>(null);
+  const [bookingDetailModal, setBookingDetailModal] = useState<UserBooking | null>(null);
   const [showAllBookingsModal, setShowAllBookingsModal] = useState(false);
   const [bookingsCurrentPage, setBookingsCurrentPage] = useState(1);
 
@@ -450,6 +453,8 @@ export const ProfilePage: React.FC = () => {
   const [isAppealing, setIsAppealing] = useState(false);
   const [showReportsModal, setShowReportsModal] = useState(false);
 
+
+
   const isAnyModalOpen =
     isEditModalOpen ||
     showDeposit ||
@@ -458,6 +463,7 @@ export const ProfilePage: React.FC = () => {
     showReportsModal ||
     showOwnerAppForm ||
     Boolean(bookingToCancel) ||
+    Boolean(bookingDetailModal) ||
     Boolean(selectedReportForAppeal) ||
     Boolean(popupErrorMessage) ||
     Boolean(editingSkillId);
@@ -585,13 +591,13 @@ export const ProfilePage: React.FC = () => {
       setBookingsLoading(true);
       const res = await getMyBookings({ limit: 100 });
       
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setHours(0, 0, 0, 0);
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const tenDaysAgo = new Date();
+      tenDaysAgo.setHours(0, 0, 0, 0);
+      tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
       
       const recentBookings = res.bookings.filter((b) => {
         const bookingDate = new Date(b.date);
-        return bookingDate >= thirtyDaysAgo;
+        return bookingDate >= tenDaysAgo;
       });
 
       recentBookings.sort((a, b) => {
@@ -1095,67 +1101,103 @@ export const ProfilePage: React.FC = () => {
             {/* ─── LEFT SIDEBAR ────────────────────────────────────────────── */}
             <aside className="w-full lg:w-80 shrink-0 flex flex-col gap-6">
               {/* Profile Main Info */}
-              <div className="bg-white/[0.03] border border-white/[0.05] rounded-3xl p-6 flex flex-col items-center text-center shadow-[0_8px_30px_rgb(0,0,0,0.15)] relative overflow-hidden group">
-                <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500/25 to-transparent" />
+              {(() => {
+                const userXp = currentUser?.xp ?? 0;
+                const ELITE_TIERS = [
+                  { name: 'Bronze',   minXp: 0,    text: 'text-amber-500',   border: 'border-amber-600/30',  bg: 'bg-amber-600/10', bar: 'bg-gradient-to-r from-amber-700 to-amber-500' },
+                  { name: 'Silver',   minXp: 100,  text: 'text-slate-300',   border: 'border-slate-400/30',  bg: 'bg-slate-400/10', bar: 'bg-gradient-to-r from-slate-500 to-slate-300' },
+                  { name: 'Gold',     minXp: 300,  text: 'text-yellow-400',  border: 'border-yellow-500/30', bg: 'bg-yellow-500/10', bar: 'bg-gradient-to-r from-yellow-600 to-yellow-400' },
+                  { name: 'Platinum', minXp: 600,  text: 'text-cyan-300',    border: 'border-cyan-400/30',   bg: 'bg-cyan-400/10', bar: 'bg-gradient-to-r from-cyan-500 to-teal-400' },
+                  { name: 'Diamond',  minXp: 1000, text: 'text-violet-300',  border: 'border-violet-400/30', bg: 'bg-violet-400/10', bar: 'bg-gradient-to-r from-violet-500 to-purple-400' },
+                  { name: 'Elite',    minXp: 2000, text: 'text-[#00d26a]',   border: 'border-[#00d26a]/30',  bg: 'bg-[#00d26a]/10', bar: 'bg-gradient-to-r from-[#00d26a] to-emerald-400' },
+                ];
+                let tierIdx = 0;
+                for (let i = ELITE_TIERS.length - 1; i >= 0; i--) {
+                  if (userXp >= ELITE_TIERS[i].minXp) { tierIdx = i; break; }
+                }
+                const tier = ELITE_TIERS[tierIdx];
+                const nextTier = ELITE_TIERS[tierIdx + 1] ?? null;
+                const progress = nextTier
+                  ? Math.min(100, ((userXp - tier.minXp) / (nextTier.minXp - tier.minXp)) * 100)
+                  : 100;
+                const isPlayer = currentUser?.role === 'user';
 
-                {/* Avatar Frame with Stars & Verified Check */}
-                <div className="relative w-28 h-28 flex items-center justify-center">
-                  <div className="absolute inset-0 rounded-full border border-blue-500/40 shadow-[0_0_20px_rgba(59,130,246,0.25)] animate-pulse" />
-                  <div className="absolute inset-[3px] rounded-full border border-white/[0.04]" />
-                  <div className="w-[100px] h-[100px] rounded-full overflow-hidden border border-slate-900 bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-3xl font-black text-white relative shadow-inner">
-                    {currentAvatarUrl ? (
-                      <img
-                        src={currentAvatarUrl}
-                        alt="avatar"
-                        className="h-full w-full object-cover"
-                      />
+                return (
+                  <div className="bg-white/[0.03] border border-white/[0.05] rounded-3xl p-6 flex flex-col items-center text-center shadow-[0_8px_30px_rgb(0,0,0,0.15)] relative overflow-hidden group">
+                    <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500/25 to-transparent" />
+
+                    {/* Avatar */}
+                    <div className="relative w-28 h-28 flex items-center justify-center">
+                      <div className="absolute inset-0 rounded-full border border-blue-500/40 shadow-[0_0_20px_rgba(59,130,246,0.25)] animate-pulse" />
+                      <div className="absolute inset-[3px] rounded-full border border-white/[0.04]" />
+                      <div className="w-[100px] h-[100px] rounded-full overflow-hidden border border-slate-900 bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-3xl font-black text-white relative shadow-inner">
+                        {currentAvatarUrl ? (
+                          <img src={currentAvatarUrl} alt="avatar" className="h-full w-full object-cover" />
+                        ) : (
+                          avatarInitial
+                        )}
+                      </div>
+                      <div className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-blue-500 border-2 border-deep flex items-center justify-center shadow-lg">
+                        <CheckedVerifiedIcon />
+                      </div>
+                      {isEditing ? (
+                        <button
+                          type="button"
+                          onClick={handlePickAvatar}
+                          className="absolute inset-[3px] rounded-full bg-black/75 flex flex-col items-center justify-center text-white transition hover:bg-black/80 cursor-pointer"
+                          title="Đổi ảnh đại diện"
+                        >
+                          <CameraIcon />
+                          <span className="text-[9px] font-bold mt-1 tracking-wider uppercase">SỬA</span>
+                        </button>
+                      ) : null}
+                      <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarFileChange} className="hidden" />
+                    </div>
+
+                    <h2 className="mt-4 text-xl font-bold text-white tracking-wide truncate max-w-full">{profileName}</h2>
+                    <p className="text-xs text-slate-400 mt-1 truncate max-w-full font-mono">{profileEmail}</p>
+
+                    {/* Tier Badge */}
+                    {isPlayer ? (
+                      <div className={`mt-3 inline-flex items-center gap-1.5 rounded-full ${tier.bg} ${tier.border} border px-4 py-1 text-xs font-extrabold tracking-wide uppercase ${tier.text}`}>
+                        <MedalIcon />
+                        <span>{tier.name}</span>
+                      </div>
                     ) : (
-                      avatarInitial
+                      <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 px-4 py-1 text-xs font-extrabold text-blue-300 tracking-wide uppercase">
+                        <MedalIcon />
+                        <span>{profileRole}</span>
+                      </div>
                     )}
+
+                    {/* Progress bar + Points/XP — only for players */}
+                    {isPlayer && (
+                      <div className="w-full mt-5">
+                        {/* Progress */}
+                        <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 mb-1.5">
+                          <span>{tier.name}</span>
+                          <span>{nextTier ? nextTier.name : 'MAX'}</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
+                          <div className={`h-full rounded-full ${tier.bar} transition-all duration-500`} style={{ width: `${progress}%` }} />
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-1.5 text-right">
+                          {nextTier ? `${userXp} / ${nextTier.minXp} XP` : `${userXp} XP — Hạng cao nhất!`}
+                        </p>
+
+                        {/* Points */}
+                        <div className="mt-4 flex justify-center">
+                          <div className="inline-flex items-center gap-2.5 rounded-2xl bg-violet-500/10 border border-violet-500/20 px-5 py-2.5">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">SỐ ĐIỂM HIỆN CÓ</span>
+                            <span className="text-xl font-black text-violet-300 leading-none">{currentUser?.points ?? 0}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                   </div>
-                  {/* Verified Check Badge */}
-                  <div className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-blue-500 border-2 border-deep flex items-center justify-center shadow-lg">
-                    <CheckedVerifiedIcon />
-                  </div>
-
-                  {/* Pick Avatar Button overlay when editing */}
-                  {isEditing ? (
-                    <button
-                      type="button"
-                      onClick={handlePickAvatar}
-                      className="absolute inset-[3px] rounded-full bg-black/75 flex flex-col items-center justify-center text-white transition hover:bg-black/80 cursor-pointer"
-                      title="Đổi ảnh đại diện"
-                    >
-                      <CameraIcon />
-                      <span className="text-[9px] font-bold mt-1 tracking-wider uppercase">
-                        SỬA
-                      </span>
-                    </button>
-                  ) : null}
-                  <input
-                    ref={avatarInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarFileChange}
-                    className="hidden"
-                  />
-                </div>
-
-                <h2 className="mt-4 text-xl font-bold text-white tracking-wide truncate max-w-full">
-                  {profileName}
-                </h2>
-                <p className="text-xs text-slate-400 mt-1 truncate max-w-full font-mono">
-                  {profileEmail}
-                </p>
-
-                {/* Level / Role Badge */}
-                <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 px-4 py-1 text-xs font-extrabold text-blue-300 tracking-wide uppercase">
-                  <MedalIcon />
-                  <span>{profileRole} LEVEL</span>
-                </div>
-
-
-              </div>
+                );
+              })()}
 
               {/* Reports Status Widget */}
               {reportsLoading ? (
@@ -1259,6 +1301,7 @@ export const ProfilePage: React.FC = () => {
                   </button>
                 )
               )}
+
 
             </aside>
 
@@ -1893,7 +1936,7 @@ export const ProfilePage: React.FC = () => {
                         <th className="text-[10px] font-bold text-slate-500 tracking-wider uppercase py-3.5">
                           KHUNG GIỜ
                         </th>
-                        <th className="text-[10px] font-bold text-slate-500 tracking-wider uppercase py-3.5">
+                        <th className="text-[10px] font-bold text-slate-500 tracking-wider uppercase py-3.5 text-center">
                           TRẠNG THÁI
                         </th>
                         <th className="text-[10px] font-bold text-slate-500 tracking-wider uppercase py-3.5 text-right">
@@ -1946,7 +1989,7 @@ export const ProfilePage: React.FC = () => {
                           }
 
                           return (
-                            <tr key={booking._id} className="border-b border-white/[0.02] hover:bg-white/[0.01] transition">
+                            <tr key={booking._id} onClick={() => setBookingDetailModal(booking)} className="border-b border-white/[0.02] hover:bg-white/[0.01] transition cursor-pointer">
                               <td className="py-4 text-sm font-semibold text-slate-200">
                                 {booking.court_name}
                                 <span className="block text-[10px] text-slate-500 font-normal">{booking.sub_court_name}</span>
@@ -1957,23 +2000,34 @@ export const ProfilePage: React.FC = () => {
                               <td className="py-4 text-sm font-mono text-slate-400">
                                 {booking.start_time} - {booking.end_time}
                               </td>
-                              <td className="py-4 flex items-center gap-2">
-                                <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusClass}`}>
-                                  {statusLabel}
-                                </span>
-                                {booking.match_id && (
-                                  <div className="flex items-center justify-center h-6 w-6 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400" title="Lịch đặt từ ghép cặp">
-                                    <SwordsIcon className="h-3.5 w-3.5" />
-                                  </div>
-                                )}
+                              <td className="py-4">
+                                <div className="flex items-center justify-center gap-2">
+                                  <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusClass}`}>
+                                    {statusLabel}
+                                  </span>
+                                  {booking.match_id && (
+                                    <div className="flex items-center justify-center h-6 w-6 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400" title="Lịch đặt từ ghép cặp">
+                                      <SwordsIcon className="h-3.5 w-3.5" />
+                                    </div>
+                                  )}
+                                </div>
                               </td>
                               <td className="py-4 text-sm font-bold text-right text-emerald-400">
-                                {new Intl.NumberFormat('vi-VN').format(booking.total_price)} đ
+                                {(() => {
+                                  let finalPrice = booking.total_price;
+                                  if (booking.participants && booking.participants.length > 0) {
+                                    const p = booking.participants.find(p => p.userId === currentUser?.id);
+                                    if (p) finalPrice = p.amount;
+                                  } else {
+                                    finalPrice = Math.max(0, booking.total_price - (booking.voucher_discount || 0));
+                                  }
+                                  return new Intl.NumberFormat('vi-VN').format(finalPrice);
+                                })()} đ
                               </td>
                               <td className="py-4 text-center">
                                 {!isPlayed && (isSuccess || booking.status === 'waiting_opponent') ? (
                                   <button
-                                    onClick={() => setBookingToCancel(booking)}
+                                    onClick={(e) => { e.stopPropagation(); setBookingToCancel(booking); }}
                                     disabled={cancellingBookingId === booking._id}
                                     className="px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 text-xs font-bold hover:bg-rose-500/20 transition disabled:opacity-50"
                                   >
@@ -2349,7 +2403,7 @@ export const ProfilePage: React.FC = () => {
                       <th className="text-[10px] font-bold text-slate-500 tracking-wider uppercase py-3.5">SÂN</th>
                       <th className="text-[10px] font-bold text-slate-500 tracking-wider uppercase py-3.5">NGÀY</th>
                       <th className="text-[10px] font-bold text-slate-500 tracking-wider uppercase py-3.5">GIỜ</th>
-                      <th className="text-[10px] font-bold text-slate-500 tracking-wider uppercase py-3.5">TRẠNG THÁI</th>
+                      <th className="text-[10px] font-bold text-slate-500 tracking-wider uppercase py-3.5 text-center">TRẠNG THÁI</th>
                       <th className="text-[10px] font-bold text-slate-500 tracking-wider uppercase py-3.5 text-right">CHI PHÍ</th>
                       <th className="text-[10px] font-bold text-slate-500 tracking-wider uppercase py-3.5 text-center">THAO TÁC</th>
                     </tr>
@@ -2369,61 +2423,72 @@ export const ProfilePage: React.FC = () => {
                       else if (isSuccess) { statusClass = "bg-blue-500/10 text-blue-400 border-blue-500/20"; statusLabel = "Thành công"; }
                       else if (isCancelled) { statusClass = "bg-rose-500/10 text-rose-400 border-rose-500/20"; statusLabel = "Đã hủy"; }
                       return (
-                        <tr key={booking._id} className="border-b border-white/[0.02] hover:bg-white/[0.01] transition">
+                        <tr key={booking._id} onClick={() => setBookingDetailModal(booking)} className="border-b border-white/[0.02] hover:bg-white/[0.01] transition cursor-pointer">
                           <td className="py-3.5 text-sm font-semibold text-slate-200">
                             {booking.court_name}
                             <span className="block text-[10px] text-slate-500 font-normal">{booking.sub_court_name}</span>
                           </td>
                           <td className="py-3.5 text-sm text-slate-300">{new Date(booking.date).toLocaleDateString('vi-VN')}</td>
                           <td className="py-3.5 text-sm font-mono text-slate-400">{booking.start_time} - {booking.end_time}</td>
-                          <td className="py-3.5 flex items-center gap-2">
-                            <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusClass}`}>{statusLabel}</span>
-                            {booking.match_id && (
-                              <div className="relative group inline-block z-10">
-                                <button type="button" className="flex items-center justify-center h-6 w-6 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 hover:scale-105 transition-all duration-300">
-                                  <SwordsIcon className="h-3.5 w-3.5" />
-                                </button>
-                                
-                                {/* Tooltip profile card */}
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-4 rounded-2xl bg-[#0F172A]/95 border border-cyan-500/25 backdrop-blur-md shadow-2xl shadow-cyan-950/50 scale-95 opacity-0 pointer-events-none group-hover:scale-100 group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-50">
-                                  <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-[#0F172A]/95" />
-                                  <p className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider mb-2.5">Đối thủ ghép trận</p>
-                                  {(() => {
-                                    const opponent = booking.match_id?.participants?.find(
-                                      (p) => p._id !== currentUser?.id
-                                    );
-                                    if (!opponent) {
-                                      return <span className="text-slate-400 text-xs italic">Đang chờ đối thủ...</span>;
-                                    }
-                                    return (
-                                      <div className="flex items-center gap-3">
-                                        <div className="h-10 w-10 rounded-full overflow-hidden border border-cyan-500/25 bg-slate-800 flex items-center justify-center shrink-0">
-                                          {opponent.avatarUrl ? (
-                                            <img src={opponent.avatarUrl} alt={opponent.name} className="h-full w-full object-cover" />
-                                          ) : (
-                                            <span className="text-sm font-black text-cyan-400">
-                                              {(opponent.name || opponent.userName || "U").charAt(0).toUpperCase()}
-                                            </span>
-                                          )}
+                          <td className="py-3.5">
+                            <div className="flex items-center justify-center gap-2">
+                              <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusClass}`}>{statusLabel}</span>
+                              {booking.match_id && (
+                                <div className="relative group inline-block z-10">
+                                  <button type="button" className="flex items-center justify-center h-6 w-6 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 hover:scale-105 transition-all duration-300">
+                                    <SwordsIcon className="h-3.5 w-3.5" />
+                                  </button>
+                                  
+                                  {/* Tooltip profile card */}
+                                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-4 rounded-2xl bg-[#0F172A]/95 border border-cyan-500/25 backdrop-blur-md shadow-2xl shadow-cyan-950/50 scale-95 opacity-0 pointer-events-none group-hover:scale-100 group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-50">
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-[#0F172A]/95" />
+                                    <p className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider mb-2.5">Đối thủ ghép trận</p>
+                                    {(() => {
+                                      const opponent = booking.match_id?.participants?.find(
+                                        (p) => p._id !== currentUser?.id
+                                      );
+                                      if (!opponent) {
+                                        return <span className="text-slate-400 text-xs italic">Đang chờ đối thủ...</span>;
+                                      }
+                                      return (
+                                        <div className="flex items-center gap-3">
+                                          <div className="h-10 w-10 rounded-full overflow-hidden border border-cyan-500/25 bg-slate-800 flex items-center justify-center shrink-0">
+                                            {opponent.avatarUrl ? (
+                                              <img src={opponent.avatarUrl} alt={opponent.name} className="h-full w-full object-cover" />
+                                            ) : (
+                                              <span className="text-sm font-black text-cyan-400">
+                                                {(opponent.name || opponent.userName || "U").charAt(0).toUpperCase()}
+                                              </span>
+                                            )}
+                                          </div>
+                                          <div className="min-w-0 text-left">
+                                            <h4 className="text-xs font-bold text-white truncate">{opponent.name || opponent.userName}</h4>
+                                            <p className="text-[10px] text-slate-400 truncate">@{opponent.userName}</p>
+                                          </div>
                                         </div>
-                                        <div className="min-w-0 text-left">
-                                          <h4 className="text-xs font-bold text-white truncate">{opponent.name || opponent.userName}</h4>
-                                          <p className="text-[10px] text-slate-400 truncate">@{opponent.userName}</p>
-                                        </div>
-                                      </div>
-                                    );
-                                  })()}
+                                      );
+                                    })()}
+                                  </div>
                                 </div>
-                              </div>
-                            )}
+                              )}
+                            </div>
                           </td>
                           <td className="py-3.5 text-sm font-bold text-right text-emerald-400">
-                            {new Intl.NumberFormat('vi-VN').format(booking.total_price)} đ
+                            {(() => {
+                              let finalPrice = booking.total_price;
+                              if (booking.participants && booking.participants.length > 0) {
+                                const p = booking.participants.find(p => p.userId === currentUser?.id);
+                                if (p) finalPrice = p.amount;
+                              } else {
+                                finalPrice = Math.max(0, booking.total_price - (booking.voucher_discount || 0));
+                              }
+                              return new Intl.NumberFormat('vi-VN').format(finalPrice);
+                            })()} đ
                           </td>
                           <td className="py-3.5 text-center">
                             {!isPlayed && (isSuccess || booking.status === 'waiting_opponent') ? (
                               <button
-                                onClick={() => { setBookingToCancel(booking); setShowAllBookingsModal(false); }}
+                                onClick={(e) => { e.stopPropagation(); setBookingToCancel(booking); setShowAllBookingsModal(false); }}
                                 disabled={cancellingBookingId === booking._id}
                                 className="px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 text-xs font-bold hover:bg-rose-500/20 transition disabled:opacity-50"
                               >Hủy sân</button>
@@ -2791,6 +2856,78 @@ export const ProfilePage: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Booking Detail Modal */}
+        {bookingDetailModal && (
+          <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm" onClick={() => setBookingDetailModal(null)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+              onClick={e => e.stopPropagation()}
+              className="w-full max-w-sm rounded-3xl border border-white/10 bg-[#0B1221] shadow-2xl p-6 relative overflow-hidden"
+            >
+              <div className="flex flex-col items-center gap-3 text-center mb-6">
+                <div className="h-14 w-14 rounded-full bg-slate-800 flex items-center justify-center mb-1">
+                  <div className="h-7 w-7 rounded-full bg-white flex items-center justify-center text-[#0F172A]">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                  </div>
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white mb-1">Chi tiết đặt sân</h2>
+                  <p className="text-slate-400 text-[13px]">Mã đơn: {bookingDetailModal._id.substring(0, 8).toUpperCase()}</p>
+                </div>
+              </div>
+
+              <div className="relative rounded-2xl bg-[#141E2B] p-5 space-y-5">
+                <div className="absolute left-0 top-[55%] -translate-x-1/2 -translate-y-1/2 w-4 h-6 bg-[#0B1221] rounded-r-full" />
+                <div className="absolute right-0 top-[55%] translate-x-1/2 -translate-y-1/2 w-4 h-6 bg-[#0B1221] rounded-l-full" />
+
+                <div className="flex justify-between items-center px-1">
+                  <span className="text-[10px] font-bold text-slate-400 tracking-wider">SÂN</span>
+                  <span className="text-[13px] font-bold text-white">{bookingDetailModal.court_name} - {bookingDetailModal.sub_court_name}</span>
+                </div>
+
+                <div className="border-t border-dashed border-white/10 pt-5 px-1 flex justify-between items-start">
+                  <span className="text-[10px] font-bold text-slate-400 tracking-wider mt-0.5">THỜI GIAN</span>
+                  <div className="text-right">
+                    <p className="text-[13px] font-bold text-[#c7f200]">{bookingDetailModal.start_time} - {bookingDetailModal.end_time}</p>
+                    <p className="text-[11px] text-slate-400 mt-1">{new Date(bookingDetailModal.date).toLocaleDateString('vi-VN')}</p>
+                  </div>
+                </div>
+
+                {(bookingDetailModal.voucher_discount ?? 0) > 0 && (
+                  <div className="border-t border-white/5 pt-5 px-1 flex justify-between items-center">
+                    <span className="text-[10px] font-bold text-slate-400 tracking-wider">GIẢM GIÁ VOUCHER</span>
+                    <span className="text-[13px] font-bold text-emerald-400">-{new Intl.NumberFormat('vi-VN').format(bookingDetailModal.voucher_discount!)} đ</span>
+                  </div>
+                )}
+
+                <div className="border-t border-white/5 pt-5 px-1 flex justify-between items-center">
+                  <span className="text-[10px] font-bold text-slate-400 tracking-wider">ĐÃ THANH TOÁN</span>
+                  <span className="text-lg font-black text-[#c7f200]">
+                    {(() => {
+                      let finalPrice = bookingDetailModal.total_price;
+                      if (bookingDetailModal.participants && bookingDetailModal.participants.length > 0) {
+                        const p = bookingDetailModal.participants.find(p => p.userId === currentUser?.id);
+                        if (p) finalPrice = p.amount;
+                      } else {
+                        finalPrice = Math.max(0, bookingDetailModal.total_price - (bookingDetailModal.voucher_discount || 0));
+                      }
+                      return new Intl.NumberFormat('vi-VN').format(finalPrice);
+                    })()} đ
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setBookingDetailModal(null)}
+                className="w-full mt-6 rounded-2xl bg-white/10 hover:bg-white/20 py-3.5 text-[13px] font-bold text-white transition"
+              >
+                Đóng
+              </button>
+            </motion.div>
+          </div>
+        )}
+
       </div>
     </div>
   );

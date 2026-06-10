@@ -9,6 +9,9 @@ import WalletTransaction from '../models/walletTransactionModel.js';
 import Match from '../models/matchModel.js';
 import ChatMessage from '../models/chatMessageModel.js';
 import { createNotification } from './notificationController.js';
+import { consumeVoucher } from './voucherController.js';
+import User from '../models/userModel.js';
+import Voucher from '../models/voucherModel.js';
 
 // Helper: Khởi tạo các mốc thời gian 30 phút
 function generateTimeSlots(openTime: string, closeTime: string): ISlot[] {
@@ -409,7 +412,7 @@ export async function userBookCourt(req: Request, res: Response) {
 	try {
 		const user = req.user!;
 		const userId = user._id;
-		const { court_id, sub_court_id, date, start_time, end_time, match_id } = req.body;
+		const { court_id, sub_court_id, date, start_time, end_time, match_id, voucher_code } = req.body;
 
 		// --- Validate input ---
 		if (!court_id || !mongoose.Types.ObjectId.isValid(court_id)) {
@@ -503,7 +506,22 @@ export async function userBookCourt(req: Request, res: Response) {
 
 		// Determine if this is a matchmaking booking (split 50/50)
 		const isMatchBooking = !!(match_id && mongoose.Types.ObjectId.isValid(match_id));
-		const chargeAmount = isMatchBooking ? Math.ceil(total_price / 2) : total_price;
+
+		// --- Apply voucher ---
+		let voucherDiscount = 0;
+		let voucherId: string | undefined;
+		let voucherPointsUsed = 0;
+		if (voucher_code) {
+			const vResult = await consumeVoucher(voucher_code, total_price, userId.toString(), session);
+			if (vResult) {
+				voucherDiscount = vResult.discountAmount;
+				voucherId = vResult.voucherId;
+				voucherPointsUsed = vResult.pointsCost;
+			}
+		}
+
+		const discountedTotalPrice = Math.max(0, total_price - voucherDiscount);
+		const chargeAmount = isMatchBooking ? Math.ceil(discountedTotalPrice / 2) : discountedTotalPrice;
 
 		// --- Bước 5: Kiểm tra và trừ tiền ví ---
 		const wallet = await Wallet.findOne({ userId }).session(session);
@@ -546,14 +564,18 @@ export async function userBookCourt(req: Request, res: Response) {
 			total_price,
 			status: bookingStatus,
 			source: 'app',
-			tone: 'blue',
-			match_id: match_id || undefined,
+			match_id: isMatchBooking ? match_id : undefined,
 			participants: isMatchBooking ? [
 				{ userId: new mongoose.Types.ObjectId(userId), amount: chargeAmount, status: 'paid' },
-				...(opponentId ? [{ userId: new mongoose.Types.ObjectId(opponentId), amount: total_price - chargeAmount, status: 'unpaid' as const }] : []),
+				...(opponentId ? [{ userId: new mongoose.Types.ObjectId(opponentId), amount: discountedTotalPrice - chargeAmount, status: 'unpaid' as const }] : []),
 			] : undefined,
 			opponent_deadline: opponentDeadline,
+			voucher_id: voucherId,
+			voucher_code: voucherId ? voucher_code : undefined,
+			voucher_points_used: voucherPointsUsed,
+			voucher_discount: voucherDiscount,
 		});
+
 		await newBooking.save({ session });
 
 		// Cập nhật giờ hẹn của Trận đấu — CHỈ khi booking thường (matchmaking chờ đối thủ thanh toán)
@@ -626,6 +648,9 @@ export async function userBookCourt(req: Request, res: Response) {
 		await session.commitTransaction();
 		session.endSession();
 
+		// Award points for booking a court (non-matchmaking = full booking, matchmaking = 50% deposit)
+		User.findByIdAndUpdate(userId, { $inc: { points: 10, xp: 15 } }).catch(() => {});
+
 		// --- Bước 10: Notify qua Socket ---
 		if (isMatchBooking) {
 			try {
@@ -664,7 +689,7 @@ export async function userBookCourt(req: Request, res: Response) {
 							start_time,
 							end_time,
 							total_price,
-							opponent_amount: total_price - chargeAmount,
+							opponent_amount: discountedTotalPrice - chargeAmount,
 							deadline: opponentDeadline?.toISOString(),
 						});
 					}
@@ -749,6 +774,8 @@ export async function userBookCourt(req: Request, res: Response) {
 				start_time,
 				end_time,
 				total_price,
+				charged_amount: chargeAmount,
+				voucher_discount: voucherDiscount,
 				status: bookingStatus,
 				slots_booked: numberOfSlotsBooked,
 				wallet_balance: wallet.balance,
@@ -868,6 +895,9 @@ export async function opponentPayBooking(req: Request, res: Response) {
 		await tx.save({ session });
 
 		await session.commitTransaction();
+
+		// Award points to opponent for completing their booking payment
+		User.findByIdAndUpdate(userId, { $inc: { points: 10, xp: 15 } }).catch(() => {});
 
 		// --- Socket notifications ---
 		if (booking.match_id) {
@@ -1228,6 +1258,31 @@ export async function cancelBooking(req: Request, res: Response) {
 							}
 						}
 					}
+				}
+			}
+		}
+
+		// --- VOUCHER REFUND ---
+		if (booking.voucher_id) {
+			const voucher = await Voucher.findById(booking.voucher_id).session(session);
+			if (voucher) {
+				if (voucher.pointsCost === 0) {
+					// Free voucher: Remove user from usedBy, decrement usedCount
+					voucher.usedBy = voucher.usedBy.filter((id: any) => id.toString() !== booking.user_id?.toString());
+					if (voucher.usedCount > 0) voucher.usedCount -= 1;
+					if (voucher.status === 'expired' && voucher.usedCount < voucher.maxUses) {
+						// Only reactivate if it hasn't passed expiryDate
+						const today = new Date().toISOString().split('T')[0];
+						if (voucher.expiryDate >= today) voucher.status = 'active';
+					}
+					await voucher.save({ session });
+				} else {
+					// Points voucher: Do NOT refund points. Add user back to usedBy so they can use it again.
+					// Note: usedCount is NOT decremented because the user still owns the "redeemed" status.
+					if (booking.user_id) {
+						voucher.usedBy.push(new mongoose.Types.ObjectId(booking.user_id));
+					}
+					await voucher.save({ session });
 				}
 			}
 		}

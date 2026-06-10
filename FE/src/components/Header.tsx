@@ -8,6 +8,8 @@ type StoredUser = {
   email?: string;
   role?: 'user' | 'owner' | 'admin';
   avatarUrl?: string;
+  xp?: number;
+  points?: number;
 };
 
 export const Header: React.FC = () => {
@@ -64,6 +66,17 @@ export const Header: React.FC = () => {
       ? '/admin/dashboard'
       : '/profile';
 
+  const getUserLevelInfo = (xp: number = 0) => {
+    if (xp >= 2000) return { name: 'ELITE', color: 'text-[#00d26a]' };
+    if (xp >= 1000) return { name: 'DIAMOND', color: 'text-violet-300' };
+    if (xp >= 600) return { name: 'PLATINUM', color: 'text-cyan-300' };
+    if (xp >= 300) return { name: 'GOLD', color: 'text-yellow-400' };
+    if (xp >= 100) return { name: 'SILVER', color: 'text-slate-300' };
+    return { name: 'BRONZE', color: 'text-amber-500' };
+  };
+
+  const levelInfo = getUserLevelInfo(currentUser?.xp);
+
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('currentUser');
@@ -83,12 +96,10 @@ export const Header: React.FC = () => {
 
           {/* Logo */}
           <Link to="/home" className="flex items-center gap-2.5 group shrink-0">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full font-black text-[#0A0A0B] transition-transform group-hover:scale-105" style={{ backgroundColor: 'var(--accent-primary)' }}>
-              <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
-                <path d="M13.49 5.48c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm-3.6 13.9l1-4.4 2.1 2v6h2v-7.5l-2.1-2 .6-3c1.3 1.5 3.3 2.5 5.5 2.5v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1l-5.2 2.2v4.7h2v-3.4l1.8-.7-1.6 8.1-4.9-1-.4 2 6.7 1.4 1.1-5.4z" />
-              </svg>
+            <div className="flex h-10 w-10 items-center justify-center rounded-full overflow-hidden transition-transform group-hover:scale-105 border border-white/10 shadow-[0_0_10px_rgba(255,255,255,0.05)] bg-[#0A0A0B]">
+              <img src="/logo.jpg" alt="ArenaS Logo" className="h-full w-full object-cover scale-[1.15]" />
             </div>
-            <span className="text-xl font-black font-montserrat uppercase tracking-[0.18em] text-accent-primary">ArenaS</span>
+            <span className="text-xl font-black font-montserrat uppercase tracking-[0.18em] text-slate-200">ArenaS</span>
           </Link>
 
           {/* Navigation */}
@@ -137,9 +148,9 @@ export const Header: React.FC = () => {
                       profileInitial
                     )}
                   </span>
-                  <span className="hidden pr-1.5 md:block">
-                    <span className="block text-sm font-bold leading-tight text-white">{currentUser?.name ?? currentUser?.userName ?? 'Tài khoản'}</span>
-                    <span className="block text-[10px] font-bold uppercase tracking-widest text-accent-secondary">Hồ sơ</span>
+                  <span className="hidden pr-1.5 md:block text-center">
+                    <span className="block text-[15px] font-bold leading-tight text-white">{currentUser?.name ?? currentUser?.userName ?? 'Tài khoản'}</span>
+                    <span className={`block text-[10px] font-bold uppercase tracking-widest ${levelInfo.color} mt-[3px]`}>{levelInfo.name}</span>
                   </span>
                   <svg viewBox="0 0 24 24" className={`hidden md:block h-3.5 w-3.5 text-white/40 transition-transform ${isProfileMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2.5">
                     <path d="m6 9 6 6 6-6" />
@@ -246,6 +257,7 @@ export const Header: React.FC = () => {
             {[
               { to: '/tim-san', label: 'Tìm Sân', show: true },
               { to: '/matchmaking', label: 'Tìm Đối Thủ', show: isPlayerAccount },
+
               { to: '/cho-chu-san', label: 'Liên Hệ Chủ Sân', show: !isManagementAccount },
               { to: '/bang-gia', label: 'Bảng Giá', show: !isPlayerAccount },
             ].filter(i => i.show).map(item => (

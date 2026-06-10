@@ -305,7 +305,8 @@ export async function acceptMatch(req: Request, res: Response): Promise<void> {
 			const populatedMatch = await Match.findById(match._id)
 				.populate("participants", "name userName avatarUrl")
 				.populate("court_id", "name location sports price_per_hour coordinates")
-				.populate("owner_id", "name userName");
+				.populate("owner_id", "name userName")
+				.lean();
 
 			const matchPayload = {
 				matchId: match._id,
@@ -611,7 +612,8 @@ export async function completeMatch(req: Request, res: Response): Promise<void> 
 				const populatedMatch = await Match.findById(match._id)
 					.populate("participants", "name userName avatarUrl")
 					.populate("court_id", "name location sports price_per_hour coordinates")
-					.populate("owner_id", "name userName");
+					.populate("owner_id", "name userName")
+					.lean();
 
 				res.status(200).json({
 					success: true,
@@ -634,10 +636,10 @@ export async function completeMatch(req: Request, res: Response): Promise<void> 
 		match.status = "COMPLETED";
 		await match.save();
 
-		// Increment completed_matches_count for both participants
+		// Increment completed_matches_count and award points for both participants
 		for (const pId of match.participants) {
 			await User.findByIdAndUpdate(pId, {
-				$inc: { completed_matches_count: 1 }
+				$inc: { completed_matches_count: 1, points: 20, xp: 30 }
 			});
 		}
 
@@ -646,7 +648,8 @@ export async function completeMatch(req: Request, res: Response): Promise<void> 
 		const populatedMatch = await Match.findById(match._id)
 			.populate("participants", "name userName avatarUrl")
 			.populate("court_id", "name location sports price_per_hour coordinates")
-			.populate("owner_id", "name userName");
+			.populate("owner_id", "name userName")
+			.lean();
 
 		for (const p of match.participants) {
 			io.to(`user:${p.toString()}`).emit("match_completed", {
