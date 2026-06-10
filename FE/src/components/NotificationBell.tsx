@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import ReactDOM from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   getMyNotifications,
@@ -54,7 +55,9 @@ type Props = { isLoggedIn: boolean };
 export const NotificationBell: React.FC<Props> = ({ isLoggedIn }) => {
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const bellRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 });
   const [notifications, setNotifications] = useState<FENotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -107,6 +110,13 @@ export const NotificationBell: React.FC<Props> = ({ isLoggedIn }) => {
 
   const handleOpen = async () => {
     if (!open) {
+      if (bellRef.current) {
+        const rect = bellRef.current.getBoundingClientRect();
+        setDropdownPos({
+          top: rect.bottom + 8,
+          right: window.innerWidth - rect.right,
+        });
+      }
       setOpen(true);
       setLoading(true);
       try {
@@ -147,6 +157,7 @@ export const NotificationBell: React.FC<Props> = ({ isLoggedIn }) => {
     <div className="relative" ref={dropdownRef}>
       {/* Bell button */}
       <button
+        ref={bellRef}
         type="button"
         onClick={handleOpen}
         className="relative flex h-9 w-9 items-center justify-center rounded-xl transition-all hover:scale-105 active:scale-95"
@@ -183,13 +194,14 @@ export const NotificationBell: React.FC<Props> = ({ isLoggedIn }) => {
         )}
       </button>
 
-      {/* Dropdown */}
-      {open && (
+      {/* Dropdown — rendered via portal to escape all stacking contexts */}
+      {open && ReactDOM.createPortal(
         <div
-          className="fixed z-[9999] w-80 overflow-hidden rounded-xl shadow-2xl"
+          className="fixed w-80 overflow-hidden rounded-xl shadow-2xl"
           style={{
-            top: dropdownRef.current ? dropdownRef.current.getBoundingClientRect().bottom + 8 : 'auto',
-            right: dropdownRef.current ? window.innerWidth - dropdownRef.current.getBoundingClientRect().right : 0,
+            top: dropdownPos.top,
+            right: dropdownPos.right,
+            zIndex: 99999,
             backgroundColor: 'var(--bg-deep)',
             border: '1px solid rgba(var(--accent-primary-rgb), 0.2)',
             boxShadow: '0 20px 40px -10px rgba(0,0,0,0.7)',
@@ -271,7 +283,8 @@ export const NotificationBell: React.FC<Props> = ({ isLoggedIn }) => {
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
