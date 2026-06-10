@@ -10,6 +10,11 @@ export interface IWithdrawalRequest extends Document {
 	bankAccountNumber: string;
 	status: WithdrawalStatus;
 	adminNote?: string;
+	isReported?: boolean;
+	reportMessage?: string;
+	isReportResolved?: boolean;
+	reportResolutionMessage?: string;
+	isReceiptConfirmed?: boolean;
 	createdAt: Date;
 	updatedAt: Date;
 }
@@ -51,6 +56,26 @@ const withdrawalRequestSchema = new Schema<IWithdrawalRequest>(
 		adminNote: {
 			type: String,
 			required: false,
+		},
+		isReported: {
+			type: Boolean,
+			default: false,
+		},
+		reportMessage: {
+			type: String,
+			required: false,
+		},
+		isReportResolved: {
+			type: Boolean,
+			default: false,
+		},
+		reportResolutionMessage: {
+			type: String,
+			required: false,
+		},
+		isReceiptConfirmed: {
+			type: Boolean,
+			default: false,
 		},
 	},
 	{

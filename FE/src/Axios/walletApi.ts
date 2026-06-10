@@ -64,6 +64,11 @@ export type WithdrawalRequestInfo = {
 	bankAccountNumber: string;
 	status: 'pending' | 'approved' | 'rejected';
 	adminNote?: string;
+	isReported?: boolean;
+	reportMessage?: string;
+	isReportResolved?: boolean;
+	reportResolutionMessage?: string;
+	isReceiptConfirmed?: boolean;
 	createdAt: string;
 	updatedAt: string;
 };
@@ -184,6 +189,51 @@ export async function processWithdrawal(
 	} catch (error: unknown) {
 		throw new Error(
 			error instanceof Error ? error.message : 'Failed to process withdrawal'
+		);
+	}
+}
+
+export async function reportWithdrawal(
+	id: string,
+	message?: string
+): Promise<RequestWithdrawalResponse> {
+	try {
+		const { data } = await axiosClient.post<RequestWithdrawalResponse>(`/wallet/withdrawals/${id}/report`, {
+			message,
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(
+			error instanceof Error ? error.message : 'Failed to report withdrawal'
+		);
+	}
+}
+
+export async function resolveReport(
+	id: string,
+	message: string
+): Promise<RequestWithdrawalResponse> {
+	try {
+		const { data } = await axiosClient.post<RequestWithdrawalResponse>(`/wallet/withdrawals/${id}/resolve`, {
+			message,
+		});
+		return data;
+	} catch (error: unknown) {
+		throw new Error(
+			error instanceof Error ? error.message : 'Failed to resolve report'
+		);
+	}
+}
+
+export async function confirmReceipt(
+	id: string
+): Promise<RequestWithdrawalResponse> {
+	try {
+		const { data } = await axiosClient.post<RequestWithdrawalResponse>(`/wallet/withdrawals/${id}/confirm-receipt`);
+		return data;
+	} catch (error: unknown) {
+		throw new Error(
+			error instanceof Error ? error.message : 'Failed to confirm receipt'
 		);
 	}
 }

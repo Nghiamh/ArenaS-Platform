@@ -23,9 +23,20 @@ export async function createNotification(opts: {
 			link: opts.link,
 			metadata: opts.metadata,
 		});
-	} catch {
+
+		// Emit socket event
+		const { getIo } = await import("../services/socketHandler.js");
+		const io = getIo();
+		if (io) {
+			if (opts.recipientId) {
+				io.to(`user:${opts.recipientId.toString()}`).emit("new_notification", { type: opts.type });
+			} else if (opts.recipientRole) {
+				io.to(`role:${opts.recipientRole}`).emit("new_notification", { type: opts.type });
+			}
+		}
+	} catch (error) {
 		// Non-fatal — log silently, don't break main flow
-		console.error("[Notification] Failed to create notification:", opts.type);
+		console.error("[Notification] Failed to create notification:", opts.type, error);
 	}
 }
 

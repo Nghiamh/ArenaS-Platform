@@ -7,6 +7,7 @@ import {
   markAllNotificationsRead,
   type FENotification,
 } from '../Axios/Axios';
+import { useSocket } from '../hooks/useSocket';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -58,27 +59,43 @@ export const NotificationBell: React.FC<Props> = ({ isLoggedIn }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // Poll unread count every 15s for near-realtime feel
-  const pollCount = useCallback(async () => {
-    if (!isLoggedIn) return;
-    try {
-      const count = await getUnreadNotificationCount();
-      setUnreadCount(count);
-    } catch {
-      // ignore auth/network errors silently
-    }
-  }, [isLoggedIn]);
+	// Poll unread count every 15s for near-realtime feel
+	const pollCount = useCallback(async () => {
+		if (!isLoggedIn) return;
+		try {
+			const count = await getUnreadNotificationCount();
+			setUnreadCount(count);
+		} catch {
+			// ignore auth/network errors silently
+		}
+	}, [isLoggedIn]);
 
-  useEffect(() => {
-    if (!isLoggedIn) return;
-    // initial fetch right away
-    pollCount();
-    const id = setInterval(pollCount, 15_000);
-    return () => clearInterval(id);
-  }, [isLoggedIn, pollCount]);
+	useEffect(() => {
+		if (!isLoggedIn) return;
+		// initial fetch right away
+		pollCount();
+		const id = setInterval(pollCount, 15_000);
+		return () => clearInterval(id);
+	}, [isLoggedIn, pollCount]);
 
-  // Close on outside click
-  useEffect(() => {
+	const { onNewNotification } = useSocket();
+	useEffect(() => {
+		const unsubscribe = onNewNotification(() => {
+			pollCount();
+			if (open) {
+				getMyNotifications({ limit: 20 })
+					.then((res) => {
+						setNotifications(res.notifications);
+						setUnreadCount(res.unreadCount);
+					})
+					.catch(() => {});
+			}
+		});
+		return unsubscribe;
+	}, [onNewNotification, pollCount, open]);
+
+	// Close on outside click
+	useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setOpen(false);

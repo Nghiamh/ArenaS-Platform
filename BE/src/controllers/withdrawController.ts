@@ -26,17 +26,20 @@ export async function requestWithdrawal(req: Request, res: Response) {
 		if (!wallet) {
 			throw new Error("wallet_not_found");
 		}
-		if (wallet.balance < amount) {
+		// Calculate total pending withdrawals to ensure they don't request more than they have
+		const pendingRequests = await WithdrawalRequest.find({ ownerId, status: "pending" }).session(session);
+		const totalPending = pendingRequests.reduce((sum, req) => sum + req.amount, 0);
+
+		if (wallet.balance < totalPending + amount) {
 			throw new Error("insufficient_balance");
 		}
+
 		if (wallet.status === "frozen") {
 			throw new Error("wallet_frozen");
 		}
 
-		// Deduct from wallet immediately (hold)
-		wallet.balance -= amount;
-		await wallet.save({ session });
-
+		// DO NOT deduct from wallet here. We deduct when admin approves.
+		
 		// Create withdrawal request
 		const request = new WithdrawalRequest({
 			ownerId,
@@ -133,27 +136,23 @@ export async function processWithdrawal(req: Request, res: Response) {
 		}).sort({ createdAt: -1 }).session(session);
 
 		if (status === "approved") {
+			// Now we deduct the balance
+			if (wallet.balance < request.amount) {
+				throw new Error("insufficient_balance_at_approval");
+			}
+			wallet.balance -= request.amount;
+			await wallet.save({ session });
+
 			if (transaction) {
 				transaction.status = "completed";
 				await transaction.save({ session });
 			}
 		} else if (status === "rejected") {
-			// Refund the money
-			wallet.balance += request.amount;
-			await wallet.save({ session });
-
+			// We didn't deduct, so no need to refund the balance
 			if (transaction) {
 				transaction.status = "failed";
 				await transaction.save({ session });
 			}
-
-			// Add a refund transaction
-			await new WalletTransaction({
-				walletId: wallet._id,
-				amount: request.amount,
-				type: "refund",
-				status: "completed",
-			}).save({ session });
 		}
 
 		await session.commitTransaction();
@@ -191,6 +190,7 @@ export async function processWithdrawal(req: Request, res: Response) {
 			request_not_found: { status: 404, message: "Không tìm thấy yêu cầu rút tiền" },
 			request_already_processed: { status: 400, message: "Yêu cầu này đã được xử lý" },
 			wallet_not_found: { status: 404, message: "Không tìm thấy ví" },
+			insufficient_balance_at_approval: { status: 400, message: "Số dư ví hiện tại không đủ để duyệt yêu cầu này" },
 		};
 
 		const mapped = errorMap[error.message];
@@ -223,6 +223,145 @@ export async function getWithdrawalRequests(req: Request, res: Response) {
 		});
 	} catch (error) {
 		console.error("getWithdrawalRequests error:", error);
+		return res.status(500).json({ error: "internal_server_error" });
+	}
+}
+
+// 4. Owner reports an approved withdrawal they haven't received
+export async function reportWithdrawal(req: Request, res: Response) {
+	try {
+		const { id } = req.params;
+		const { message } = req.body;
+		const user = req.user!;
+
+		const request = await WithdrawalRequest.findById(id);
+		if (!request) {
+			return res.status(404).json({ error: "Không tìm thấy yêu cầu rút tiền" });
+		}
+
+		if (request.ownerId.toString() !== user._id.toString()) {
+			return res.status(403).json({ error: "Không có quyền báo cáo" });
+		}
+
+		if (request.status !== "approved") {
+			return res.status(400).json({ error: "Chỉ có thể báo cáo đơn đã được duyệt" });
+		}
+
+		if (request.isReported && !request.isReportResolved) {
+			return res.status(400).json({ error: "Đơn này đang được báo cáo và chờ xử lý" });
+		}
+
+		request.isReported = true;
+		if (request.isReportResolved) {
+			request.isReportResolved = false;
+			request.reportMessage = `${request.reportMessage}\n\n[Báo cáo lại]: ${message || "Chưa nhận được tiền"}`;
+		} else {
+			request.reportMessage = message || "Chưa nhận được tiền";
+		}
+		await request.save();
+
+		// Notify Admin
+		void createNotification({
+			recipientRole: "admin",
+			type: "withdrawal_reported",
+			title: "Báo cáo lỗi rút tiền ⚠️",
+			message: `Chủ sân ${user.name || user.userName} báo cáo chưa nhận được tiền cho mã giao dịch ${request._id.toString().slice(-8)}.`,
+			link: "/admin/withdrawals",
+		});
+
+		return res.status(200).json({
+			message: "Gửi báo cáo thành công",
+			request,
+		});
+	} catch (error) {
+		console.error("reportWithdrawal error:", error);
+		return res.status(500).json({ error: "internal_server_error" });
+	}
+}
+
+// 5. Admin resolves a reported withdrawal
+export async function resolveReport(req: Request, res: Response) {
+	try {
+		const { id } = req.params;
+		const { message } = req.body;
+
+		if (!message) {
+			return res.status(400).json({ error: "Vui lòng nhập lời nhắn xử lý" });
+		}
+
+		const request = await WithdrawalRequest.findById(id);
+		if (!request) {
+			return res.status(404).json({ error: "Không tìm thấy yêu cầu rút tiền" });
+		}
+
+		if (!request.isReported) {
+			return res.status(400).json({ error: "Yêu cầu này chưa được báo cáo lỗi" });
+		}
+
+		if (request.isReportResolved) {
+			return res.status(400).json({ error: "Báo cáo này đã được xử lý" });
+		}
+
+		request.isReportResolved = true;
+		request.reportResolutionMessage = message;
+		await request.save();
+
+		// Notify Owner
+		void createNotification({
+			recipientId: request.ownerId,
+			type: "withdrawal_report_resolved",
+			title: "Báo cáo rút tiền đã được xử lý 🛠️",
+			message: `Admin đã xử lý báo cáo của bạn với lời nhắn: "${message}".`,
+			link: "/owner/wallet",
+		});
+
+		return res.status(200).json({
+			message: "Xử lý báo cáo thành công",
+			request,
+		});
+	} catch (error) {
+		console.error("resolveReport error:", error);
+		return res.status(500).json({ error: "internal_server_error" });
+	}
+}
+
+// 6. Owner confirms they received the money
+export async function confirmReceipt(req: Request, res: Response) {
+	try {
+		const { id } = req.params;
+		const user = req.user!;
+
+		const request = await WithdrawalRequest.findById(id);
+		if (!request) {
+			return res.status(404).json({ error: "Không tìm thấy yêu cầu rút tiền" });
+		}
+
+		if (request.ownerId.toString() !== user._id.toString()) {
+			return res.status(403).json({ error: "Không có quyền xác nhận" });
+		}
+
+		if (request.status !== "approved") {
+			return res.status(400).json({ error: "Chỉ có thể xác nhận đơn đã được duyệt" });
+		}
+
+		request.isReceiptConfirmed = true;
+		await request.save();
+
+		// Notify Admin
+		void createNotification({
+			recipientRole: "admin",
+			type: "withdrawal_receipt_confirmed",
+			title: "Chủ sân đã nhận được tiền ✅",
+			message: `Chủ sân ${user.name || user.userName} đã xác nhận nhận được tiền cho mã giao dịch ${request._id.toString().slice(-8)}.`,
+			link: "/admin/withdrawals",
+		});
+
+		return res.status(200).json({
+			message: "Xác nhận thành công",
+			request,
+		});
+	} catch (error) {
+		console.error("confirmReceipt error:", error);
 		return res.status(500).json({ error: "internal_server_error" });
 	}
 }

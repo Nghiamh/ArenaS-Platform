@@ -2,14 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { OwnerSidebar } from './OwnerSidebar';
 import { NotificationBell } from '../../components/NotificationBell';
-import { getMyWallet, getWithdrawalRequests, requestWithdrawal, type WalletInfo, type WithdrawalRequestInfo } from '../../Axios/walletApi';
+import { getMyWallet, getWithdrawalRequests, requestWithdrawal, reportWithdrawal, confirmReceipt, type WalletInfo, type WithdrawalRequestInfo } from '../../Axios/walletApi';
+import { useSocket } from '../../hooks/useSocket';
 
 export const OwnerWalletScreen: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => localStorage.getItem('ownerSidebarCollapsed') === '1');
   const [wallet, setWallet] = useState<WalletInfo | null>(null);
   const [withdrawals, setWithdrawals] = useState<WithdrawalRequestInfo[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [amount, setAmount] = useState('');
@@ -18,6 +19,25 @@ export const OwnerWalletScreen: React.FC = () => {
   const [bankAccountNumber, setBankAccountNumber] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Report Modal state
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportRequestId, setReportRequestId] = useState('');
+  const [reportMessage, setReportMessage] = useState('');
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const [reportError, setReportError] = useState('');
+
+  // View Report Modal state
+  const [viewReportModalOpen, setViewReportModalOpen] = useState(false);
+  const [reportReq, setReportReq] = useState<WithdrawalRequestInfo | null>(null);
+
+  // Toast State
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   useEffect(() => {
     localStorage.setItem('ownerSidebarCollapsed', sidebarCollapsed ? '1' : '0');
@@ -43,16 +63,30 @@ export const OwnerWalletScreen: React.FC = () => {
     loadData();
   }, []);
 
+  const { onNewNotification } = useSocket();
+  useEffect(() => {
+    const unsubscribe = onNewNotification((payload) => {
+      if (
+        payload.type === 'withdrawal_approved' ||
+        payload.type === 'withdrawal_rejected' ||
+        payload.type === 'withdrawal_report_resolved'
+      ) {
+        loadData();
+      }
+    });
+    return unsubscribe;
+  }, [onNewNotification]);
+
   const handleRequestWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
-    
+
     const numAmount = Number(amount.replace(/,/g, ''));
     if (!numAmount || numAmount < 10000) {
       setErrorMsg('Số tiền rút tối thiểu là 10.000đ');
       return;
     }
-    
+
     if (wallet && numAmount > wallet.balance) {
       setErrorMsg('Số dư không đủ');
       return;
@@ -76,6 +110,50 @@ export const OwnerWalletScreen: React.FC = () => {
       setErrorMsg(error.message || 'Có lỗi xảy ra khi tạo yêu cầu rút tiền');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const openReportModal = (id: string) => {
+    setReportRequestId(id);
+    setReportMessage('');
+    setReportError('');
+    setReportModalOpen(true);
+  };
+
+  const openViewReportModal = (req: WithdrawalRequestInfo) => {
+    setReportReq(req);
+    setViewReportModalOpen(true);
+  };
+
+  const handleConfirmReceipt = async (id: string) => {
+    try {
+      await confirmReceipt(id);
+      await loadData();
+      setViewReportModalOpen(false);
+      showToast("Cảm ơn bạn đã xác nhận!", "success");
+    } catch (error: any) {
+      showToast(error.message || 'Có lỗi xảy ra khi xác nhận', "error");
+    }
+  };
+
+  const submitReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reportMessage.trim()) {
+      setReportError('Vui lòng nhập nội dung báo cáo');
+      return;
+    }
+
+    setIsSubmittingReport(true);
+    setReportError('');
+    try {
+      await reportWithdrawal(reportRequestId, reportMessage);
+      await loadData();
+      setReportModalOpen(false);
+      showToast("Gửi báo cáo thành công!", "success");
+    } catch (error: any) {
+      setReportError(error.message || 'Có lỗi xảy ra khi gửi báo cáo');
+    } finally {
+      setIsSubmittingReport(false);
     }
   };
 
@@ -178,6 +256,7 @@ export const OwnerWalletScreen: React.FC = () => {
                               <th className="px-4 py-4 font-semibold text-right">Số tiền</th>
                               <th className="px-4 py-4 font-semibold">Ngân hàng</th>
                               <th className="px-4 py-4 font-semibold">Trạng thái</th>
+                              <th className="px-4 py-4 font-semibold text-right">Thao tác</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-white/5">
@@ -198,6 +277,29 @@ export const OwnerWalletScreen: React.FC = () => {
                                     <div className="mt-1 text-xs text-slate-500 max-w-[200px] truncate" title={req.adminNote}>
                                       Lý do: {req.adminNote}
                                     </div>
+                                  )}
+                                  {req.isReported && (
+                                    <div className={`mt-1 text-[10px] font-bold uppercase tracking-wider ${req.isReceiptConfirmed ? 'text-blue-400' : req.isReportResolved ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                      {req.isReceiptConfirmed ? '✔️ Đã nhận tiền' : req.isReportResolved ? '✅ Đã xử lý báo cáo' : '⚠️ Đã báo cáo lỗi'}
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="px-4 py-4 text-right">
+                                  {req.status === 'approved' && !req.isReported && (
+                                    <button
+                                      onClick={() => openReportModal(req._id)}
+                                      className="text-xs font-bold text-rose-400 hover:text-rose-300 transition underline underline-offset-2"
+                                    >
+                                      Báo lỗi nhận tiền
+                                    </button>
+                                  )}
+                                  {req.isReported && (
+                                    <button
+                                      onClick={() => openViewReportModal(req)}
+                                      className={`text-xs font-bold transition underline underline-offset-2 ${req.isReportResolved ? 'text-emerald-400 hover:text-emerald-300' : 'text-slate-400 hover:text-white'}`}
+                                    >
+                                      {req.isReportResolved ? 'Xem kết quả xử lý' : 'Xem báo cáo'}
+                                    </button>
                                   )}
                                 </td>
                               </tr>
@@ -242,7 +344,7 @@ export const OwnerWalletScreen: React.FC = () => {
                     {errorMsg}
                   </div>
                 )}
-                
+
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-1.5">Số tiền rút (VND)</label>
                   <input
@@ -316,6 +418,183 @@ export const OwnerWalletScreen: React.FC = () => {
               </form>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Report Modal */}
+      <AnimatePresence>
+        {reportModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setReportModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md overflow-hidden rounded-3xl border border-rose-500/20 bg-[#081734] p-6 shadow-2xl"
+            >
+              <div className="flex items-center gap-3 text-rose-400 mb-2">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <h2 className="text-2xl font-black text-white">Báo cáo lỗi</h2>
+              </div>
+              <p className="mt-2 text-sm text-slate-400 mb-6">
+                Vui lòng cung cấp chi tiết vấn đề bạn gặp phải (VD: Chưa nhận được tiền, sai số tiền, ...). Admin sẽ kiểm tra và phản hồi lại sớm nhất.
+              </p>
+
+              <form onSubmit={submitReport} className="space-y-4">
+                {reportError && (
+                  <div className="rounded-xl bg-rose-500/10 border border-rose-500/20 p-3 text-sm text-rose-400">
+                    {reportError}
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">Nội dung báo cáo</label>
+                  <textarea
+                    required
+                    rows={4}
+                    value={reportMessage}
+                    onChange={(e) => setReportMessage(e.target.value)}
+                    placeholder="VD: Tôi chưa nhận được tiền dù trạng thái đã duyệt..."
+                    className="w-full rounded-xl border border-white/10 bg-white/5 p-3 text-white placeholder:text-slate-500 focus:border-rose-500/50 focus:outline-none focus:ring-1 focus:ring-rose-500/50 transition resize-none"
+                  />
+                </div>
+
+                <div className="pt-4 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setReportModalOpen(false)}
+                    className="flex-1 rounded-xl bg-white/5 py-3 text-sm font-bold text-white hover:bg-white/10 transition"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingReport}
+                    className="flex-1 rounded-xl bg-rose-500 py-3 text-sm font-bold text-white shadow-lg hover:bg-rose-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmittingReport ? 'Đang gửi...' : 'Gửi Báo Cáo'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* View Report Modal */}
+      <AnimatePresence>
+        {viewReportModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setViewReportModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-[#081734] p-6 shadow-2xl"
+            >
+              <div className="flex items-center gap-3 text-white mb-6">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6 text-rose-400">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <h2 className="text-2xl font-black text-white">Nội dung báo cáo</h2>
+              </div>
+
+              <div className="rounded-xl bg-white/5 border border-white/10 p-4 text-sm text-white/90 whitespace-pre-wrap leading-relaxed">
+                {reportReq?.reportMessage || 'Không có nội dung.'}
+              </div>
+
+              {reportReq?.isReportResolved && (
+                <div className="mt-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-4">
+                  <div className="text-emerald-400 font-bold mb-1">Phản hồi từ Admin:</div>
+                  <div className="text-sm text-emerald-300/90 whitespace-pre-wrap leading-relaxed">
+                    {reportReq.reportResolutionMessage}
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-6 flex flex-col gap-3">
+                {reportReq?.isReportResolved && !reportReq.isReceiptConfirmed ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleConfirmReceipt(reportReq._id)}
+                      className="w-full rounded-xl bg-blue-500 py-3 text-sm font-bold text-white hover:bg-blue-400 transition shadow-lg shadow-blue-500/20"
+                    >
+                      Tôi đã nhận được tiền
+                    </button>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setViewReportModalOpen(false);
+                          openReportModal(reportReq._id);
+                        }}
+                        className="flex-[2] rounded-xl bg-rose-500/10 border border-rose-500/20 py-3 text-sm font-bold text-rose-400 hover:bg-rose-500/20 transition whitespace-nowrap"
+                      >
+                        Báo cáo lại
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setViewReportModalOpen(false)}
+                        className="flex-1 rounded-xl bg-white/10 py-3 text-sm font-bold text-white hover:bg-white/20 transition"
+                      >
+                        Đóng
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setViewReportModalOpen(false)}
+                    className="w-full rounded-xl bg-white/10 py-3 text-sm font-bold text-white hover:bg-white/20 transition"
+                  >
+                    Đóng
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-2xl shadow-2xl font-bold flex items-center gap-3 ${
+              toast.type === 'success' 
+                ? 'bg-emerald-500 text-white shadow-emerald-500/20' 
+                : 'bg-rose-500 text-white shadow-rose-500/20'
+            }`}
+          >
+            {toast.type === 'success' ? (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            )}
+            {toast.message}
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
