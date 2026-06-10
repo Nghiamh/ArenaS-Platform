@@ -150,7 +150,9 @@ export const Header: React.FC = () => {
                   </span>
                   <span className="hidden pr-1.5 md:block text-center">
                     <span className="block text-[15px] font-bold leading-tight text-white">{currentUser?.name ?? currentUser?.userName ?? 'Tài khoản'}</span>
-                    <span className={`block text-[10px] font-bold uppercase tracking-widest ${levelInfo.color} mt-[3px]`}>{levelInfo.name}</span>
+                    {currentUser?.role !== 'admin' && (
+                      <span className={`block text-[10px] font-bold uppercase tracking-widest ${levelInfo.color} mt-[3px]`}>{levelInfo.name}</span>
+                    )}
                   </span>
                   <svg viewBox="0 0 24 24" className={`hidden md:block h-3.5 w-3.5 text-white/40 transition-transform ${isProfileMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2.5">
                     <path d="m6 9 6 6 6-6" />

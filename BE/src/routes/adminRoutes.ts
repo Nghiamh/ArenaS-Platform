@@ -26,6 +26,13 @@ import {
 	adminToggleVoucher,
 	adminDeleteVoucher,
 } from "../controllers/voucherController.js";
+import {
+	adminGetAllReviews,
+	adminDeleteReview,
+	adminGetAllReports,
+	adminResolveReport,
+	adminDismissReport,
+} from "../controllers/adminModerationController.js";
 
 const adminRoutes = Router();
 
@@ -77,5 +84,16 @@ adminRoutes.post("/vouchers",             ...adminOnly, adminCreateVoucher);
 adminRoutes.put("/vouchers/:id",          ...adminOnly, adminUpdateVoucher);
 adminRoutes.post("/vouchers/:id/toggle",  ...adminOnly, adminToggleVoucher);
 adminRoutes.delete("/vouchers/:id",       ...adminOnly, adminDeleteVoucher);
+
+// GET    /api/admin/moderation/reviews                  — list all reviews
+// DELETE /api/admin/moderation/reviews/:reviewId         — delete a review (+ recalc avg_rating)
+// GET    /api/admin/moderation/reports?status=pending    — list all player/court reports
+// POST   /api/admin/moderation/reports/:reportId/resolve — mark report resolved
+// POST   /api/admin/moderation/reports/:reportId/dismiss — dismiss report
+adminRoutes.get("/moderation/reviews",                          ...adminOnly, adminGetAllReviews);
+adminRoutes.delete("/moderation/reviews/:reviewId",             ...adminOnly, adminDeleteReview);
+adminRoutes.get("/moderation/reports",                          ...adminOnly, adminGetAllReports);
+adminRoutes.post("/moderation/reports/:reportId/resolve",       ...adminOnly, adminResolveReport);
+adminRoutes.post("/moderation/reports/:reportId/dismiss",       ...adminOnly, adminDismissReport);
 
 export default adminRoutes;
