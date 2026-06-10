@@ -43,7 +43,7 @@ const voucherSchema = new Schema<IVoucher>(
   { timestamps: true }
 );
 
-voucherSchema.index({ code: 1 }, { unique: true });
+
 voucherSchema.index({ status: 1 });
 voucherSchema.index({ expiryDate: 1 });
 
