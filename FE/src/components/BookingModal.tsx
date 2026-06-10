@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { userBookCourt, type UserBookingPayload, type UserBookingResponse, getCurrentUserProfile } from '../Axios/Axios';
 import { validateVoucher, getPublicVouchers, redeemVoucher, type VoucherItem } from '../Axios/voucherApi';
