@@ -170,19 +170,19 @@ type FormModalProps = {
   onClose: () => void;
 };
 
+const FormField: React.FC<{ label: string; error?: string; children: React.ReactNode }> = ({ label, error, children }) => (
+  <div>
+    <label className={labelCls}>{label}</label>
+    {children}
+    {error && <p className="mt-1 text-xs text-rose-400">{error}</p>}
+  </div>
+);
+
 const UserFormModal: React.FC<FormModalProps> = ({ mode, form, saving, errors, onChange, onSave, onClose }) => {
   const set = (patch: Partial<FormState>) => onChange(patch);
   const strengthLevel = form.password.length >= 12 ? 4 : form.password.length >= 8 ? 3 : form.password.length >= 6 ? 2 : form.password.length > 0 ? 1 : 0;
   const strengthLabel  = ['', 'Yếu', 'Trung bình', 'Mạnh', 'Rất mạnh'][strengthLevel];
   const strengthColors = ['', 'bg-rose-500', 'bg-amber-500', 'bg-blue-500', 'bg-emerald-500'];
-
-  const Field: React.FC<{ name: keyof FormState; label: string; children: React.ReactNode }> = ({ name, label, children }) => (
-    <div>
-      <label className={labelCls}>{label}</label>
-      {children}
-      {errors[name] && <p className="mt-1 text-xs text-rose-400">{errors[name]}</p>}
-    </div>
-  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
@@ -209,31 +209,31 @@ const UserFormModal: React.FC<FormModalProps> = ({ mode, form, saving, errors, o
 
           {/* Name + Username */}
           <div className="grid grid-cols-2 gap-4">
-            <Field name="name" label="Họ và tên">
+            <FormField label="Họ và tên" error={errors.name}>
               <input className={inputCls} value={form.name} placeholder="Nguyễn Văn A"
                 onChange={e => set({ name: e.target.value })} />
-            </Field>
-            <Field name="userName" label="Tên đăng nhập">
+            </FormField>
+            <FormField label="Tên đăng nhập" error={errors.userName}>
               <input className={`${inputCls} ${mode === 'edit' ? 'opacity-50 cursor-not-allowed' : ''}`}
                 autoComplete="off"
                 value={form.userName} placeholder="nguyen.vana"
                 readOnly={mode === 'edit'}
                 onChange={e => set({ userName: e.target.value })} />
-            </Field>
+            </FormField>
           </div>
 
           {/* Email + Phone */}
           <div className="grid grid-cols-2 gap-4">
-            <Field name="email" label="Email">
+            <FormField label="Email" error={errors.email}>
               <input className={`${inputCls} ${mode === 'edit' ? 'opacity-50 cursor-not-allowed' : ''}`}
                 type="email" value={form.email} placeholder="email@gmail.com"
                 readOnly={mode === 'edit'}
                 onChange={e => set({ email: e.target.value })} />
-            </Field>
-            <Field name="phone" label="Số điện thoại">
+            </FormField>
+            <FormField label="Số điện thoại" error={errors.phone}>
               <input className={inputCls} type="tel" value={form.phone} placeholder="09xxxxxxxx"
                 onChange={e => set({ phone: e.target.value })} />
-            </Field>
+            </FormField>
           </div>
 
           {/* Role */}
@@ -293,7 +293,7 @@ const UserFormModal: React.FC<FormModalProps> = ({ mode, form, saving, errors, o
                 </div>
               )}
               <div className="grid grid-cols-2 gap-4">
-                <Field name="password" label={mode === 'add' ? 'Mật khẩu *' : 'Mật khẩu mới'}>
+                <FormField label={mode === 'add' ? 'Mật khẩu *' : 'Mật khẩu mới'} error={errors.password}>
                   <div className="relative">
                     <input className={`${inputCls} pr-10`} type={form.showPwd ? 'text' : 'password'}
                       autoComplete="new-password"
@@ -305,8 +305,8 @@ const UserFormModal: React.FC<FormModalProps> = ({ mode, form, saving, errors, o
                       <EyeIcon off={form.showPwd} />
                     </button>
                   </div>
-                </Field>
-                <Field name="confirmPwd" label="Xác nhận mật khẩu">
+                </FormField>
+                <FormField label="Xác nhận mật khẩu" error={errors.confirmPwd}>
                   <div className="relative">
                     <input className={`${inputCls} pr-10 ${errors.confirmPwd ? 'border-rose-500/60' : ''}`}
                       type={form.showConfirm ? 'text' : 'password'}
@@ -318,7 +318,7 @@ const UserFormModal: React.FC<FormModalProps> = ({ mode, form, saving, errors, o
                       <EyeIcon off={form.showConfirm} />
                     </button>
                   </div>
-                </Field>
+                </FormField>
               </div>
               {form.password.length > 0 && (
                 <div>

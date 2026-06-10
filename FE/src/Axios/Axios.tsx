@@ -1713,3 +1713,95 @@ export async function markAllNotificationsRead(): Promise<void> {
 	}
 }
 
+// ─── Admin Moderation ─────────────────────────────────────────────────────────
+
+export type AdminReview = {
+  _id: string;
+  reviewer: string;
+  user_id: string;
+  stadiumName: string;
+  court_id: string;
+  rating: number;
+  content: string;
+  createdAt: string;
+};
+
+export type AdminReport = {
+  _id: string;
+  reporterName: string;
+  reporter_id: string;
+  targetName: string;
+  target_id: string;
+  targetType: 'user' | 'court';
+  reason: string;
+  description: string;
+  status: 'pending' | 'resolved' | 'dismissed';
+  chat_logs: { sender_name: string; message: string; createdAt: string }[];
+  appeal_description?: string;
+  createdAt: string;
+};
+
+export async function adminGetModerationReviews(params?: {
+  page?: number;
+  limit?: number;
+}): Promise<{ reviews: AdminReview[]; total: number; totalPages: number; page: number }> {
+  try {
+    const { data } = await axiosClient.get('/admin/moderation/reviews', {
+      headers: withAuthHeaders(),
+      params,
+    });
+    return data;
+  } catch (error: unknown) {
+    throw new Error(toErrorMessage(error));
+  }
+}
+
+export async function adminDeleteModerationReview(reviewId: string): Promise<{ message: string }> {
+  try {
+    const { data } = await axiosClient.delete(`/admin/moderation/reviews/${reviewId}`, {
+      headers: withAuthHeaders(),
+    });
+    return data;
+  } catch (error: unknown) {
+    throw new Error(toErrorMessage(error));
+  }
+}
+
+export async function adminGetModerationReports(params?: {
+  page?: number;
+  limit?: number;
+  status?: string;
+}): Promise<{ reports: AdminReport[]; total: number; totalPages: number; page: number }> {
+  try {
+    const { data } = await axiosClient.get('/admin/moderation/reports', {
+      headers: withAuthHeaders(),
+      params,
+    });
+    return data;
+  } catch (error: unknown) {
+    throw new Error(toErrorMessage(error));
+  }
+}
+
+export async function adminResolveReport(reportId: string): Promise<{ message: string }> {
+  try {
+    const { data } = await axiosClient.post(`/admin/moderation/reports/${reportId}/resolve`, {}, {
+      headers: withAuthHeaders(),
+    });
+    return data;
+  } catch (error: unknown) {
+    throw new Error(toErrorMessage(error));
+  }
+}
+
+export async function adminDismissReport(reportId: string): Promise<{ message: string }> {
+  try {
+    const { data } = await axiosClient.post(`/admin/moderation/reports/${reportId}/dismiss`, {}, {
+      headers: withAuthHeaders(),
+    });
+    return data;
+  } catch (error: unknown) {
+    throw new Error(toErrorMessage(error));
+  }
+}
+
