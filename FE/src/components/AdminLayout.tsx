@@ -32,7 +32,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ activeKey, children })
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top bar with notification bell */}
-        <div className="flex shrink-0 items-center justify-end gap-3 border-b border-white/[0.06] bg-slate-950/80 px-5 py-3 backdrop-blur-sm">
+        <div className="flex shrink-0 items-center justify-end gap-3 border-b border-white/[0.06] bg-slate-950/80 px-5 py-3 backdrop-blur-sm overflow-visible">
           <NotificationBell isLoggedIn={isLoggedIn} />
           <div className="h-5 w-px bg-white/[0.08]" />
           <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Admin Panel</span>
