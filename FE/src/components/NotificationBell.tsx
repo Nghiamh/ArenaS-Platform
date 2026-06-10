@@ -186,8 +186,10 @@ export const NotificationBell: React.FC<Props> = ({ isLoggedIn }) => {
       {/* Dropdown */}
       {open && (
         <div
-          className="absolute right-0 top-10 z-50 w-80 overflow-hidden rounded-xl shadow-2xl"
+          className="fixed z-[9999] w-80 overflow-hidden rounded-xl shadow-2xl"
           style={{
+            top: dropdownRef.current ? dropdownRef.current.getBoundingClientRect().bottom + 8 : 'auto',
+            right: dropdownRef.current ? window.innerWidth - dropdownRef.current.getBoundingClientRect().right : 0,
             backgroundColor: 'var(--bg-deep)',
             border: '1px solid rgba(var(--accent-primary-rgb), 0.2)',
             boxShadow: '0 20px 40px -10px rgba(0,0,0,0.7)',
