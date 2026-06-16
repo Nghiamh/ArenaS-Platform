@@ -69,6 +69,45 @@ export async function adminDeleteReview(req: Request, res: Response) {
   }
 }
 
+// GET /api/admin/moderation/review-stats — tổng đánh giá và trung bình từng sân
+export async function adminGetReviewStats(req: Request, res: Response) {
+  try {
+    const raw = await ReviewModel.aggregate([
+      {
+        $group: {
+          _id: '$court_id',
+          totalReviews: { $sum: 1 },
+          avgRating: { $avg: '$rating' },
+        },
+      },
+      {
+        $lookup: {
+          from: 'courts',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'court',
+        },
+      },
+      { $unwind: { path: '$court', preserveNullAndEmptyArrays: true } },
+      { $sort: { totalReviews: -1 } },
+    ]);
+
+    const stats = raw.map((s) => ({
+      court_id:     s._id,
+      courtName:    s.court?.name ?? '(đã xoá)',
+      totalReviews: s.totalReviews as number,
+      avgRating:    Math.round((s.avgRating as number) * 10) / 10,
+    }));
+
+    const totalReviews = stats.reduce((sum, s) => sum + s.totalReviews, 0);
+
+    return res.status(200).json({ stats, totalReviews });
+  } catch (err) {
+    console.error('adminGetReviewStats:', err);
+    return res.status(500).json({ error: 'internal_server_error' });
+  }
+}
+
 // ─── Reports ──────────────────────────────────────────────────────────────────
 
 // GET /api/admin/moderation/reports?page=1&limit=20&status=pending

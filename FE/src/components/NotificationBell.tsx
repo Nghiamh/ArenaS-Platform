@@ -97,10 +97,14 @@ export const NotificationBell: React.FC<Props> = ({ isLoggedIn }) => {
 		return unsubscribe;
 	}, [onNewNotification, pollCount, open]);
 
-	// Close on outside click
+	// Close on outside click — check both bell wrapper and portal dropdown
+  const portalRef = useRef<HTMLDivElement>(null);
 	useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const inBell = dropdownRef.current?.contains(target);
+      const inPortal = portalRef.current?.contains(target);
+      if (!inBell && !inPortal) {
         setOpen(false);
       }
     };
@@ -197,6 +201,7 @@ export const NotificationBell: React.FC<Props> = ({ isLoggedIn }) => {
       {/* Dropdown — rendered via portal to escape all stacking contexts */}
       {open && ReactDOM.createPortal(
         <div
+          ref={portalRef}
           className="fixed w-80 overflow-hidden rounded-xl shadow-2xl"
           style={{
             top: dropdownPos.top,

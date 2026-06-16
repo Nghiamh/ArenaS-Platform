@@ -29,6 +29,7 @@ import {
 import {
 	adminGetAllReviews,
 	adminDeleteReview,
+	adminGetReviewStats,
 	adminGetAllReports,
 	adminResolveReport,
 	adminDismissReport,
@@ -85,11 +86,13 @@ adminRoutes.put("/vouchers/:id",          ...adminOnly, adminUpdateVoucher);
 adminRoutes.post("/vouchers/:id/toggle",  ...adminOnly, adminToggleVoucher);
 adminRoutes.delete("/vouchers/:id",       ...adminOnly, adminDeleteVoucher);
 
+// GET    /api/admin/moderation/review-stats              — tổng + avg đánh giá từng sân (cho dashboard)
 // GET    /api/admin/moderation/reviews                  — list all reviews
 // DELETE /api/admin/moderation/reviews/:reviewId         — delete a review (+ recalc avg_rating)
 // GET    /api/admin/moderation/reports?status=pending    — list all player/court reports
 // POST   /api/admin/moderation/reports/:reportId/resolve — mark report resolved
 // POST   /api/admin/moderation/reports/:reportId/dismiss — dismiss report
+adminRoutes.get("/moderation/review-stats",                     ...adminOnly, adminGetReviewStats);
 adminRoutes.get("/moderation/reviews",                          ...adminOnly, adminGetAllReviews);
 adminRoutes.delete("/moderation/reviews/:reviewId",             ...adminOnly, adminDeleteReview);
 adminRoutes.get("/moderation/reports",                          ...adminOnly, adminGetAllReports);
