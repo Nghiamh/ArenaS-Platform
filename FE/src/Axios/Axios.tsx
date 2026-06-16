@@ -1756,6 +1756,24 @@ export async function adminGetModerationReviews(params?: {
   }
 }
 
+export type CourtReviewStat = {
+  court_id: string;
+  courtName: string;
+  totalReviews: number;
+  avgRating: number;
+};
+
+export async function adminGetReviewStats(): Promise<{ stats: CourtReviewStat[]; totalReviews: number }> {
+  try {
+    const { data } = await axiosClient.get('/admin/moderation/review-stats', {
+      headers: withAuthHeaders(),
+    });
+    return data;
+  } catch (error: unknown) {
+    throw new Error(toErrorMessage(error));
+  }
+}
+
 export async function adminDeleteModerationReview(reviewId: string): Promise<{ message: string }> {
   try {
     const { data } = await axiosClient.delete(`/admin/moderation/reviews/${reviewId}`, {

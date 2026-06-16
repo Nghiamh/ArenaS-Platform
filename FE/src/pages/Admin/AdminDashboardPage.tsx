@@ -7,9 +7,11 @@ import {
   adminApproveCourt,
   adminRejectCourt,
   getCurrentUserProfile,
+  adminGetReviewStats,
   type AdminCourt,
   type AdminIncomeSummary,
   type AdminIncomeEntry,
+  type CourtReviewStat,
 } from '../../Axios/Axios';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -78,6 +80,8 @@ export const AdminDashboardPage: React.FC = () => {
   const [totalCourts,  setTotalCourts]  = useState(0);
   const [incomeSummary, setIncomeSummary] = useState<AdminIncomeSummary | null>(null);
   const [incomeItems,  setIncomeItems]  = useState<AdminIncomeEntry[]>([]);
+  const [reviewStats,  setReviewStats]  = useState<CourtReviewStat[]>([]);
+  const [totalReviews, setTotalReviews] = useState(0);
   const [adminName,    setAdminName]    = useState('');
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState('');
@@ -93,15 +97,20 @@ export const AdminDashboardPage: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const [courtsRes, incomeRes, profileRes] = await Promise.all([
+      const [courtsRes, incomeRes, profileRes, reviewRes] = await Promise.all([
         adminGetAllCourts({ limit: 200 }),
         adminGetIncome({ limit: 5 }),
         getCurrentUserProfile().catch(() => null),
+        adminGetReviewStats().catch(() => null),
       ]);
       setCourts(courtsRes.courts);
       setTotalCourts(courtsRes.total);
       setIncomeSummary(incomeRes.summary);
       setIncomeItems(incomeRes.items);
+      if (reviewRes) {
+        setReviewStats(reviewRes.stats);
+        setTotalReviews(reviewRes.totalReviews);
+      }
       if (profileRes) setAdminName(profileRes.user.name);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Lỗi tải dữ liệu');
@@ -202,7 +211,18 @@ export const AdminDashboardPage: React.FC = () => {
       border: 'border-violet-500/20',
       valueColor: 'text-violet-100',
     },
-  ], [loading, totalCourts, activeCourts, pendingCourts.length, incomeSummary, revenueTrend]);
+    {
+      label: 'Tổng đánh giá',
+      value: loading ? null : totalReviews,
+      sub: loading ? null : reviewStats.length > 0
+        ? `trung bình ${(reviewStats.reduce((s, r) => s + r.avgRating, 0) / reviewStats.length).toFixed(1)}★ toàn hệ thống`
+        : 'chưa có đánh giá',
+      icon: '⭐',
+      gradient: 'from-yellow-500/15 to-amber-600/10',
+      border: 'border-yellow-500/20',
+      valueColor: 'text-yellow-100',
+    },
+  ], [loading, totalCourts, activeCourts, pendingCourts.length, incomeSummary, revenueTrend, totalReviews, reviewStats]);
 
   return (
     <AdminLayout activeKey="dashboard">
@@ -246,7 +266,7 @@ export const AdminDashboardPage: React.FC = () => {
           )}
 
           {/* ── Stat Cards ── */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
             {statCards.map((card, idx) => (
               <div
                 key={idx}
@@ -530,6 +550,74 @@ export const AdminDashboardPage: React.FC = () => {
                 </tbody>
               </table>
             </div>
+          </section>
+
+          {/* ── Review Stats by Court ── */}
+          <section className="rounded-2xl border border-white/[0.07] bg-white/[0.025] overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
+              <div>
+                <h2 className="font-black text-base">Đánh giá theo sân</h2>
+                <p className="mt-0.5 text-xs text-slate-400">
+                  Tổng {loading ? '…' : totalReviews} đánh giá · {loading ? '…' : reviewStats.length} sân có đánh giá
+                </p>
+              </div>
+              <Link to="/admin/moderation" className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition">
+                Chi tiết →
+              </Link>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[480px] text-sm">
+                <thead>
+                  <tr className="border-b border-white/[0.05]">
+                    {['#', 'Tên sân', 'Số đánh giá', 'Trung bình'].map((h, i) => (
+                      <th
+                        key={h}
+                        className={`px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 ${i >= 2 ? 'text-right' : 'text-left'}`}
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.04]">
+                  {loading ? (
+                    [1, 2, 3].map(i => (
+                      <tr key={i}><td colSpan={4} className="px-5 py-3"><Skeleton className="h-7" /></td></tr>
+                    ))
+                  ) : reviewStats.length > 0 ? (
+                    reviewStats.slice(0, 10).map((stat, idx) => {
+                      const stars = Math.round(stat.avgRating);
+                      return (
+                        <tr key={stat.court_id} className="hover:bg-white/[0.02] transition-colors">
+                          <td className="px-5 py-3.5 text-slate-600 text-xs w-8">{idx + 1}</td>
+                          <td className="px-5 py-3.5 font-semibold text-white">{stat.courtName}</td>
+                          <td className="px-5 py-3.5 text-right">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-yellow-500/10 px-2.5 py-0.5 text-xs font-bold text-yellow-300 ring-1 ring-yellow-400/20">
+                              {stat.totalReviews} đánh giá
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5 text-right">
+                            <span className="inline-flex items-center gap-1.5 text-sm font-black text-amber-300">
+                              <span>{'★'.repeat(stars)}{'☆'.repeat(5 - stars)}</span>
+                              <span className="text-white/70 text-xs font-semibold">{stat.avgRating.toFixed(1)}</span>
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr><td colSpan={4} className="py-12 text-center text-sm text-slate-500">Chưa có đánh giá nào</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {!loading && reviewStats.length > 10 && (
+              <div className="px-6 py-3 border-t border-white/[0.06] text-right">
+                <Link to="/admin/moderation" className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition">
+                  Xem thêm {reviewStats.length - 10} sân →
+                </Link>
+              </div>
+            )}
           </section>
 
           {/* ── Quick Actions ── */}
