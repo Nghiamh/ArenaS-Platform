@@ -776,7 +776,7 @@ export type CourtDashboard = {
 };
 
 // Booking APIs
-export type CourtSlotStatus = 'available' | 'booked' | 'locked';
+export type CourtSlotStatus = 'available' | 'booked' | 'locked' | 'maintenance';
 
 export type CourtSlotDetail = {
 	start: string;
@@ -1823,3 +1823,22 @@ export async function adminDismissReport(reportId: string): Promise<{ message: s
   }
 }
 
+export type CourtMaintenancePayload = {
+  action: 'lock' | 'unlock';
+  sub_court_id?: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  reason?: string;
+};
+
+export async function setCourtMaintenance(courtId: string, payload: CourtMaintenancePayload): Promise<{ message: string }> {
+  try {
+    const { data } = await axiosClient.post<{ message: string }>(`/courts/${courtId}/maintenance`, payload, {
+      headers: withAuthHeaders(),
+    });
+    return data;
+  } catch (error: unknown) {
+    throw new Error(toErrorMessage(error));
+  }
+}

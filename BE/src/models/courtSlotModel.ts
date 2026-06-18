@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export type SlotStatus = 'available' | 'booked' | 'locked';
+export type SlotStatus = 'available' | 'booked' | 'locked' | 'maintenance';
 
 export interface ISlot {
   start: string; // Ví dụ: '06:00'
@@ -9,6 +9,7 @@ export interface ISlot {
   booking_id?: mongoose.Types.ObjectId;
   locked_by?: mongoose.Types.ObjectId;
   locked_at?: Date;
+  reason?: string;
 }
 
 export interface ICourtSlot extends Document {
@@ -21,10 +22,11 @@ export interface ICourtSlot extends Document {
 const slotSchema = new Schema<ISlot>({
   start: { type: String, required: true },
   end: { type: String, required: true },
-  status: { type: String, enum: ['available', 'booked', 'locked'], default: 'available' },
+  status: { type: String, enum: ['available', 'booked', 'locked', 'maintenance'], default: 'available' },
   booking_id: { type: Schema.Types.ObjectId, ref: 'Booking' }, // Có thể ref tới model Booking sau này
   locked_by: { type: Schema.Types.ObjectId, ref: 'User' },
   locked_at: { type: Date },
+  reason: { type: String },
 }, { _id: false });
 
 const courtSlotSchema = new Schema<ICourtSlot>({
