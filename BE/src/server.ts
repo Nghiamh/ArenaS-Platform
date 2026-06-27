@@ -7,6 +7,8 @@ import mongoose from "mongoose";
 import { Server as SocketServer } from "socket.io";
 import authRoutes from "./routes/authRoutes.js";
 import Court from "./models/courtModel.js";
+import { CourtSlotModel } from "./models/courtSlotModel.js";
+import { CourtDashboardModel } from "./models/courtDashboardModel.js";
 import UserSkill from "./models/userSkillModel.js";
 import MatchmakingTicket from "./models/matchmakingTicketModel.js";
 import Match from "./models/matchModel.js";
@@ -87,7 +89,7 @@ async function startServer(): Promise<void> {
 	await mongoose.connect(MONGODB_URI);
 
 	// Ensure collections exist
-	const models = [Court, UserSkill, MatchmakingTicket, Match, ChatMessage];
+	const models = [Court, UserSkill, MatchmakingTicket, Match, ChatMessage, CourtSlotModel, CourtDashboardModel];
 	for (const model of models) {
 		try {
 			await model.createCollection();
@@ -99,14 +101,22 @@ async function startServer(): Promise<void> {
 		}
 	}
 
-	console.log("MongoDB connected successfully");
+	// Xóa index cũ nếu tồn tại (để sửa lỗi duplicate key khi tạo slot/dashboard cho nhiều sân nhỏ)
+	try {
+		await CourtSlotModel.collection.dropIndex("court_id_1_date_1");
+		console.log("Đã xóa index cũ court_id_1_date_1 trong CourtSlot");
+	} catch (error: any) {}
 
-	// Initialize background jobs
-	startSubscriptionCron();
+	try {
+		await CourtDashboardModel.collection.dropIndex("court_id_1_date_1");
+		console.log("Đã xóa index cũ court_id_1_date_1 trong CourtDashboard");
+	} catch (error: any) {}
+
+	console.log("MongoDB connected successfully");
 
 	// Start the matchmaking worker (runs every 5 seconds)
 	startMatchmakingWorker(io);
-	// Initialize background jobs
+	
 	startSubscriptionCron();
 	startPayoutCron();
 	startMatchBookingTimeoutCron(io);

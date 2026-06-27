@@ -14,6 +14,9 @@ import {
   type SubCourtStatus,
   getCourtDashboard,
   type CourtDashboard,
+  setCourtMaintenance,
+  getCourtSlots,
+  type CourtSlotDetail,
 } from '../../Axios/Axios';
 import { OwnerSidebar } from './OwnerSidebar';
 
@@ -267,7 +270,8 @@ const SubCourtsPanel: React.FC<{
   subCourts: SubCourt[];
   dashboards?: Record<string, CourtDashboard>;
   onEditCourt?: () => void;
-}> = ({ subCourts, dashboards = {}, onEditCourt }) => {
+  onOpenMaintenance?: (subCourt: SubCourt, isLocked: boolean) => void;
+}> = ({ subCourts, dashboards = {}, onEditCourt, onOpenMaintenance }) => {
   const [expanded, setExpanded] = useState(true);
   if (!subCourts || subCourts.length === 0) return null;
 
@@ -430,6 +434,25 @@ const SubCourtsPanel: React.FC<{
                         ✎
                       </motion.button>
                     )}
+                    {onOpenMaintenance && (
+                      <motion.button
+                        type="button"
+                        whileHover={{ scale: 1.08 }}
+                        whileTap={{ scale: 0.93 }}
+                        onClick={() => onOpenMaintenance(sc, dashboard ? dashboard.blocked_slots > 0 : false)}
+                        className={`flex h-7 w-7 items-center justify-center rounded-full border transition ${
+                          (dashboard && dashboard.blocked_slots > 0)
+                            ? 'border-amber-400/50 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30'
+                            : 'border-slate-400/30 bg-slate-500/10 text-slate-300 hover:bg-slate-500/20'
+                        }`}
+                        aria-label="Khóa sân nhỏ"
+                        title="Tạm đóng sân nhỏ"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                      </motion.button>
+                    )}
                   </div>
                 </div>
               );
@@ -447,7 +470,8 @@ const CourtCard: React.FC<{
   onEditCourt: (court: OwnerCourt) => void;
   onDeleteCourt: (court: OwnerCourt) => void;
   onToggleCourtStatus: (court: OwnerCourt) => void;
-}> = ({ court, index, onEditCourt, onDeleteCourt, onToggleCourtStatus }) => {
+  onOpenMaintenance: (court: OwnerCourt, subCourt?: SubCourt, isLocked?: boolean) => void;
+}> = ({ court, index, onEditCourt, onDeleteCourt, onToggleCourtStatus, onOpenMaintenance }) => {
   const primaryImage = court.images[0] ?? defaultCourtImage;
   const isOpen = court.status === 'available' || court.status === 'open';
 
@@ -530,6 +554,28 @@ const CourtCard: React.FC<{
                 </span>
                 <span>{courtStatusLabel[court.status]}</span>
               </motion.button>
+              {(() => {
+                const isEntireCourtLocked = (court.sub_courts?.length ?? 0) > 0 && 
+                  court.sub_courts!.every(sc => sc._id ? dashboards[sc._id]?.blocked_slots > 0 : false);
+                return (
+                  <motion.button
+                    whileHover={{ y: -1, scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => onOpenMaintenance(court, undefined, isEntireCourtLocked)}
+                    className={`flex h-10 w-10 items-center justify-center rounded-full border transition ${
+                      isEntireCourtLocked
+                        ? 'border-amber-400/50 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30'
+                        : 'border-slate-400/35 bg-slate-500/10 text-slate-300 hover:bg-slate-500/20'
+                    }`}
+                    aria-label="Tạm đóng cơ sở"
+                    title="Tạm đóng toàn cơ sở"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </motion.button>
+                );
+              })()}
               <motion.button
                 whileHover={{ y: -1, scale: 1.02 }}
                 whileTap={{ scale: 0.97 }}
@@ -593,7 +639,12 @@ const CourtCard: React.FC<{
       </div>
 
       {/* Sub-courts collapsible panel */}
-      <SubCourtsPanel subCourts={court.sub_courts ?? []} dashboards={dashboards} onEditCourt={() => onEditCourt(court)} />
+      <SubCourtsPanel 
+        subCourts={court.sub_courts ?? []} 
+        dashboards={dashboards} 
+        onEditCourt={() => onEditCourt(court)} 
+        onOpenMaintenance={(sc, isLocked) => onOpenMaintenance(court, sc, isLocked)}
+      />
     </motion.article>
   );
 };
@@ -617,6 +668,63 @@ export const OwnerManageCourtScreen: React.FC = () => {
     | { isOpen: true; courtId: string; name: string }
   >({ isOpen: false });
   const [subscriptionError, setSubscriptionError] = useState('');
+  const [maintenanceState, setMaintenanceState] = useState<{
+    isOpen: boolean;
+    courtId: string;
+    subCourtId?: string;
+    courtName: string;
+    subCourtName?: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    reason: string;
+    isLocked: boolean;
+  }>({
+    isOpen: false,
+    courtId: '',
+    courtName: '',
+    date: new Date().toISOString().split('T')[0],
+    startTime: '06:00',
+    endTime: '22:00',
+    reason: '',
+    isLocked: false
+  });
+
+  const [lockedTimes, setLockedTimes] = useState<string[]>([]);
+  const [isFetchingLockedTimes, setIsFetchingLockedTimes] = useState(false);
+
+  useEffect(() => {
+    if (maintenanceState.isOpen && maintenanceState.courtId) {
+      setIsFetchingLockedTimes(true);
+      getCourtSlots(maintenanceState.courtId, maintenanceState.date).then(data => {
+        let slots: CourtSlotDetail[] = [];
+        if (maintenanceState.subCourtId) {
+          const scData = data.find(d => d.sub_court_id === maintenanceState.subCourtId);
+          if (scData) slots = scData.slots;
+        } else {
+          slots = data[0]?.slots || [];
+        }
+        
+        const maintenanceSlots = slots.filter(s => s.status === 'maintenance');
+        const merged: string[] = [];
+        let curStart = ''; let curEnd = '';
+        maintenanceSlots.forEach(s => {
+          if (!curStart) { curStart = s.start; curEnd = s.end; }
+          else if (s.start === curEnd) { curEnd = s.end; }
+          else { merged.push(`${curStart} - ${curEnd}`); curStart = s.start; curEnd = s.end; }
+        });
+        if (curStart) merged.push(`${curStart} - ${curEnd}`);
+        setLockedTimes(merged);
+      }).catch(console.error).finally(() => setIsFetchingLockedTimes(false));
+    }
+  }, [maintenanceState.isOpen, maintenanceState.courtId, maintenanceState.subCourtId, maintenanceState.date]);
+
+  const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  const showToast = (type: 'success' | 'error', text: string) => {
+    setToastMessage({ type, text });
+    setTimeout(() => setToastMessage(null), 4000);
+  };
 
   useEffect(() => {
     localStorage.setItem('ownerSidebarCollapsed', sidebarCollapsed ? '1' : '0');
@@ -762,6 +870,57 @@ export const OwnerManageCourtScreen: React.FC = () => {
     }
   };
 
+  const handleOpenMaintenance = (court: OwnerCourt, subCourt?: SubCourt, isLocked?: boolean) => {
+    setActionMessage('');
+      
+    setMaintenanceState(prev => ({
+      ...prev,
+      isOpen: true,
+      courtId: court.id,
+      subCourtId: subCourt?._id,
+      courtName: court.name,
+      subCourtName: subCourt?.name,
+      isLocked: isLocked || false
+    }));
+  };
+
+  const handleSubmitMaintenance = async (action: 'lock' | 'unlock') => {
+    setActionMessage('');
+    
+    if (action === 'lock') {
+      if (!maintenanceState.reason.trim()) {
+        setActionMessage('Vui lòng nhập lý do tạm đóng sân.');
+        return;
+      }
+
+      const startDateTime = new Date(`${maintenanceState.date}T${maintenanceState.startTime}:00`);
+      const now = new Date();
+      const diffMins = (startDateTime.getTime() - now.getTime()) / (1000 * 60);
+
+      if (diffMins < 20) {
+        setActionMessage('Chỉ được khóa sân tối thiểu 20 phút trước giờ bắt đầu.');
+        return;
+      }
+    }
+
+    try {
+      await setCourtMaintenance(maintenanceState.courtId, {
+        action,
+        sub_court_id: maintenanceState.subCourtId,
+        date: maintenanceState.date,
+        start_time: maintenanceState.startTime,
+        end_time: maintenanceState.endTime,
+        reason: maintenanceState.reason
+      });
+      setMaintenanceState(prev => ({ ...prev, isOpen: false }));
+      showToast('success', `Đã ${action === 'lock' ? 'tạm đóng' : 'mở khóa'} sân thành công!`);
+      await refreshCourts();
+    } catch (error) {
+      setActionMessage(error instanceof Error ? error.message : 'Không thể thực hiện bảo trì sân.');
+    }
+  };
+
+
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-[#020B1F] text-slate-100">
       <style>{`.no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none;}`}</style>
@@ -838,6 +997,7 @@ export const OwnerManageCourtScreen: React.FC = () => {
                     onEditCourt={handleOpenEditCourt}
                     onDeleteCourt={handleDeleteCourt}
                     onToggleCourtStatus={handleToggleCourtStatus}
+                    onOpenMaintenance={handleOpenMaintenance}
                   />
                 ))
               )}
@@ -1277,7 +1437,141 @@ export const OwnerManageCourtScreen: React.FC = () => {
             </motion.div>
           </motion.div>
         ) : null}
+
+        {maintenanceState.isOpen ? (
+          <motion.div
+            variants={modalBackdropVariant}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-[#020617]/80 px-4 py-8 backdrop-blur-md"
+          >
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              variants={modalCardVariant}
+              className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-amber-500/20 bg-[#061025] shadow-2xl"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent pointer-events-none" />
+              <div className="relative p-6 sm:p-8">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-white/10 text-white ring-1 ring-white/20">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-white">
+                      Tạm đóng {maintenanceState.subCourtName ? 'sân nhỏ' : 'toàn cơ sở'}
+                    </h2>
+                    <p className="mt-1 text-sm font-medium text-slate-400">
+                      {maintenanceState.subCourtName 
+                        ? `${maintenanceState.courtName} - ${maintenanceState.subCourtName}`
+                        : maintenanceState.courtName}
+                    </p>
+                  </div>
+                </div>
+
+                {isFetchingLockedTimes ? (
+                  <div className="mt-5 bg-slate-500/10 border border-slate-500/20 rounded-xl p-3 flex items-center justify-center">
+                    <span className="text-xs font-medium text-slate-400">Đang tải lịch sử...</span>
+                  </div>
+                ) : lockedTimes.length > 0 ? (
+                  <div className="mt-5 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
+                    <p className="text-xs font-bold uppercase tracking-[0.1em] text-amber-500/70 mb-1.5">Lịch sử khóa ngày {maintenanceState.date.split('-').reverse().join('/')}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {lockedTimes.map((time, idx) => (
+                        <span key={idx} className="bg-amber-500/20 text-amber-400 text-[11px] font-semibold px-2 py-1 rounded-md">
+                          {time}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="mt-6 space-y-4">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-slate-400">Ngày</label>
+                    <input
+                      type="date"
+                      value={maintenanceState.date}
+                      onChange={(e) => setMaintenanceState({ ...maintenanceState, date: e.target.value })}
+                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white focus:border-amber-400/50 focus:bg-amber-400/5 focus:outline-none focus:ring-1 focus:ring-amber-400/50"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-slate-400">Từ giờ</label>
+                      <input
+                        type="time"
+                        value={maintenanceState.startTime}
+                        onChange={(e) => setMaintenanceState({ ...maintenanceState, startTime: e.target.value })}
+                        step="1800"
+                        className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white focus:border-amber-400/50 focus:bg-amber-400/5 focus:outline-none focus:ring-1 focus:ring-amber-400/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-slate-400">Đến giờ</label>
+                      <input
+                        type="time"
+                        value={maintenanceState.endTime}
+                        onChange={(e) => setMaintenanceState({ ...maintenanceState, endTime: e.target.value })}
+                        step="1800"
+                        className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white focus:border-amber-400/50 focus:bg-amber-400/5 focus:outline-none focus:ring-1 focus:ring-amber-400/50"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.1em] text-slate-400">Lý do</label>
+                    <input
+                      type="text"
+                      placeholder="Bảo trì sân, mưa ngập..."
+                      value={maintenanceState.reason}
+                      onChange={(e) => setMaintenanceState({ ...maintenanceState, reason: e.target.value })}
+                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white focus:border-amber-400/50 focus:bg-amber-400/5 focus:outline-none focus:ring-1 focus:ring-amber-400/50"
+                    />
+                  </div>
+                </div>
+
+                {actionMessage && <p className="mt-4 text-sm text-rose-400">{actionMessage}</p>}
+
+                <div className="mt-8 flex justify-end gap-3">
+                  <button
+                    onClick={() => setMaintenanceState(prev => ({ ...prev, isOpen: false }))}
+                    className="rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-slate-300 transition hover:text-white"
+                  >
+                    Hủy
+                  </button>
+                  {maintenanceState.isLocked && (
+                    <button
+                      onClick={() => void handleSubmitMaintenance('unlock')}
+                      className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-5 py-2.5 text-sm font-bold text-emerald-400 transition hover:bg-emerald-500/20"
+                    >
+                      Mở lại sân
+                    </button>
+                  )}
+                  <button
+                    onClick={() => void handleSubmitMaintenance('lock')}
+                    className="rounded-full border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-white/20"
+                  >
+                    Khóa sân
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : null}
       </AnimatePresence>
+      
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className={`fixed bottom-8 right-8 z-[9999] rounded-xl px-5 py-3 shadow-2xl flex items-center gap-3 transition-all border bg-[#0B1221] ${
+          toastMessage.type === 'success' ? 'text-emerald-400 border-emerald-500/30' : 'text-rose-400 border-rose-500/30'
+        }`}>
+          <span className="font-bold text-sm">{toastMessage.text}</span>
+        </div>
+      )}
     </div>
   );
 };

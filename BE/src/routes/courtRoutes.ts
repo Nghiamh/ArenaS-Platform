@@ -10,6 +10,7 @@ import {
 	getOwnerCourts,
 	updateOwnerCourt,
 } from "../controllers/courtController.js";
+import { setMaintenance } from "../controllers/courtMaintenanceController.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
 const courtRoutes = Router();
@@ -27,6 +28,7 @@ courtRoutes.get("/", requireAuth, ownerRole, getOwnerCourts);
 courtRoutes.get("/:courtId", requireAuth, ownerRole, getOwnerCourtById);
 courtRoutes.post("/", requireAuth, ownerRole, createOwnerCourt);
 courtRoutes.put("/:courtId", requireAuth, ownerRole, updateOwnerCourt);
+courtRoutes.post("/:courtId/maintenance", requireAuth, ownerRole, setMaintenance);
 courtRoutes.delete("/:courtId", requireAuth, ownerRole, deleteOwnerCourt);
 
 export default courtRoutes;
