@@ -420,6 +420,9 @@ export async function declineMatch(req: Request, res: Response): Promise<void> {
 		match.status = "CANCELLED";
 		await match.save();
 
+		// Xóa chat messages của match đã huỷ
+		await ChatMessage.deleteMany({ match_id: match._id });
+
 		const io = req.app.get("io");
 
 		// Handle both participants' tickets
@@ -635,6 +638,9 @@ export async function completeMatch(req: Request, res: Response): Promise<void> 
 		// Set status to COMPLETED
 		match.status = "COMPLETED";
 		await match.save();
+
+		// Xóa chat messages sau khi match hoàn thành
+		await ChatMessage.deleteMany({ match_id: match._id });
 
 		// Increment completed_matches_count and award points for both participants
 		for (const pId of match.participants) {
@@ -1082,6 +1088,9 @@ export async function reportOpponent(req: Request, res: Response): Promise<void>
 			status: "pending",
 			chat_logs,
 		});
+
+		// Xóa chat messages sau khi đã lưu snapshot vào report
+		await ChatMessage.deleteMany({ match_id: match._id });
 
 		// Clean up the ticket for the reporter so they return to IDLE search state cleanly
 		await MatchmakingTicket.findOneAndUpdate(
