@@ -34,8 +34,6 @@ function formatTime(seconds: number): string {
 	return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
-
-
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
 
 export const MatchmakingPage: React.FC = () => {

@@ -3,6 +3,7 @@ import MatchmakingTicket, { IMatchmakingTicket } from "../models/matchmakingTick
 import Match from "../models/matchModel.js";
 import UserSkill, { IUserSkill } from "../models/userSkillModel.js";
 import Court, { ICourt } from "../models/courtModel.js";
+import ChatMessage from "../models/chatMessageModel.js";
 import { Types } from "mongoose";
 
 const WORKER_INTERVAL_MS = 5000;
@@ -351,6 +352,9 @@ async function expirePendingMatches(io: SocketServer): Promise<void> {
 		for (const match of expiredMatches) {
 			match.status = "CANCELLED";
 			await match.save();
+
+			// Xóa chat messages của match đã hết hạn
+			await ChatMessage.deleteMany({ match_id: match._id });
 
 			const participantIds = match.participants.map((id: any) => id.toString());
 			const acceptedSet = new Set(match.accepted_by.map((id: any) => id.toString()));

@@ -34,6 +34,7 @@ import reviewRoutes from "./routes/reviewRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import voucherRoutes from "./routes/voucherRoutes.js";
+import { startChatCleanupCron } from "./cron/chatCleanupCron.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -112,6 +113,12 @@ async function startServer(): Promise<void> {
 		console.log("Đã xóa index cũ court_id_1_date_1 trong CourtDashboard");
 	} catch (error: any) {}
 
+	// Xóa index booking_id_1 cũ trong Reviews (field đã bị xóa khỏi schema)
+	try {
+		await mongoose.connection.collection("reviews").dropIndex("booking_id_1");
+		console.log("Đã xóa index cũ booking_id_1 trong Reviews");
+	} catch (error: any) {}
+
 	console.log("MongoDB connected successfully");
 
 	// Start the matchmaking worker (runs every 5 seconds)
@@ -121,6 +128,7 @@ async function startServer(): Promise<void> {
 	startPayoutCron();
 	startMatchBookingTimeoutCron(io);
 	startSlotLockTimeoutCron();
+	startChatCleanupCron();
 
 	await new Promise<void>((resolve, reject) => {
 		const server = httpServer.listen(PORT, () => {
