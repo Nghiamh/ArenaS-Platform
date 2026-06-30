@@ -43,6 +43,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [voucherError, setVoucherError] = useState('');
   const [voucherLoading, setVoucherLoading] = useState(false);
 
+  // Payment type for match booking
+  const [paymentType, setPaymentType] = useState<'split' | 'full'>('split');
+
   // Voucher picker modal
   const [showVoucherPicker, setShowVoucherPicker] = useState(false);
   const [availableVouchers, setAvailableVouchers] = useState<VoucherItem[]>([]);
@@ -60,7 +63,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   
   const isMatchBooking = !!payload.match_id;
   const discountedTotalPrice = Math.max(0, estimatedPrice - voucherDiscount);
-  const finalPrice = isMatchBooking ? Math.ceil(discountedTotalPrice / 2) : discountedTotalPrice;
+  const finalPrice = isMatchBooking && paymentType === 'split' ? Math.ceil(discountedTotalPrice / 2) : discountedTotalPrice;
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -147,6 +150,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     try {
       const bookingPayload: UserBookingPayload = { ...payload };
       if (voucherCode) bookingPayload.voucher_code = voucherCode;
+      if (isMatchBooking) bookingPayload.payment_type = paymentType;
       const response = await userBookCourt(bookingPayload);
       setResult(response);
       setStep('success');
@@ -167,6 +171,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     setVoucherDiscount(0);
     setVoucherName('');
     setVoucherError('');
+    setPaymentType('split');
     onClose();
   };
 
@@ -365,12 +370,24 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                           </div>
                         )}
                         {isMatchBooking && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-cyan-400 flex items-center gap-1">
-                              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                              Chia đôi (50%)
-                            </span>
-                            <span className="text-sm font-bold text-cyan-400">{fmt(discountedTotalPrice)} đ / 2</span>
+                          <div className="flex flex-col gap-2 mt-2">
+                            <span className="text-[10px] text-slate-400 font-bold tracking-wider uppercase mb-1">Hình thức thanh toán</span>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => setPaymentType('split')}
+                                className={`flex-1 flex flex-col items-center justify-center p-2 rounded-lg border transition ${paymentType === 'split' ? 'border-cyan-400 bg-cyan-400/10' : 'border-white/10 bg-[#0F172A] opacity-60 hover:opacity-100'}`}
+                              >
+                                <span className={`text-sm font-bold ${paymentType === 'split' ? 'text-cyan-400' : 'text-slate-300'}`}>Chia đôi (50%)</span>
+                                <span className={`text-xs ${paymentType === 'split' ? 'text-cyan-400/80' : 'text-slate-500'}`}>{fmt(Math.ceil(discountedTotalPrice / 2))} đ</span>
+                              </button>
+                              <button
+                                onClick={() => setPaymentType('full')}
+                                className={`flex-1 flex flex-col items-center justify-center p-2 rounded-lg border transition ${paymentType === 'full' ? 'border-emerald-400 bg-emerald-400/10' : 'border-white/10 bg-[#0F172A] opacity-60 hover:opacity-100'}`}
+                              >
+                                <span className={`text-sm font-bold ${paymentType === 'full' ? 'text-emerald-400' : 'text-slate-300'}`}>Trả hết (100%)</span>
+                                <span className={`text-xs ${paymentType === 'full' ? 'text-emerald-400/80' : 'text-slate-500'}`}>{fmt(discountedTotalPrice)} đ</span>
+                              </button>
+                            </div>
                           </div>
                         )}
 

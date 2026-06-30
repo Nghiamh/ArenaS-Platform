@@ -1165,6 +1165,7 @@ export type UserBookingPayload = {
 	end_time: string;
 	match_id?: string;
 	voucher_code?: string;
+	payment_type?: 'split' | 'full';
 };
 
 export type UserBookingResponse = {

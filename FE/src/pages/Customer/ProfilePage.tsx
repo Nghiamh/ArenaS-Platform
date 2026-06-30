@@ -549,7 +549,8 @@ export const ProfilePage: React.FC = () => {
       await fetchWallet();
       setBookingToCancel(null);
     } catch (e: unknown) {
-      showErrorPopup(e instanceof Error ? e.message : "Có lỗi xảy ra khi hủy sân");
+      const errMsg = e instanceof Error ? e.message : "Có lỗi xảy ra khi hủy sân";
+      showErrorPopup(errMsg);
       setBookingToCancel(null);
     } finally {
       setCancellingBookingId(null);
@@ -2374,6 +2375,18 @@ export const ProfilePage: React.FC = () => {
                 {popupErrorMessage}
               </p>
               <div className="mt-6 flex justify-end">
+                {(popupErrorMessage.includes('không đủ số dư') || popupErrorMessage.includes('insufficient_balance')) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPopupErrorMessage("");
+                      setShowDeposit(true);
+                    }}
+                    className="mr-3 px-5 py-2 rounded-xl bg-[#c7f200]/20 border border-[#c7f200]/30 hover:bg-[#c7f200]/30 text-[#c7f200] text-xs font-bold uppercase transition"
+                  >
+                    Nạp tiền ngay
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setPopupErrorMessage("")}

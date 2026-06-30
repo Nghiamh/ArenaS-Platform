@@ -8,6 +8,7 @@ import User from "../models/userModel.js";
 import UserSkill from "../models/userSkillModel.js";
 import Report from "../models/reportModel.js";
 import ChatMessage from "../models/chatMessageModel.js";
+import { BookingModel } from "../models/bookingModel.js";
 
 const TICKET_EXPIRY_MINUTES = 30;
 
@@ -630,7 +631,39 @@ export async function completeMatch(req: Request, res: Response): Promise<void> 
 			return;
 		}
 
-		// Note: check-in is no longer required to mark a match completed.
+		// Find the booking associated with this match to check the end time
+		const booking = await BookingModel.findOne({ match_id: match._id });
+		if (!booking) {
+			res.status(400).json({
+				message: "booking_not_found",
+				error: "Cannot complete match because no booking was found for this match.",
+			});
+			return;
+		}
+
+		// Validate time: Can only complete if current time is within 15 minutes of booking end_time or after
+		let dateStr = "";
+		if (typeof booking.date === "string") {
+			dateStr = booking.date.split("T")[0];
+		} else {
+			const d = new Date(booking.date as any);
+			const vnTime = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+			dateStr = vnTime.toISOString().split("T")[0];
+		}
+		
+		const endDateTime = new Date(`${dateStr}T${booking.end_time}:00+07:00`);
+		const now = new Date();
+		
+		// Allow complete 15 minutes before end time
+		const allowedCompleteTime = new Date(endDateTime.getTime() - 15 * 60 * 1000);
+
+		if (now < allowedCompleteTime) {
+			res.status(400).json({
+				message: "too_early_to_complete",
+				error: "You can only complete the match from 15 minutes before the booked time ends.",
+			});
+			return;
+		}
 
 		// Set status to COMPLETED
 		match.status = "COMPLETED";

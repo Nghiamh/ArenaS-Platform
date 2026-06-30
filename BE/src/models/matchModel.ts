@@ -14,6 +14,7 @@ export interface IMatch extends Document {
 	confirmation_deadline?: Date;
 	status: MatchStatus;
 	scheduled_at?: Date;
+	scheduled_end_at?: Date;
 	createdAt?: Date;
 	updatedAt?: Date;
 }
@@ -83,6 +84,11 @@ const matchSchema = new Schema<IMatch, IMatchModel>(
 			enum: ["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"],
 		},
 		scheduled_at: {
+			type: Date,
+			required: false,
+			default: undefined,
+		},
+		scheduled_end_at: {
 			type: Date,
 			required: false,
 			default: undefined,

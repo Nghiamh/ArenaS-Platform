@@ -412,7 +412,7 @@ export async function userBookCourt(req: Request, res: Response) {
 	try {
 		const user = req.user!;
 		const userId = user._id;
-		const { court_id, sub_court_id, date, start_time, end_time, match_id, voucher_code } = req.body;
+		const { court_id, sub_court_id, date, start_time, end_time, match_id, voucher_code, payment_type = 'split' } = req.body;
 
 		// --- Validate input ---
 		if (!court_id || !mongoose.Types.ObjectId.isValid(court_id)) {
@@ -521,7 +521,10 @@ export async function userBookCourt(req: Request, res: Response) {
 		}
 
 		const discountedTotalPrice = Math.max(0, total_price - voucherDiscount);
-		const chargeAmount = isMatchBooking ? Math.ceil(discountedTotalPrice / 2) : discountedTotalPrice;
+		let chargeAmount = discountedTotalPrice;
+		if (isMatchBooking && payment_type === 'split') {
+			chargeAmount = Math.ceil(discountedTotalPrice / 2);
+		}
 
 		// --- Bước 5: Kiểm tra và trừ tiền ví ---
 		const wallet = await Wallet.findOne({ userId }).session(session);
@@ -549,8 +552,23 @@ export async function userBookCourt(req: Request, res: Response) {
 		}
 
 		// --- Bước 6: Tạo Booking document ---
-		const bookingStatus = isMatchBooking ? 'waiting_opponent' : 'confirmed';
-		const opponentDeadline = isMatchBooking ? new Date(Date.now() + 30 * 60 * 1000) : undefined;
+		const bookingStatus = (isMatchBooking && payment_type === 'split') ? 'waiting_opponent' : 'confirmed';
+		const opponentDeadline = (isMatchBooking && payment_type === 'split') ? new Date(Date.now() + 30 * 60 * 1000) : undefined;
+
+		let participants: any[] | undefined = undefined;
+		if (isMatchBooking) {
+			if (payment_type === 'split') {
+				participants = [
+					{ userId: new mongoose.Types.ObjectId(userId), amount: chargeAmount, status: 'paid' },
+					...(opponentId ? [{ userId: new mongoose.Types.ObjectId(opponentId), amount: discountedTotalPrice - chargeAmount, status: 'unpaid' as const }] : []),
+				];
+			} else {
+				participants = [
+					{ userId: new mongoose.Types.ObjectId(userId), amount: chargeAmount, status: 'paid' },
+					...(opponentId ? [{ userId: new mongoose.Types.ObjectId(opponentId), amount: 0, status: 'paid' as const }] : []),
+				];
+			}
+		}
 
 		const newBooking = new BookingModel({
 			user_id: userId,
@@ -565,10 +583,7 @@ export async function userBookCourt(req: Request, res: Response) {
 			status: bookingStatus,
 			source: 'app',
 			match_id: isMatchBooking ? match_id : undefined,
-			participants: isMatchBooking ? [
-				{ userId: new mongoose.Types.ObjectId(userId), amount: chargeAmount, status: 'paid' },
-				...(opponentId ? [{ userId: new mongoose.Types.ObjectId(opponentId), amount: discountedTotalPrice - chargeAmount, status: 'unpaid' as const }] : []),
-			] : undefined,
+			participants,
 			opponent_deadline: opponentDeadline,
 			voucher_id: voucherId,
 			voucher_code: voucherId ? voucher_code : undefined,
@@ -578,12 +593,13 @@ export async function userBookCourt(req: Request, res: Response) {
 
 		await newBooking.save({ session });
 
-		// Cập nhật giờ hẹn của Trận đấu — CHỈ khi booking thường (matchmaking chờ đối thủ thanh toán)
-		if (!isMatchBooking && match_id && mongoose.Types.ObjectId.isValid(match_id)) {
+		// Cập nhật giờ hẹn của Trận đấu — CHỈ khi booking đã confirmed
+		if (bookingStatus === 'confirmed' && isMatchBooking) {
 			const match = await Match.findById(match_id).session(session);
 			if (match) {
 				const dateStr = typeof date === 'string' ? date.split('T')[0] : new Date(date).toISOString().split('T')[0];
 				match.scheduled_at = new Date(`${dateStr}T${start_time}:00`);
+				match.scheduled_end_at = new Date(`${dateStr}T${end_time}:00`);
 				await match.save({ session });
 			}
 		}
@@ -658,78 +674,12 @@ export async function userBookCourt(req: Request, res: Response) {
 				if (match) {
 					const io = req.app.get('io');
 					const courtDisplayName = subCourt?.name ? `${court.name} - ${subCourt.name}` : court.name;
-					const formattedPrice = new Intl.NumberFormat('vi-VN').format(chargeAmount);
 					const formattedTotal = new Intl.NumberFormat('vi-VN').format(total_price);
 
-					// Chat message: Player A đã đặt cọc 50%
-					const msgContent = `Tôi đã đặt cọc 50% cho sân!\nTên sân: ${courtDisplayName}\nNgày giờ: ${date} ${start_time} - ${end_time}\nSố tiền cọc: ${formattedPrice} đ / Tổng: ${formattedTotal} đ\nĐợi bạn thanh toán 50% còn lại trong 30 phút.`;
-					const newMsg = new ChatMessage({
-						match_id,
-						sender_id: userId,
-						message: msgContent,
-					});
-					await newMsg.save();
-
-					io.to(`match:${match_id}`).emit('receive_message', {
-						_id: newMsg._id,
-						match_id,
-						sender_id: userId.toString(),
-						message: newMsg.message,
-						createdAt: newMsg.createdAt,
-					});
-
-					// Emit opponent_deposit_required to the opponent
-					if (opponentId) {
-						io.to(`user:${opponentId}`).emit('opponent_deposit_required', {
-							matchId: match_id,
-							bookingId: (newBooking._id as any).toString(),
-							bookedByUserId: userId.toString(),
-							courtName: courtDisplayName,
-							date,
-							start_time,
-							end_time,
-							total_price,
-							opponent_amount: discountedTotalPrice - chargeAmount,
-							deadline: opponentDeadline?.toISOString(),
-						});
-					}
-
-					// Also notify booker
-					io.to(`user:${userId.toString()}`).emit('court_booked', {
-						matchId: match_id,
-						bookedByUserId: userId.toString(),
-						courtName: courtDisplayName,
-						date,
-						start_time,
-						end_time,
-						status: 'waiting_opponent',
-					});
-				}
-			} catch (socketErr) {
-				console.error('Socket notify matchmaking booking error:', socketErr);
-			}
-		} else {
-			// Normal booking: emit court_booked as before
-			if (match_id && mongoose.Types.ObjectId.isValid(match_id)) {
-				try {
-					const match = await Match.findById(match_id);
-					if (match) {
-						const io = req.app.get('io');
-						const payload = {
-							matchId: match_id,
-							bookedByUserId: userId.toString(),
-							courtName: court.name,
-							date,
-							start_time,
-							end_time,
-						};
-						for (const p of match.participants) {
-							io.to(`user:${p.toString()}`).emit('court_booked', payload);
-						}
-
-						const formattedPrice = new Intl.NumberFormat('vi-VN').format(total_price);
-						const courtDisplayName = subCourt?.name ? `${court.name} - ${subCourt.name}` : court.name;
-						const msgContent = `Tôi đã đặt sân thành công!\nTên sân: ${courtDisplayName}\nNgày giờ: ${date} ${start_time} - ${end_time}\nGiá: ${formattedPrice} đ`;
+					if (payment_type === 'split') {
+						const formattedPrice = new Intl.NumberFormat('vi-VN').format(chargeAmount);
+						// Chat message: Player A đã đặt cọc 50%
+						const msgContent = `Tôi đã đặt cọc 50% cho sân!\nTên sân: ${courtDisplayName}\nNgày giờ: ${date} ${start_time} - ${end_time}\nSố tiền cọc: ${formattedPrice} đ / Tổng: ${formattedTotal} đ\nĐợi bạn thanh toán 50% còn lại trong 30 phút.`;
 						const newMsg = new ChatMessage({
 							match_id,
 							sender_id: userId,
@@ -744,10 +694,67 @@ export async function userBookCourt(req: Request, res: Response) {
 							message: newMsg.message,
 							createdAt: newMsg.createdAt,
 						});
+
+						// Emit opponent_deposit_required to the opponent
+						if (opponentId) {
+							io.to(`user:${opponentId}`).emit('opponent_deposit_required', {
+								matchId: match_id,
+								bookingId: (newBooking._id as any).toString(),
+								bookedByUserId: userId.toString(),
+								courtName: courtDisplayName,
+								date,
+								start_time,
+								end_time,
+								total_price,
+								opponent_amount: discountedTotalPrice - chargeAmount,
+								deadline: opponentDeadline?.toISOString(),
+							});
+						}
+
+						// Also notify booker
+						io.to(`user:${userId.toString()}`).emit('court_booked', {
+							matchId: match_id,
+							bookedByUserId: userId.toString(),
+							courtName: courtDisplayName,
+							date,
+							start_time,
+							end_time,
+							status: 'waiting_opponent',
+						});
+					} else {
+						// payment_type === 'full'
+						const msgContent = `Tôi đã thanh toán toàn bộ tiền sân!\nTên sân: ${courtDisplayName}\nNgày giờ: ${date} ${start_time} - ${end_time}\nGiá: ${formattedTotal} đ`;
+						const newMsg = new ChatMessage({
+							match_id,
+							sender_id: userId,
+							message: msgContent,
+						});
+						await newMsg.save();
+
+						io.to(`match:${match_id}`).emit('receive_message', {
+							_id: newMsg._id,
+							match_id,
+							sender_id: userId.toString(),
+							message: newMsg.message,
+							createdAt: newMsg.createdAt,
+						});
+
+						const payload = {
+							matchId: match_id,
+							bookedByUserId: userId.toString(),
+							courtName: courtDisplayName,
+							date,
+							start_time,
+							end_time,
+							status: 'confirmed',
+						};
+						for (const p of match.participants) {
+							io.to(`user:${p.toString()}`).emit('court_booked', payload);
+						}
 					}
-				} catch (socketErr) {
-					console.error('Socket notify court_booked error:', socketErr);
 				}
+			} catch (socketErr) {
+				console.error('Socket notify matchmaking booking error:', socketErr);
 			}
 		}
 
@@ -763,7 +770,7 @@ export async function userBookCourt(req: Request, res: Response) {
 		});
 
 		return res.status(201).json({
-			message: isMatchBooking ? 'Đặt cọc 50% thành công! Đợi đối thủ thanh toán.' : 'Đặt sân thành công!',
+			message: (isMatchBooking && payment_type === 'split') ? 'Đặt cọc 50% thành công! Đợi đối thủ thanh toán.' : 'Đặt sân thành công!',
 			booking: {
 				_id: newBooking._id,
 				court_id,
@@ -880,6 +887,7 @@ export async function opponentPayBooking(req: Request, res: Response) {
 			if (match) {
 				const dateStr = typeof booking.date === 'string' ? booking.date.split('T')[0] : new Date(booking.date as any).toISOString().split('T')[0];
 				match.scheduled_at = new Date(`${dateStr}T${booking.start_time}:00`);
+				match.scheduled_end_at = new Date(`${dateStr}T${booking.end_time}:00`);
 				await match.save({ session });
 			}
 		}
@@ -1149,9 +1157,31 @@ export async function cancelBooking(req: Request, res: Response) {
 					cancellerRefundPct = 0; ownerPenaltyPct = 1;
 				}
 
-				const cancellerRefund = Math.floor(cancellerEntry.amount * cancellerRefundPct);
-				const otherRefund = otherEntry.amount;
-				const ownerPenalty = Math.floor(cancellerEntry.amount * ownerPenaltyPct);
+				const responsibleAmount = Math.ceil((booking.total_price - (booking.voucher_discount || 0)) / 2);
+				const ownerPenalty = Math.floor(responsibleAmount * ownerPenaltyPct);
+				const cancellerPaidAmount = cancellerEntry.amount;
+				
+				let extraFeeRequired = 0;
+				let cancellerRefund = 0;
+
+				if (ownerPenalty > cancellerPaidAmount) {
+					extraFeeRequired = ownerPenalty - cancellerPaidAmount;
+					cancellerRefund = 0;
+				} else {
+					extraFeeRequired = 0;
+					cancellerRefund = cancellerPaidAmount - ownerPenalty;
+				}
+
+				let cancellerWallet = null;
+				if (extraFeeRequired > 0 || cancellerRefund > 0) {
+					cancellerWallet = await Wallet.findOne({ userId: cancellerEntry.userId }).session(session);
+					if (!cancellerWallet) {
+						throw new Error('wallet_not_found');
+					}
+					if (extraFeeRequired > 0 && cancellerWallet.balance < extraFeeRequired) {
+						throw new Error(`insufficient_balance_for_cancellation:${extraFeeRequired}`);
+					}
+				}
 
 				finalRefundPercentage = cancellerRefundPct * 100;
 				finalRefundAmount = cancellerRefund;
@@ -1159,21 +1189,27 @@ export async function cancelBooking(req: Request, res: Response) {
 				booking.status = 'cancelled';
 				await booking.save({ session });
 
-				// Refund canceller
-				if (cancellerRefund > 0) {
-					const cancellerWallet = await Wallet.findOne({ userId: cancellerEntry.userId }).session(session);
-					if (cancellerWallet) {
-						cancellerWallet.balance += cancellerRefund;
-						await cancellerWallet.save({ session });
-						await new WalletTransaction({
-							walletId: cancellerWallet._id, bookingId: booking._id,
-							type: 'refund', amount: cancellerRefund, status: 'completed',
-						}).save({ session });
-					}
+				// Deduct extra fee or refund canceller
+				if (extraFeeRequired > 0 && cancellerWallet) {
+					cancellerWallet.balance -= extraFeeRequired;
+					await cancellerWallet.save({ session });
+					await new WalletTransaction({
+						walletId: cancellerWallet._id, bookingId: booking._id,
+						type: 'payment', amount: extraFeeRequired, status: 'completed',
+						description: 'Phí hủy sân ghép trận'
+					}).save({ session });
+				} else if (cancellerRefund > 0 && cancellerWallet) {
+					cancellerWallet.balance += cancellerRefund;
+					await cancellerWallet.save({ session });
+					await new WalletTransaction({
+						walletId: cancellerWallet._id, bookingId: booking._id,
+						type: 'refund', amount: cancellerRefund, status: 'completed',
+					}).save({ session });
 				}
 				cancellerEntry.status = 'refunded';
 
-				// Refund other player 100%
+				// Refund other player 100% of what they paid
+				const otherRefund = otherEntry.amount;
 				if (otherRefund > 0 && otherEntry.status === 'paid') {
 					const otherWallet = await Wallet.findOne({ userId: otherEntry.userId }).session(session);
 					if (otherWallet) {
@@ -1369,9 +1405,15 @@ export async function cancelBooking(req: Request, res: Response) {
 			booking_not_found: { status: 404, message: 'Không tìm thấy thông tin đặt sân' },
 			booking_cannot_be_cancelled: { status: 400, message: 'Chỉ có thể hủy sân đã được xác nhận' },
 			too_late_to_cancel: { status: 400, message: 'Không thể hủy sân khi thời gian bắt đầu còn dưới 1 tiếng' },
+			wallet_not_found: { status: 404, message: 'Không tìm thấy ví để hoàn tiền/thu phí' },
 		};
 		const mapped = errorMap[error.message];
 		if (mapped) return res.status(mapped.status).json({ error: mapped.message });
+		if (error.message && error.message.startsWith('insufficient_balance_for_cancellation:')) {
+			const amount = error.message.split(':')[1];
+			const formattedAmount = new Intl.NumberFormat('vi-VN').format(Number(amount));
+			return res.status(400).json({ error: `Bạn cần thanh toán phí hủy là ${formattedAmount} đ. Ví của bạn không đủ số dư.`, code: 'insufficient_balance_for_cancellation' });
+		}
 		console.error('Lỗi cancelBooking:', error);
 		return res.status(500).json({ error: 'internal_server_error' });
 	} finally {

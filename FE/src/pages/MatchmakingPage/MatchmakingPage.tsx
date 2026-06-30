@@ -136,11 +136,9 @@ export const MatchmakingPage: React.FC = () => {
 	}, [mmState, matchData?.status]);
 
 	const completeUnlockInfo = useMemo(() => {
-		if (!matchData) return { canComplete: false, remainingMin: 0, remainingSec: 0 };
-		const scheduledTime = matchData.scheduled_at
-			? new Date(matchData.scheduled_at).getTime()
-			: new Date(matchData.createdAt || Date.now()).getTime();
-		const unlockTime = scheduledTime + 15 * 60 * 1000;
+		if (!matchData || !matchData.scheduled_end_at) return { canComplete: false, remainingMin: 0, remainingSec: 0 };
+		const endTime = new Date(matchData.scheduled_end_at).getTime();
+		const unlockTime = endTime - 15 * 60 * 1000;
 		const diff = unlockTime - nowTick;
 		return {
 			canComplete: diff <= 0,

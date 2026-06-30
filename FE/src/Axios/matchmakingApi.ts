@@ -53,6 +53,7 @@ export type MatchData = {
 	confirmation_deadline?: string;
 	status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
 	scheduled_at?: string;
+	scheduled_end_at?: string;
 	createdAt?: string;
 	updatedAt?: string;
 };
