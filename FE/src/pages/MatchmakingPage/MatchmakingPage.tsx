@@ -167,9 +167,9 @@ export const MatchmakingPage: React.FC = () => {
 	}, [mmState, matchData?.status, matchData?.scheduled_end_at]);
 
 	const completeUnlockInfo = useMemo(() => {
-		// Không có in-app booking (scheduled_end_at = null) → cho complete ngay
 		if (!matchData) return { canComplete: false, hasTimer: false, remainingMin: 0, remainingSec: 0 };
-		if (!matchData.scheduled_end_at) return { canComplete: true, hasTimer: false, remainingMin: 0, remainingSec: 0 };
+		// Chưa đặt sân → không cho complete
+		if (!matchData.scheduled_end_at) return { canComplete: false, hasTimer: false, remainingMin: 0, remainingSec: 0 };
 		// Có in-app booking → đếm ngược đến 15p trước giờ kết thúc
 		const endTime = new Date(matchData.scheduled_end_at).getTime();
 		const unlockTime = endTime - 15 * 60 * 1000;
@@ -1206,14 +1206,21 @@ export const MatchmakingPage: React.FC = () => {
 											</div>
 										)}
 
-										{/* Hoàn thành — chỉ hiện khi CHƯA hoàn thành (status !== 'COMPLETED') */}
+										{/* Hoàn thành — luôn hiện, mờ khi chưa đặt sân hoặc chưa tới giờ */}
 										{matchData.status !== 'COMPLETED' && (
-											<button type="button" onClick={handleCompleteMatch} disabled={completeLoading || !completeUnlockInfo.canComplete}
-												className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-emerald-500/25 transition hover:shadow-emerald-500/40 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed">
+											<button type="button" onClick={handleCompleteMatch}
+												disabled={completeLoading || !completeUnlockInfo.canComplete}
+												className={`w-full flex items-center justify-center gap-3 rounded-xl px-6 py-4 text-base font-bold transition ${
+													completeUnlockInfo.canComplete
+														? 'bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:brightness-110'
+														: 'bg-slate-800/60 border border-slate-700/60 text-slate-400 cursor-not-allowed'
+												}`}>
 												{completeLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Swords className="w-5 h-5" />}
-												{completeUnlockInfo.canComplete
-													? ' Hoàn thành Trận Đấu'
-													: ` Còn ${String(completeUnlockInfo.remainingMin).padStart(2, '0')}:${String(completeUnlockInfo.remainingSec).padStart(2, '0')} để hoàn thành`}
+												{!matchData.scheduled_end_at
+													? 'Hoàn thành (chưa đặt sân)'
+													: completeUnlockInfo.canComplete
+														? 'Hoàn thành Trận Đấu'
+														: `Còn ${String(completeUnlockInfo.remainingMin).padStart(2,'0')}:${String(completeUnlockInfo.remainingSec).padStart(2,'0')} để hoàn thành`}
 											</button>
 										)}
 
@@ -1236,14 +1243,17 @@ export const MatchmakingPage: React.FC = () => {
 														⚠️ Tố cáo
 													</button>
 
-													{!matchData.scheduled_at && (
-														<button type="button" onClick={handleDecline} disabled={loading}
-															className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-slate-700/60 bg-slate-800/30 text-slate-400 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 px-4 py-3 text-sm font-bold transition disabled:opacity-50"
-														>
-															{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
-															Từ Chối
-														</button>
-													)}
+													{/* Từ chối — luôn hiện, mờ/disabled khi đã có booking */}
+													<button type="button" onClick={handleDecline} disabled={loading || !!matchData.scheduled_end_at}
+														className={`flex-1 flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold transition ${
+															matchData.scheduled_end_at
+																? 'border-slate-700/30 bg-slate-800/20 text-slate-600 cursor-not-allowed opacity-40'
+																: 'border-slate-700/60 bg-slate-800/30 text-slate-400 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 disabled:opacity-50'
+														}`}
+													>
+														{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+														Từ Chối
+													</button>
 												</div>
 											</>
 										)}
