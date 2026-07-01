@@ -66,5 +66,11 @@ const bookingSchema = new Schema<IBooking>(
 
 bookingSchema.index({ court_id: 1, date: 1 });
 bookingSchema.index({ user_id: 1 });
+// Used by matchmakingController.completeMatch and bookingController
+bookingSchema.index({ match_id: 1 });
+// Used by matchBookingTimeoutCron every minute — critical for performance
+bookingSchema.index({ status: 1, opponent_deadline: 1 });
+// Used by getOwnerBookings to filter by court
+bookingSchema.index({ court_id: 1, status: 1 });
 
 export const BookingModel = mongoose.model<IBooking>('Booking', bookingSchema);

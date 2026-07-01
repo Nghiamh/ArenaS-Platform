@@ -58,6 +58,8 @@ const walletTransactionSchema = new Schema<IWalletTransaction>(
 );
 
 walletTransactionSchema.index({ walletId: 1, createdAt: -1 });
+// Used by payoutCron every 5min — compound index covers the exact query
+walletTransactionSchema.index({ type: 1, status: 1, bookingId: 1 });
 
 // Automatically delete pending/expired transactions after expiredAt (TTL index)
 // Only affects non-completed transactions

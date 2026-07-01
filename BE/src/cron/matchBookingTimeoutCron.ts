@@ -12,7 +12,10 @@ import ChatMessage from "../models/chatMessageModel.js";
  * If expired: cancel booking, refund 100% to the booker.
  */
 export function startMatchBookingTimeoutCron(io?: any): void {
-	cron.schedule("* * * * *", async () => {
+	// Chạy mỗi phút, tại giây thứ 30 (lệch pha với slotLockTimeoutCron chạy lúc :00)
+	// để tránh tranh chấp connection pool MongoDB.
+	// node-cron v3 hỗ trợ 6 fields: seconds minutes hours day month weekday
+	cron.schedule("30 * * * * *", async () => {
 		try {
 			const now = new Date();
 

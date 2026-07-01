@@ -103,6 +103,10 @@ const matchSchema = new Schema<IMatch, IMatchModel>(
 matchSchema.index({ participants: 1 });
 matchSchema.index({ court_id: 1 });
 matchSchema.index({ owner_id: 1 });
+// Used by expirePendingMatches worker every 5s — compound index for fast expiry lookup
+matchSchema.index({ status: 1, confirmation_deadline: 1 });
+// Used by getMatchmakingStatus to filter active matches per participant
+matchSchema.index({ participants: 1, status: 1 });
 
 const Match = mongoose.models.Match || mongoose.model<IMatch>("Match", matchSchema);
 

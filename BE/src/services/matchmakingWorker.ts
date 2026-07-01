@@ -134,6 +134,7 @@ export function calculateMatchScore(
 
 /**
  * Process all WAITING tickets and attempt to match pairs.
+ * PERFORMANCE: Batch-fetches all skills and courts upfront to avoid N+1 queries.
  */
 async function processMatchmaking(io: SocketServer): Promise<void> {
 	try {
@@ -153,7 +154,23 @@ async function processMatchmaking(io: SocketServer): Promise<void> {
 			return; // Need at least 2 tickets to match
 		}
 
-		// 3. Group tickets by court_id + sport
+		// 3. PERF: Batch-fetch all unique sports across all tickets
+		const uniqueSports = [...new Set(waitingTickets.map(t => getSkillSportName(t.sport)))];
+		const uniqueUserIds = [...new Set(waitingTickets.map(t => t.user_id.toString()))];
+
+		// Single query to get ALL skills for ALL waiting users across ALL relevant sports
+		const allSkills = await UserSkill.find({
+			user_id: { $in: uniqueUserIds },
+			sport: { $in: uniqueSports },
+		}).lean<IUserSkill[]>();
+
+		// Build an in-memory Map for O(1) skill lookup: "userId:sport" -> IUserSkill
+		const skillMap = new Map<string, IUserSkill>();
+		for (const skill of allSkills) {
+			skillMap.set(`${skill.user_id.toString()}:${skill.sport}`, skill);
+		}
+
+		// 4. Group tickets by court_id + sport
 		const groups = new Map<string, IMatchmakingTicket[]>();
 		for (const ticket of waitingTickets) {
 			const courtKey = ticket.court_id?.toString() ?? "any";
@@ -165,18 +182,31 @@ async function processMatchmaking(io: SocketServer): Promise<void> {
 			groups.get(groupKey)!.push(ticket);
 		}
 
-		// 4. Process each group
+		// 5. PERF: Batch-fetch all unique courts needed for scoring
+		const uniqueCourtIds = [...new Set(
+			[...groups.keys()]
+				.map(k => k.split(":")[0])
+				.filter(id => id !== "any")
+		)];
+		const courts = uniqueCourtIds.length > 0
+			? await Court.find({ _id: { $in: uniqueCourtIds } }).lean<ICourt[]>()
+			: [];
+		const courtMap = new Map<string, ICourt>();
+		for (const c of courts) {
+			courtMap.set((c._id as Types.ObjectId).toString(), c);
+		}
+
+		// 6. Process each group
 		for (const [groupKey, tickets] of groups) {
 			if (tickets.length < 2) {
 				continue;
 			}
 
-			// Get court info for distance scoring
+			// Lookup court from cache — no extra DB query
 			const courtIdStr = groupKey.split(":")[0];
-			let court: ICourt | null = null;
-			if (courtIdStr !== "any") {
-				court = await Court.findById(courtIdStr).lean<ICourt>();
-			}
+			const court: ICourt | null = courtIdStr !== "any"
+				? (courtMap.get(courtIdStr) ?? null)
+				: null;
 
 			// Track which tickets have been matched in this cycle
 			const matchedTicketIds = new Set<string>();
@@ -195,12 +225,11 @@ async function processMatchmaking(io: SocketServer): Promise<void> {
 				const waitMinutes = waitMs / 60000;
 				const threshold = calculateDynamicThreshold(waitMinutes);
 
-				// Get skill for user A (map ticket sport name to UserSkill sport name)
+				// Lookup skillA from in-memory cache — zero DB query
 				const skillSportName = getSkillSportName(ticketA.sport);
-				const skillA = await UserSkill.findOne({
-					user_id: ticketA.user_id,
-					sport: skillSportName,
-				}).lean<IUserSkill>();
+				const skillA = skillMap.get(`${ticketA.user_id.toString()}:${skillSportName}`) ?? null;
+
+				const courtCoords = court?.coordinates?.coordinates as [number, number] | undefined;
 
 				for (let j = i + 1; j < tickets.length; j++) {
 					const ticketB = tickets[j];
@@ -210,16 +239,8 @@ async function processMatchmaking(io: SocketServer): Promise<void> {
 						continue;
 					}
 
-					// Get skill for user B
-					const skillB = await UserSkill.findOne({
-						user_id: ticketB.user_id,
-						sport: skillSportName,
-					}).lean<IUserSkill>();
-
-					// Court coordinates for distance scoring
-					const courtCoords = court?.coordinates?.coordinates as
-						| [number, number]
-						| undefined;
+					// Lookup skillB from in-memory cache — zero DB query
+					const skillB = skillMap.get(`${ticketB.user_id.toString()}:${skillSportName}`) ?? null;
 
 					// Calculate match score
 					const score = calculateMatchScore(
