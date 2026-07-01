@@ -124,22 +124,57 @@ export const MatchmakingPage: React.FC = () => {
 
 
 
-	// Real-time tick for complete-match countdown
+	// Real-time tick for complete-match countdown — stops once unlock time is reached
 	const [nowTick, setNowTick] = useState(Date.now());
+	const completionTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
 	useEffect(() => {
+		// Clear any existing timer first
+		if (completionTimerRef.current) {
+			clearInterval(completionTimerRef.current);
+			completionTimerRef.current = null;
+		}
+
 		if (mmState !== 'MATCHED' || matchData?.status !== 'CONFIRMED') return;
-		const timer = setInterval(() => setNowTick(Date.now()), 1000);
-		return () => clearInterval(timer);
-	}, [mmState, matchData?.status]);
+		if (!matchData?.scheduled_end_at) return; // No in-app booking — no timer needed
+
+		const endTime = new Date(matchData.scheduled_end_at).getTime();
+		const unlockTime = endTime - 15 * 60 * 1000;
+
+		// Already past unlock time — set once and stop
+		if (Date.now() >= unlockTime) {
+			setNowTick(Date.now());
+			return;
+		}
+
+		completionTimerRef.current = setInterval(() => {
+			const now = Date.now();
+			setNowTick(now);
+			if (now >= unlockTime) {
+				clearInterval(completionTimerRef.current!);
+				completionTimerRef.current = null;
+			}
+		}, 1000);
+
+		return () => {
+			if (completionTimerRef.current) {
+				clearInterval(completionTimerRef.current);
+				completionTimerRef.current = null;
+			}
+		};
+	}, [mmState, matchData?.status, matchData?.scheduled_end_at]);
 
 	const completeUnlockInfo = useMemo(() => {
-		if (!matchData || !matchData.scheduled_end_at) return { canComplete: false, remainingMin: 0, remainingSec: 0 };
+		// Không có in-app booking (scheduled_end_at = null) → cho complete ngay
+		if (!matchData) return { canComplete: false, hasTimer: false, remainingMin: 0, remainingSec: 0 };
+		if (!matchData.scheduled_end_at) return { canComplete: true, hasTimer: false, remainingMin: 0, remainingSec: 0 };
+		// Có in-app booking → đếm ngược đến 15p trước giờ kết thúc
 		const endTime = new Date(matchData.scheduled_end_at).getTime();
 		const unlockTime = endTime - 15 * 60 * 1000;
 		const diff = unlockTime - nowTick;
 		return {
 			canComplete: diff <= 0,
+			hasTimer: true,
 			remainingMin: Math.max(0, Math.floor(diff / 60000)),
 			remainingSec: Math.max(0, Math.floor((diff % 60000) / 1000)),
 		};
@@ -1169,15 +1204,14 @@ export const MatchmakingPage: React.FC = () => {
 											</div>
 										)}
 
-										{matchData.scheduled_at && (
-											<button type="button" onClick={handleCompleteMatch} disabled={completeLoading || !completeUnlockInfo.canComplete}
-												className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-emerald-500/25 transition hover:shadow-emerald-500/40 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed">
-												{completeLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Swords className="w-5 h-5" />}
-												{completeUnlockInfo.canComplete
-													? ' Hoàn thành Trận Đấu'
-													: ` Còn ${String(completeUnlockInfo.remainingMin).padStart(2, '0')}:${String(completeUnlockInfo.remainingSec).padStart(2, '0')} để hoàn thành`}
-											</button>
-										)}
+										{/* Hoàn thành — luôn hiện khi CONFIRMED, timer chỉ hiện nếu có in-app booking */}
+										<button type="button" onClick={handleCompleteMatch} disabled={completeLoading || !completeUnlockInfo.canComplete}
+											className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-emerald-500/25 transition hover:shadow-emerald-500/40 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed">
+											{completeLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Swords className="w-5 h-5" />}
+											{completeUnlockInfo.canComplete
+												? ' Hoàn thành Trận Đấu'
+												: ` Còn ${String(completeUnlockInfo.remainingMin).padStart(2, '0')}:${String(completeUnlockInfo.remainingSec).padStart(2, '0')} để hoàn thành`}
+										</button>
 
 										<button type="button" onClick={handleGoToChat}
 											className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-blue-500/25 transition hover:shadow-blue-500/40 hover:brightness-110">

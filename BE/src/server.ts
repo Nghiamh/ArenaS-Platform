@@ -35,6 +35,7 @@ import adminRoutes from "./routes/adminRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import voucherRoutes from "./routes/voucherRoutes.js";
 import { startChatCleanupCron } from "./cron/chatCleanupCron.js";
+import { startTicketCleanupCron } from "./cron/ticketCleanupCron.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -129,6 +130,7 @@ async function startServer(): Promise<void> {
 	startMatchBookingTimeoutCron(io);
 	startSlotLockTimeoutCron();
 	startChatCleanupCron();
+	startTicketCleanupCron();
 
 	await new Promise<void>((resolve, reject) => {
 		const server = httpServer.listen(PORT, () => {
