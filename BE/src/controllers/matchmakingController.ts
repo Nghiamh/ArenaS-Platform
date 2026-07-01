@@ -152,6 +152,7 @@ export async function cancelMatchmaking(req: Request, res: Response): Promise<vo
 /**
  * GET /api/matchmaking/status
  * Get the current matchmaking status for the authenticated user.
+ * PERF: Split nested populate into 2 separate lean() queries to reduce DB overhead.
  */
 export async function getMatchmakingStatus(req: Request, res: Response): Promise<void> {
 	try {
@@ -161,47 +162,56 @@ export async function getMatchmakingStatus(req: Request, res: Response): Promise
 			return;
 		}
 
+		// Step 1: Fetch ticket with lean() — no deep nested populate
+		// Cast to any: Mongoose lean() on findOne returns FlattenMaps<T> | FlattenMaps<T>[]
+		// which TS cannot narrow without explicit cast. Runtime is always a single doc from findOne.
 		const ticket = await MatchmakingTicket.findOne({
 			user_id: user._id,
 			status: { $in: ["WAITING", "MATCHED"] },
 		})
 			.sort({ createdAt: -1 })
 			.populate("court_id", "name location sports coordinates")
-			.populate({
-				path: "match_id",
-				populate: [
-					{ path: "participants", select: "name userName avatarUrl" },
-					{ path: "court_id", select: "name location sports price_per_hour coordinates" },
-					{ path: "owner_id", select: "name userName" }
-				]
-			});
-
-		if (ticket && ticket.status === "MATCHED" && ticket.match_id) {
-			const m = ticket.match_id as any;
-			if (m && (m.status === "COMPLETED" || m.status === "CANCELLED")) {
-				// Check if this user has already submitted feedback for this match
-				const feedback = await MatchFeedback.findOne({
-					match_id: m._id,
-					reporter_id: user._id,
-				});
-
-				if (feedback || m.status === "CANCELLED") {
-					// Clean up the ticket as it is stale
-					ticket.status = "CANCELLED";
-					await ticket.save();
-
-					res.status(200).json({
-						success: true,
-						status: "IDLE",
-						message: "No active matchmaking ticket",
-						ticket: null,
-					});
-					return;
-				}
-			}
-		}
+			.lean() as any;
 
 		if (!ticket) {
+			// Fallback: ticket may have been cleaned up, but match is still active.
+			// Check if user is a participant in any PENDING/CONFIRMED match.
+			const searchId = new mongoose.Types.ObjectId(user._id.toString());
+			const activeMatch = await Match.findOne({
+				participants: searchId,
+				status: { $in: ["PENDING", "CONFIRMED"] },
+			})
+				.populate("participants", "name userName avatarUrl")
+				.populate("court_id", "name location sports price_per_hour coordinates")
+				.populate("owner_id", "name userName")
+				.lean() as any;
+
+
+
+			if (activeMatch) {
+				// Re-create a lightweight synthetic ticket for FE compatibility
+				const syntheticTicket = {
+					_id: null,
+					user_id: user._id,
+					sport: activeMatch.sport,
+					status: "MATCHED" as const,
+					match_id: activeMatch,
+					court_id: activeMatch.court_id,
+					createdAt: activeMatch.createdAt,
+				};
+
+
+
+				res.status(200).json({
+					success: true,
+					status: "MATCHED",
+					ticket: syntheticTicket,
+					waitMinutes: 0,
+				});
+				return;
+			}
+
+
 			res.status(200).json({
 				success: true,
 				status: "IDLE",
@@ -211,15 +221,73 @@ export async function getMatchmakingStatus(req: Request, res: Response): Promise
 			return;
 		}
 
-		// Calculate wait time
-		const waitMs = Date.now() - (ticket.createdAt?.getTime() ?? Date.now());
-		const waitMinutes = Math.floor(waitMs / 60000);
+		// Step 2: If MATCHED, resolve match in a separate lean query
+		if (ticket.status === "MATCHED" && ticket.match_id) {
+			const matchId = ticket.match_id;
+
+			const populatedMatch = await Match.findById(matchId)
+				.populate("participants", "name userName avatarUrl")
+				.populate("court_id", "name location sports price_per_hour coordinates")
+				.populate("owner_id", "name userName")
+				.lean() as any;
+
+			if (!populatedMatch) {
+				// Stale ticket — clean up atomically (no full doc save)
+				await MatchmakingTicket.updateOne({ _id: ticket._id }, { status: "CANCELLED" });
+				res.status(200).json({
+					success: true,
+					status: "IDLE",
+					message: "No active matchmaking ticket",
+					ticket: null,
+				});
+				return;
+			}
+
+			// Handle terminal match statuses
+			if (populatedMatch.status === "COMPLETED" || populatedMatch.status === "CANCELLED") {
+				let shouldCleanUp = populatedMatch.status === "CANCELLED";
+
+				if (populatedMatch.status === "COMPLETED") {
+					const feedback = await MatchFeedback.findOne({
+						match_id: populatedMatch._id,
+						reporter_id: user._id,
+					}).lean();
+					if (feedback) shouldCleanUp = true;
+				}
+
+				if (shouldCleanUp) {
+					await MatchmakingTicket.updateOne({ _id: ticket._id }, { status: "CANCELLED" });
+					res.status(200).json({
+						success: true,
+						status: "IDLE",
+						message: "No active matchmaking ticket",
+						ticket: null,
+					});
+					return;
+				}
+			}
+
+			// Merge populated match back into ticket shape for FE compatibility
+			const ticketWithMatch = { ...ticket, match_id: populatedMatch };
+			const waitMs = Date.now() - new Date(ticket.createdAt ?? Date.now()).getTime();
+
+			res.status(200).json({
+				success: true,
+				status: ticket.status,
+				ticket: ticketWithMatch,
+				waitMinutes: Math.floor(waitMs / 60000),
+			});
+			return;
+		}
+
+		// WAITING state — no match to resolve
+		const waitMs = Date.now() - new Date(ticket.createdAt ?? Date.now()).getTime();
 
 		res.status(200).json({
 			success: true,
 			status: ticket.status,
 			ticket,
-			waitMinutes,
+			waitMinutes: Math.floor(waitMs / 60000),
 		});
 	} catch (error: unknown) {
 		console.error("getMatchmakingStatus error:", error);
@@ -266,15 +334,6 @@ export async function acceptMatch(req: Request, res: Response): Promise<void> {
 			return;
 		}
 
-		// Verify match is PENDING
-		if (match.status !== "PENDING") {
-			res.status(400).json({
-				message: "invalid_match_status",
-				error: `Match is already in ${match.status} status`,
-			});
-			return;
-		}
-
 		// Check if already accepted
 		const alreadyAccepted = match.accepted_by.some(
 			(id: any) => id.toString() === userId
@@ -283,7 +342,7 @@ export async function acceptMatch(req: Request, res: Response): Promise<void> {
 		if (alreadyAccepted) {
 			await match.populate([
 				{ path: "participants", select: "name userName avatarUrl" },
-				{ path: "court_id", select: "name location sports price_per_hour" },
+				{ path: "court_id", select: "name location sports price_per_hour coordinates" },
 				{ path: "owner_id", select: "name userName" }
 			]);
 			res.status(200).json({
@@ -293,6 +352,24 @@ export async function acceptMatch(req: Request, res: Response): Promise<void> {
 			});
 			return;
 		}
+
+		// Verify match is PENDING
+		if (match.status !== "PENDING") {
+			let errorMsg = `Match is already in ${match.status} status`;
+			if (match.status === "CANCELLED") {
+				errorMsg = "Trận đấu đã bị huỷ (có thể do quá hạn xác nhận).";
+			} else if (match.status === "CONFIRMED") {
+				errorMsg = "Trận đấu đã được xác nhận.";
+			}
+
+			res.status(400).json({
+				message: "invalid_match_status",
+				error: errorMsg,
+			});
+			return;
+		}
+
+
 
 		// Record acceptance
 		match.accepted_by.push(user._id as any);

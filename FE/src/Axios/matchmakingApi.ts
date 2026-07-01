@@ -189,7 +189,7 @@ export async function cancelMatchmaking(): Promise<CancelMatchmakingResponse> {
 
 export async function getMatchmakingStatus(): Promise<MatchmakingStatusResponse> {
 	try {
-		const { data } = await axiosClient.get<MatchmakingStatusResponse>('/matchmaking/status', {
+		const { data } = await axiosClient.get<MatchmakingStatusResponse>(`/matchmaking/status?t=${Date.now()}`, {
 			headers: withAuthHeaders(),
 		});
 		return data;

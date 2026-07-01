@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
 	ArrowLeft,
@@ -147,39 +147,9 @@ export const ChatPage: React.FC = () => {
 			.finally(() => setLoading(false));
 	}, [matchId]);
 
-	// Auto-fetch pending deposit info when deposit message detected but depositInfo is null
-	useEffect(() => {
-		if (!matchId || loading || depositInfo || depositPaid) return;
-
-		// Check if any message is a deposit message from opponent
-		const hasDepositMsg = messages.some((msg) => {
-			const senderId = getSenderId(msg.sender_id);
-			const isMine = senderId === currentUserId;
-			const isDepositMsg = msg.message.includes('đặt cọc 50%') && msg.message.includes('Đợi bạn thanh toán');
-			return isDepositMsg && !isMine;
-		});
-
-		if (!hasDepositMsg) return;
-
-		// Fetch pending deposit from dedicated API
-		getMatchPendingDeposit(matchId)
-			.then((res) => {
-				if (res.pending_deposit) {
-					setDepositInfo({
-						bookingId: res.pending_deposit.bookingId,
-						amount: res.pending_deposit.amount,
-						deadline: res.pending_deposit.deadline || '',
-					});
-					if (res.pending_deposit.deadline) {
-						const remainingSec = Math.max(0, Math.floor((new Date(res.pending_deposit.deadline).getTime() - Date.now()) / 1000));
-						setDepositCountdown(remainingSec);
-					}
-				}
-			})
-			.catch((err) => {
-				console.error('Failed to fetch pending deposit:', err);
-			});
-	}, [matchId, messages, loading, depositInfo, depositPaid, currentUserId]);
+	// NOTE: pending_deposit is hydrated from getChatHistory (above) on initial load,
+	// and updated in real-time via the opponent_deposit_required socket event (below).
+	// No extra polling/scanning needed here.
 
 	// Listen for new messages from socket
 	useEffect(() => {

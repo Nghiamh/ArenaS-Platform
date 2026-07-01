@@ -245,8 +245,12 @@ export const MatchmakingPage: React.FC = () => {
 			}
 		} catch { /* ignore */ }
 
+		// Safety fallback: if API never resolves, dismiss spinner after 10s
+		const fallbackTimer = setTimeout(() => setInitialLoading(false), 10000);
+
 		getMatchmakingStatus()
 			.then((res) => {
+				clearTimeout(fallbackTimer);
 				if (res.status === 'WAITING' && res.ticket) {
 					setMmState('WAITING');
 					setTicket(res.ticket);
@@ -282,7 +286,6 @@ export const MatchmakingPage: React.FC = () => {
 							const idStr = String(mid);
 							if (idStr && !idStr.includes('[object')) {
 								setResolvedMatchId(idStr);
-								// Fallback: create a dummy matchData to prevent endless loading spinner
 								setMatchData({
 									_id: idStr,
 									participants: [],
@@ -297,7 +300,7 @@ export const MatchmakingPage: React.FC = () => {
 								} as any);
 							}
 						}
-						
+
 						// Hydrate pending deposit if any
 						const rMid = typeof mid === 'object' ? String((mid as any)._id) : String(mid);
 						if (rMid && !rMid.includes('[object')) {
@@ -318,26 +321,38 @@ export const MatchmakingPage: React.FC = () => {
 							}).catch(() => {});
 						}
 					} else {
-						// Match object doesn't exist, fall back to IDLE
 						setMmState('IDLE');
 					}
 				}
+				// Only dismiss spinner on successful response
+				setInitialLoading(false);
 			})
-			.catch(() => { })
-			.finally(() => setInitialLoading(false));
+			.catch(() => {
+				clearTimeout(fallbackTimer);
+				// On error: keep spinner alive — socket reconnect will retry fetchStatus().
+				// The 10s fallbackTimer above ensures spinner won't hang forever.
+			});
 	}, [selectedSport]);
 
-	// Check existing matchmaking status on mount AND when socket reconnects
-	useEffect(() => {
-		if (isConnected) {
-			fetchStatus();
-		}
-	}, [isConnected, fetchStatus]);
+	// Stable ref to always hold the latest fetchStatus without it being a dep
+	const fetchStatusRef = useRef(fetchStatus);
+	useEffect(() => { fetchStatusRef.current = fetchStatus; }, [fetchStatus]);
 
-	// Also run once on mount regardless of socket (so initial load works)
+	// Run once on mount — keeps spinner until API responds
 	useEffect(() => {
-		fetchStatus();
-	}, [fetchStatus]);
+		fetchStatusRef.current();
+	}, []);
+
+	// Re-fetch ONLY when socket transitions from disconnected → connected
+	// Using ref avoids re-firing when selectedSport changes inside fetchStatus.then()
+	const prevConnectedRef = useRef(false);
+	useEffect(() => {
+		if (isConnected && !prevConnectedRef.current) {
+			// Socket just (re)connected — sync state in case first call failed
+			fetchStatusRef.current();
+		}
+		prevConnectedRef.current = isConnected;
+	}, [isConnected]);
 
 	// Wait timer
 	useEffect(() => {
