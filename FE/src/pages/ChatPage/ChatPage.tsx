@@ -16,7 +16,7 @@ import {
 	voteChatDelete,
 	type ChatMessageData,
 } from '../../Axios/matchmakingApi';
-import { opponentPayBooking, getMatchPendingDeposit } from '../../Axios/Axios';
+import { opponentPayBooking } from '../../Axios/Axios';
 import { useSocket } from '../../hooks/useSocket';
 import { DepositModal } from '../WalletPage/DepositModal';
 
