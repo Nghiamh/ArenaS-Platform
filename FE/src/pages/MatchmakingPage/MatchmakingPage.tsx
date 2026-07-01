@@ -129,12 +129,14 @@ export const MatchmakingPage: React.FC = () => {
 	const completionTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
 	useEffect(() => {
-		// Clear any existing timer first
+		// Always clear existing timer first — this runs on every dependency change
+		// including when status changes from CONFIRMED → COMPLETED
 		if (completionTimerRef.current) {
 			clearInterval(completionTimerRef.current);
 			completionTimerRef.current = null;
 		}
 
+		// Only start timer when match is actively CONFIRMED with an in-app booking
 		if (mmState !== 'MATCHED' || matchData?.status !== 'CONFIRMED') return;
 		if (!matchData?.scheduled_end_at) return; // No in-app booking — no timer needed
 
@@ -1204,41 +1206,54 @@ export const MatchmakingPage: React.FC = () => {
 											</div>
 										)}
 
-										{/* Hoàn thành — luôn hiện khi CONFIRMED, timer chỉ hiện nếu có in-app booking */}
-										<button type="button" onClick={handleCompleteMatch} disabled={completeLoading || !completeUnlockInfo.canComplete}
-											className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-emerald-500/25 transition hover:shadow-emerald-500/40 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed">
-											{completeLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Swords className="w-5 h-5" />}
-											{completeUnlockInfo.canComplete
-												? ' Hoàn thành Trận Đấu'
-												: ` Còn ${String(completeUnlockInfo.remainingMin).padStart(2, '0')}:${String(completeUnlockInfo.remainingSec).padStart(2, '0')} để hoàn thành`}
-										</button>
-
-										<button type="button" onClick={handleGoToChat}
-											className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-blue-500/25 transition hover:shadow-blue-500/40 hover:brightness-110">
-											<MessageCircle className="w-5 h-5" /> Vào Chat
-										</button>
-
-										<div className="flex gap-3 mt-2">
-											<button
-												type="button"
-												onClick={() => {
-													setReportReason("Không điểm danh / Bỏ trận (AFK)");
-													setIsReportModalOpen(true);
-												}}
-												className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-slate-700/60 bg-slate-800/30 text-slate-400 hover:bg-slate-700/50 hover:text-red-400 px-4 py-3 text-sm font-bold transition"
-											>
-												⚠️ Tố cáo
+										{/* Hoàn thành — chỉ hiện khi CHƯA hoàn thành (status !== 'COMPLETED') */}
+										{matchData.status !== 'COMPLETED' && (
+											<button type="button" onClick={handleCompleteMatch} disabled={completeLoading || !completeUnlockInfo.canComplete}
+												className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-emerald-500/25 transition hover:shadow-emerald-500/40 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed">
+												{completeLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Swords className="w-5 h-5" />}
+												{completeUnlockInfo.canComplete
+													? ' Hoàn thành Trận Đấu'
+													: ` Còn ${String(completeUnlockInfo.remainingMin).padStart(2, '0')}:${String(completeUnlockInfo.remainingSec).padStart(2, '0')} để hoàn thành`}
 											</button>
+										)}
 
-											{!matchData.scheduled_at && (
-												<button type="button" onClick={handleDecline} disabled={loading}
-													className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-slate-700/60 bg-slate-800/30 text-slate-400 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 px-4 py-3 text-sm font-bold transition disabled:opacity-50"
-												>
-													{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
-													Từ Chối
+										{matchData.status !== 'COMPLETED' && (
+											<>
+												<button type="button" onClick={handleGoToChat}
+													className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-blue-500/25 transition hover:shadow-blue-500/40 hover:brightness-110">
+													<MessageCircle className="w-5 h-5" /> Vào Chat
 												</button>
-											)}
-										</div>
+
+												<div className="flex gap-3 mt-2">
+													<button
+														type="button"
+														onClick={() => {
+															setReportReason("Không điểm danh / Bỏ trận (AFK)");
+															setIsReportModalOpen(true);
+														}}
+														className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-slate-700/60 bg-slate-800/30 text-slate-400 hover:bg-slate-700/50 hover:text-red-400 px-4 py-3 text-sm font-bold transition"
+													>
+														⚠️ Tố cáo
+													</button>
+
+													{!matchData.scheduled_at && (
+														<button type="button" onClick={handleDecline} disabled={loading}
+															className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-slate-700/60 bg-slate-800/30 text-slate-400 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 px-4 py-3 text-sm font-bold transition disabled:opacity-50"
+														>
+															{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+															Từ Chối
+														</button>
+													)}
+												</div>
+											</>
+										)}
+
+										{/* Trạng thái đã hoàn thành — hiện khi chờ survey modal */}
+										{matchData.status === 'COMPLETED' && (
+											<div className="text-center py-4 text-emerald-400 text-sm font-semibold border border-emerald-500/30 bg-emerald-500/10 rounded-xl">
+												🏁 Trận đấu đã kết thúc! Đang mở khảo sát...
+											</div>
+										)}
 									</>
 								)}
 							</div>
