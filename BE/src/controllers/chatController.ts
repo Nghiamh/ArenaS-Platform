@@ -17,9 +17,12 @@ export async function getChatHistory(req: Request, res: Response): Promise<void>
 		}
 
 		const { matchId } = req.params;
+		const userId = user._id!.toString();
 
-		// Verify match exists
-		const match = await Match.findById(matchId);
+		// select() chỉ fetch các field cần thiết để giảm payload từ MongoDB
+		const match = await Match.findById(matchId)
+			.select("participants chat_deleted_by court_id");
+
 		if (!match) {
 			res.status(404).json({
 				message: "match_not_found",
@@ -29,7 +32,6 @@ export async function getChatHistory(req: Request, res: Response): Promise<void>
 		}
 
 		// Check if user is a participant
-		const userId = user._id!.toString();
 		const isParticipant = match.participants.some(
 			(p: any) => p.toString() === userId
 		);
@@ -59,50 +61,50 @@ export async function getChatHistory(req: Request, res: Response): Promise<void>
 		const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
 		const skip = (page - 1) * limit;
 
-		const [messages, total] = await Promise.all([
+		// PERF: Chạy song song cả 3 query thay vì tuần tự (tiết kiệm ~1-2 DB round trips)
+		const [messages, total, pendingBooking] = await Promise.all([
 			ChatMessage.find({ match_id: matchId })
 				.sort({ createdAt: 1 })
 				.skip(skip)
 				.limit(limit)
 				.populate("sender_id", "name userName avatarUrl"),
 			ChatMessage.countDocuments({ match_id: matchId }),
+			BookingModel.findOne({
+				match_id: matchId,
+				status: "waiting_opponent",
+			}).lean(),
 		]);
 
-		// Check for pending deposit: a 'waiting_opponent' booking for this match
-		// where the current user is the unpaid participant
+		// Check for pending deposit
 		let pending_deposit: {
 			bookingId: string;
 			amount: number;
 			deadline: string;
 		} | undefined;
 
-		try {
-			const pendingBooking = await BookingModel.findOne({
-				match_id: matchId,
-				status: 'waiting_opponent',
-			});
+		if (pendingBooking && pendingBooking.participants) {
+			const unpaidEntry = pendingBooking.participants.find(
+				(p) => p.userId.toString() === userId && p.status === "unpaid"
+			);
 
-			if (pendingBooking && pendingBooking.participants) {
-				const unpaidEntry = pendingBooking.participants.find(
-					(p) => p.userId.toString() === userId && p.status === 'unpaid'
-				);
-
-				if (unpaidEntry) {
-					// Verify deadline hasn't passed
-					const deadline = pendingBooking.opponent_deadline;
-					if (deadline && new Date() < deadline) {
-						pending_deposit = {
-							bookingId: (pendingBooking._id as any).toString(),
-							amount: unpaidEntry.amount,
-							deadline: deadline.toISOString(),
-						};
-					}
+			if (unpaidEntry) {
+				const deadline = pendingBooking.opponent_deadline;
+				if (deadline && new Date() < deadline) {
+					pending_deposit = {
+						bookingId: (pendingBooking._id as any).toString(),
+						amount: unpaidEntry.amount,
+						deadline: deadline.toISOString(),
+					};
 				}
 			}
-		} catch (depositErr) {
-			console.error("getChatHistory pending_deposit lookup error:", depositErr);
-			// Non-critical, continue without pending_deposit
 		}
+
+		const courtId = match.court_id;
+		const courtIdStr = courtId
+			? typeof courtId === "object" && "_id" in (courtId as any)
+				? (courtId as any)._id.toString()
+				: (courtId as any).toString()
+			: undefined;
 
 		res.status(200).json({
 			success: true,
@@ -110,8 +112,8 @@ export async function getChatHistory(req: Request, res: Response): Promise<void>
 			deleted: false,
 			votesRemaining: Math.max(0, totalParties - match.chat_deleted_by.length),
 			chat_deleted_by: match.chat_deleted_by.map((id: any) => id.toString()),
-			canVote: isParticipant, // only participants can vote, not the court owner
-			court_id: match.court_id ? (typeof match.court_id === 'object' && '_id' in match.court_id ? (match.court_id as any)._id.toString() : match.court_id.toString()) : undefined,
+			canVote: isParticipant,
+			court_id: courtIdStr,
 			pending_deposit,
 			pagination: {
 				page,
