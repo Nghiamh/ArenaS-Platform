@@ -886,8 +886,8 @@ export async function opponentPayBooking(req: Request, res: Response) {
 			const match = await Match.findById(booking.match_id).session(session);
 			if (match) {
 				const dateStr = typeof booking.date === 'string' ? booking.date.split('T')[0] : new Date(booking.date as any).toISOString().split('T')[0];
-				match.scheduled_at = new Date(`${dateStr}T${booking.start_time}:00`);
-				match.scheduled_end_at = new Date(`${dateStr}T${booking.end_time}:00`);
+				match.scheduled_at = new Date(`${dateStr}T${booking.start_time}:00+07:00`);
+				match.scheduled_end_at = new Date(`${dateStr}T${booking.end_time}:00+07:00`);
 				await match.save({ session });
 			}
 		}
