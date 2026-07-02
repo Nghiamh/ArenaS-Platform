@@ -289,37 +289,37 @@ export async function register(req: Request, res: Response): Promise<void> {
 				emailVerificationTokenHash: tokenHash,
 				emailVerificationExpiresAt: expiresAt,
 			});
-
-			const verificationBaseUrl =
-				process.env.RESET_PASSWORD_BASE_URL?.trim() ||
-				process.env.FRONTEND_URL?.trim() ||
-				"http://localhost:5173";
-
-			const verificationUrl = `${verificationBaseUrl.replace(/\/$/, "")}/verify-email?token=${rawToken}`;
-			const preferredLanguage = req.headers["accept-language"];
-			const locale = typeof preferredLanguage === "string" && preferredLanguage.toLowerCase().startsWith("en") ? "en" : "vi";
-
-			await sendVerificationEmail({
-				toEmail: createdUser.email,
-				toName: createdUser.userName,
-				verificationUrl,
-				locale,
-			});
-
-			const authResponse = buildAuthResponse(createdUser);
-
-			res.status(201).json({
-				message: "Đăng ký thành công. Vui lòng kiểm tra email để xác nhận tài khoản.",
-				status: "pending_verification",
-				user: authResponse.user,
-				redirectPath: authResponse.redirectPath,
-			});
 		} catch (error: any) {
-			if (createdUser && createdUser._id) {
-				await User.deleteOne({ _id: createdUser._id });
-			}
 			throw error;
 		}
+
+		const verificationBaseUrl =
+			process.env.RESET_PASSWORD_BASE_URL?.trim() ||
+			process.env.FRONTEND_URL?.trim() ||
+			"http://localhost:5173";
+
+		const verificationUrl = `${verificationBaseUrl.replace(/\/$/, "")}/verify-email?token=${rawToken}`;
+		const preferredLanguage = req.headers["accept-language"];
+		const locale = typeof preferredLanguage === "string" && preferredLanguage.toLowerCase().startsWith("en") ? "en" : "vi";
+
+		// Fire-and-forget: don't block registration if email fails
+		sendVerificationEmail({
+			toEmail: createdUser.email,
+			toName: createdUser.userName,
+			verificationUrl,
+			locale,
+		}).catch((emailError: any) => {
+			console.error("Failed to send verification email:", emailError?.message || emailError);
+		});
+
+		const authResponse = buildAuthResponse(createdUser);
+
+		res.status(201).json({
+			message: "Đăng ký thành công. Vui lòng kiểm tra email để xác nhận tài khoản.",
+			status: "pending_verification",
+			user: authResponse.user,
+			redirectPath: authResponse.redirectPath,
+		});
 	} catch (error: any) {
 		console.error("Register error:", error);
 		res.status(500).json({
