@@ -1357,6 +1357,7 @@ export async function cancelBooking(req: Request, res: Response) {
 					const newMsg = new ChatMessage({ match_id: booking.match_id, sender_id: userId, message: msgContent });
 					await newMsg.save({ session });
 					match.scheduled_at = undefined;
+					match.scheduled_end_at = undefined;
 					await match.save({ session });
 
 					const io = req.app.get('io');

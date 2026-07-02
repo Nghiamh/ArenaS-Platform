@@ -597,8 +597,11 @@ export const MatchmakingPage: React.FC = () => {
 					return {
 						...prev,
 						scheduled_at: undefined,
+						scheduled_end_at: undefined, // also clear so complete-match timer stops
 					};
 				});
+				setOpponentDeposit(null);  // clear any pending deposit banner too
+				setDepositCountdown(0);
 				showToast('Sân đấu đã bị huỷ!');
 			}
 		});

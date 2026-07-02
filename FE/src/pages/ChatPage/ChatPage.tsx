@@ -42,7 +42,7 @@ function getSenderName(sender: ChatMessageData['sender_id']): string {
 export const ChatPage: React.FC = () => {
 	const { matchId } = useParams<{ matchId: string }>();
 	const navigate = useNavigate();
-	const { joinMatchRoom, leaveMatchRoom, sendMessage: socketSendMessage, onReceiveMessage, onChatVoteUpdated, onOpponentDepositRequired, isConnected } = useSocket();
+	const { joinMatchRoom, leaveMatchRoom, sendMessage: socketSendMessage, onReceiveMessage, onChatVoteUpdated, onOpponentDepositRequired, onCourtCancelled, isConnected } = useSocket();
 
 	const [currentUserId, setCurrentUserId] = useState<string>('');
 	const [messages, setMessages] = useState<ChatMessageData[]>([]);
@@ -182,6 +182,17 @@ export const ChatPage: React.FC = () => {
 			}
 		});
 	}, [onOpponentDepositRequired, matchId]);
+
+	// Listen for court_cancelled — clear deposit banner & stop countdown
+	useEffect(() => {
+		onCourtCancelled((payload) => {
+			if (payload.matchId === matchId) {
+				setDepositInfo(null);
+				setDepositCountdown(0);
+				setDepositPaid(false);
+			}
+		});
+	}, [onCourtCancelled, matchId]);
 
 	// Deposit countdown timer
 	useEffect(() => {
