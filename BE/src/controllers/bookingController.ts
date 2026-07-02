@@ -598,8 +598,8 @@ export async function userBookCourt(req: Request, res: Response) {
 			const match = await Match.findById(match_id).session(session);
 			if (match) {
 				const dateStr = typeof date === 'string' ? date.split('T')[0] : new Date(date).toISOString().split('T')[0];
-				match.scheduled_at = new Date(`${dateStr}T${start_time}:00`);
-				match.scheduled_end_at = new Date(`${dateStr}T${end_time}:00`);
+				match.scheduled_at = new Date(`${dateStr}T${start_time}:00+07:00`);
+				match.scheduled_end_at = new Date(`${dateStr}T${end_time}:00+07:00`);
 				await match.save({ session });
 			}
 		}
