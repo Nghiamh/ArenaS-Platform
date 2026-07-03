@@ -2,6 +2,81 @@ import { Request, Response } from "express";
 import ChatMessage from "../models/chatMessageModel.js";
 import Match from "../models/matchModel.js";
 import { BookingModel } from "../models/bookingModel.js";
+import { getIo } from "../services/socketHandler.js";
+
+/**
+ * POST /api/chat/:matchId/send
+ * REST fallback to send a message when socket is unreliable.
+ * Saves to DB and broadcasts via socket if available.
+ */
+export async function sendMessage(req: Request, res: Response): Promise<void> {
+	try {
+		const user = req.user;
+		if (!user) {
+			res.status(401).json({ message: "unauthorized" });
+			return;
+		}
+
+		const { matchId } = req.params;
+		const { message } = req.body;
+		const userId = user._id!.toString();
+
+		if (!message?.trim()) {
+			res.status(400).json({ message: "message is required" });
+			return;
+		}
+
+		const match = await Match.findById(matchId).select("participants chat_deleted_by");
+		if (!match) {
+			res.status(404).json({ message: "match_not_found" });
+			return;
+		}
+
+		const isParticipant = match.participants.some((p: any) => p.toString() === userId);
+		if (!isParticipant) {
+			res.status(403).json({ message: "forbidden" });
+			return;
+		}
+
+		const totalParties = match.participants.length;
+		if (match.chat_deleted_by.length >= totalParties) {
+			res.status(403).json({ message: "chat_deleted" });
+			return;
+		}
+
+		const chatMessage = await ChatMessage.create({
+			match_id: matchId,
+			sender_id: userId,
+			message: message.trim(),
+		});
+
+		// Broadcast via socket if available
+		const io = getIo();
+		if (io) {
+			io.to(`match:${matchId}`).emit("receive_message", {
+				_id: chatMessage._id,
+				match_id: matchId,
+				sender_id: userId,
+				message: chatMessage.message,
+				createdAt: chatMessage.createdAt,
+			});
+		}
+
+		res.status(201).json({
+			success: true,
+			message: {
+				_id: chatMessage._id,
+				sender_id: userId,
+				message: chatMessage.message,
+				createdAt: chatMessage.createdAt,
+			},
+		});
+	} catch (error) {
+		console.error("sendMessage REST error:", error);
+		res.status(500).json({ message: "internal_error" });
+	}
+}
+
 
 /**
  * GET /api/chat/:matchId/history
