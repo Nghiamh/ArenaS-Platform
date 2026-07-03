@@ -39,7 +39,7 @@ function getSenderName(sender: ChatMessageData['sender_id']): string {
 export const ChatPage: React.FC = () => {
 	const { matchId } = useParams<{ matchId: string }>();
 	const navigate = useNavigate();
-	const { joinMatchRoom, leaveMatchRoom, sendMessage: socketSendMessage, onReceiveMessage, onOpponentDepositRequired, isConnected } = useSocket();
+	const { joinMatchRoom, leaveMatchRoom, sendMessage: socketSendMessage, onReceiveMessage, onOpponentDepositRequired, onCourtCancelled, isConnected } = useSocket();
 
 	const [currentUserId, setCurrentUserId] = useState<string>('');
 	const [messages, setMessages] = useState<ChatMessageData[]>([]);
