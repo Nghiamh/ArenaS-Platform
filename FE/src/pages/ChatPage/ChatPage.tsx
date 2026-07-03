@@ -4,16 +4,13 @@ import {
 	ArrowLeft,
 	Send,
 	ChevronDown,
-	Trash2,
 	Loader2,
-	MessageSquareOff,
 	ShieldAlert,
 	MapPin,
 	Clock,
 } from 'lucide-react';
 import {
 	getChatHistory,
-	voteChatDelete,
 	type ChatMessageData,
 } from '../../Axios/matchmakingApi';
 import { opponentPayBooking, getMatchPendingDeposit } from '../../Axios/Axios';
@@ -42,18 +39,13 @@ function getSenderName(sender: ChatMessageData['sender_id']): string {
 export const ChatPage: React.FC = () => {
 	const { matchId } = useParams<{ matchId: string }>();
 	const navigate = useNavigate();
-	const { joinMatchRoom, leaveMatchRoom, sendMessage: socketSendMessage, onReceiveMessage, onChatVoteUpdated, onOpponentDepositRequired, isConnected } = useSocket();
+	const { joinMatchRoom, leaveMatchRoom, sendMessage: socketSendMessage, onReceiveMessage, onOpponentDepositRequired, isConnected } = useSocket();
 
 	const [currentUserId, setCurrentUserId] = useState<string>('');
 	const [messages, setMessages] = useState<ChatMessageData[]>([]);
 	const [inputText, setInputText] = useState('');
 	const [loading, setLoading] = useState(true);
 	const [sending, setSending] = useState(false);
-	const [chatDeleted, setChatDeleted] = useState(false);
-	const [deleteVoting, setDeleteVoting] = useState(false);
-	const [deleteVotesRemaining, setDeleteVotesRemaining] = useState<number | null>(null);
-	const [canVote, setCanVote] = useState(false);
-	const [chatDeletedBy, setChatDeletedBy] = useState<string[]>([]);
 	const [showScrollFab, setShowScrollFab] = useState(false);
 	const [error, setError] = useState('');
 	const [courtId, setCourtId] = useState<string | null>(null);
@@ -111,34 +103,19 @@ export const ChatPage: React.FC = () => {
 		setLoading(true);
 		getChatHistory(matchId)
 			.then((res) => {
-				if (res.deleted) {
-					setChatDeleted(true);
-					setMessages([]);
-				} else {
-					setMessages(res.messages);
-					if (res.votesRemaining !== undefined) {
-						setDeleteVotesRemaining(res.votesRemaining);
-					}
-					if (res.chat_deleted_by !== undefined) {
-						setChatDeletedBy(res.chat_deleted_by);
-					}
-					if (res.canVote !== undefined) {
-						setCanVote(res.canVote);
-					}
-					if (res.court_id) {
-						setCourtId(res.court_id);
-					}
-					// Populate pending deposit info from API response
-					// (handles case where user missed the real-time socket event)
-					if (res.pending_deposit && !depositInfo && !depositPaid) {
-						setDepositInfo({
-							bookingId: res.pending_deposit.bookingId,
-							amount: res.pending_deposit.amount,
-							deadline: res.pending_deposit.deadline,
-						});
-						const remainingSec = Math.max(0, Math.floor((new Date(res.pending_deposit.deadline).getTime() - Date.now()) / 1000));
-						setDepositCountdown(remainingSec);
-					}
+				setMessages(res.messages ?? []);
+				if (res.court_id) {
+					setCourtId(res.court_id);
+				}
+				// Populate pending deposit info from API response
+				if (res.pending_deposit && !depositInfo && !depositPaid) {
+					setDepositInfo({
+						bookingId: res.pending_deposit.bookingId,
+						amount: res.pending_deposit.amount,
+						deadline: res.pending_deposit.deadline,
+					});
+					const remainingSec = Math.max(0, Math.floor((new Date(res.pending_deposit.deadline).getTime() - Date.now()) / 1000));
+					setDepositCountdown(remainingSec);
 				}
 			})
 			.catch((err) => {
@@ -195,21 +172,6 @@ export const ChatPage: React.FC = () => {
 		return () => clearInterval(timer);
 	}, [depositInfo, depositCountdown, depositPaid]);
 
-	// Listen for chat deletion/voting updates from socket
-	useEffect(() => {
-		onChatVoteUpdated((payload) => {
-			if (payload.matchId === matchId) {
-				setDeleteVotesRemaining(payload.votesRemaining);
-				if (payload.chat_deleted_by) {
-					setChatDeletedBy(payload.chat_deleted_by);
-				}
-				if (payload.deleted) {
-					setChatDeleted(true);
-					setMessages([]);
-				}
-			}
-		});
-	}, [onChatVoteUpdated, matchId]);
 
 	// Auto-scroll on initial load
 	useEffect(() => {
@@ -235,7 +197,7 @@ export const ChatPage: React.FC = () => {
 
 	// Send message
 	const handleSend = useCallback(() => {
-		if (!inputText.trim() || !matchId || sending || chatDeleted) return;
+		if (!inputText.trim() || !matchId || sending) return;
 
 		const text = inputText.trim();
 		setInputText('');
@@ -244,7 +206,7 @@ export const ChatPage: React.FC = () => {
 		socketSendMessage(matchId, text);
 		setSending(false);
 		inputRef.current?.focus();
-	}, [inputText, matchId, sending, chatDeleted, socketSendMessage]);
+	}, [inputText, matchId, sending, socketSendMessage]);
 
 	const handleKeyDown = useCallback(
 		(e: React.KeyboardEvent) => {
@@ -256,37 +218,6 @@ export const ChatPage: React.FC = () => {
 		[handleSend],
 	);
 
-	// Vote to delete chat
-	const handleVoteDelete = useCallback(async () => {
-		if (!matchId || deleteVoting) return;
-
-		const confirmed = window.confirm(
-			'Bạn muốn vote xoá lịch sử chat?\nCần cả 2 người chơi đồng ý mới xoá được.',
-		);
-		if (!confirmed) return;
-
-		setDeleteVoting(true);
-		try {
-			const res = await voteChatDelete(matchId);
-			setDeleteVotesRemaining(res.votesRemaining);
-			if (res.chat_deleted_by) {
-				setChatDeletedBy(res.chat_deleted_by);
-			}
-			if (res.deleted) {
-				setChatDeleted(true);
-				setMessages([]);
-			}
-		} catch (err: unknown) {
-			const msg = err instanceof Error ? err.message : 'Lỗi';
-			if (msg === 'already_voted') {
-				setError('Bạn đã vote xoá rồi.');
-			} else {
-				setError(msg);
-			}
-		} finally {
-			setDeleteVoting(false);
-		}
-	}, [matchId, deleteVoting]);
 
 	// Group consecutive messages by sender
 	const shouldShowSender = (msg: ChatMessageData, index: number): boolean => {
@@ -335,36 +266,8 @@ export const ChatPage: React.FC = () => {
 							</span>
 						</div>
 					</div>
-					{canVote && (
-						<button
-							type="button"
-							onClick={handleVoteDelete}
-							disabled={deleteVoting || chatDeleted || chatDeletedBy.includes(currentUserId)}
-							className={`flex items-center justify-center w-9 h-9 rounded-xl border transition disabled:opacity-40 disabled:cursor-not-allowed ${chatDeletedBy.includes(currentUserId)
-									? 'border-amber-500/30 bg-amber-500/10 text-amber-400'
-									: 'border-slate-700/60 bg-slate-800/50 text-slate-500 hover:bg-red-500/15 hover:text-red-400 hover:border-red-500/30'
-								}`}
-							title={chatDeletedBy.includes(currentUserId) ? 'Bạn đã vote xoá' : 'Vote xoá chat'}
-						>
-							{deleteVoting ? (
-								<Loader2 className="w-4 h-4 animate-spin" />
-							) : (
-								<Trash2 className="w-4 h-4" />
-							)}
-						</button>
-					)}
 				</div>
 			</div>
-
-			{/* Vote remaining banner */}
-			{deleteVotesRemaining != null && deleteVotesRemaining > 0 && !chatDeleted && (
-				<div className="mx-5 my-2 px-4 py-2.5 rounded-xl text-[0.8rem] border border-slate-700/60 bg-slate-800/60 flex items-center gap-2 text-amber-300">
-					<ShieldAlert className="w-4 h-4 shrink-0" />
-					<span>
-						Đã vote xoá. Còn cần <strong>{deleteVotesRemaining}</strong> vote nữa để xoá chat.
-					</span>
-				</div>
-			)}
 
 			{/* Error */}
 			{error && (
@@ -380,24 +283,8 @@ export const ChatPage: React.FC = () => {
 				</div>
 			)}
 
-			{/* Chat deleted */}
-			{chatDeleted && !loading && (
-				<div className="flex flex-col items-center justify-center flex-1 gap-4 p-8 animate-in fade-in slide-in-from-bottom-4">
-					<MessageSquareOff className="w-14 h-14 text-slate-600" />
-					<p className="text-slate-400 text-sm text-center">
-						Lịch sử chat đã được xoá bởi tất cả các bên.
-					</p>
-					<button
-						onClick={() => navigate('/matchmaking')}
-						className="text-blue-400 hover:underline text-sm"
-					>
-						Quay lại Tìm Đối Thủ
-					</button>
-				</div>
-			)}
-
 			{/* Messages */}
-			{!loading && !chatDeleted && (
+			{!loading && (
 				<>
 					<div
 						ref={messagesContainerRef}
