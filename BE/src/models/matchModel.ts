@@ -8,7 +8,6 @@ export interface IMatch extends Document {
 	court_id: Types.ObjectId;
 	sport: string;
 	match_score: number;
-	chat_deleted_by: Types.ObjectId[];
 	accepted_by: Types.ObjectId[];
 	checked_in_players: Types.ObjectId[];
 	confirmation_deadline?: Date;
@@ -54,12 +53,6 @@ const matchSchema = new Schema<IMatch, IMatchModel>(
 			required: true,
 			min: 0,
 			max: 100,
-		},
-		chat_deleted_by: {
-			type: [Schema.Types.ObjectId],
-			required: true,
-			default: [],
-			ref: "User",
 		},
 		accepted_by: {
 			type: [Schema.Types.ObjectId],

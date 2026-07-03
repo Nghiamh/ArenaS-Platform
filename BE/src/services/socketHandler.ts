@@ -137,22 +137,6 @@ export function setupSocketHandlers(io: SocketServer): void {
 						return;
 					}
 
-					// Check if chat has been deleted for this match
-					const match = await Match.findById(matchId);
-					if (!match) {
-						socket.emit("error", { message: "Match not found" });
-						return;
-					}
-
-					// All participants must agree to delete chat; if they have, block new messages
-					const totalParties = match.participants.length; // 2 players
-					if (match.chat_deleted_by.length >= totalParties) {
-						socket.emit("error", {
-							message: "Chat has been deleted for this match",
-						});
-						return;
-					}
-
 					// Save message to database
 					const chatMessage = await ChatMessage.create({
 						match_id: matchId,
