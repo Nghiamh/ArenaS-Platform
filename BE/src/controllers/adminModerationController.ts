@@ -100,8 +100,10 @@ export async function adminGetReviewStats(req: Request, res: Response) {
     }));
 
     const totalReviews = stats.reduce((sum, s) => sum + s.totalReviews, 0);
+    const totalRatingSum = raw.reduce((sum, s) => sum + ((s.avgRating as number) * (s.totalReviews as number)), 0);
+    const avgRating = totalReviews > 0 ? Math.round((totalRatingSum / totalReviews) * 10) / 10 : 0;
 
-    return res.status(200).json({ stats, totalReviews });
+    return res.status(200).json({ stats, totalReviews, avgRating });
   } catch (err) {
     console.error('adminGetReviewStats:', err);
     return res.status(500).json({ error: 'internal_server_error' });

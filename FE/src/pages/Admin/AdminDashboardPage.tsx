@@ -82,6 +82,7 @@ export const AdminDashboardPage: React.FC = () => {
   const [incomeItems,  setIncomeItems]  = useState<AdminIncomeEntry[]>([]);
   const [reviewStats,  setReviewStats]  = useState<CourtReviewStat[]>([]);
   const [totalReviews, setTotalReviews] = useState(0);
+  const [avgRating,    setAvgRating]    = useState(0);
   const [adminName,    setAdminName]    = useState('');
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState('');
@@ -110,6 +111,7 @@ export const AdminDashboardPage: React.FC = () => {
       if (reviewRes) {
         setReviewStats(reviewRes.stats);
         setTotalReviews(reviewRes.totalReviews);
+        setAvgRating(reviewRes.avgRating);
       }
       if (profileRes) setAdminName(profileRes.user.name);
     } catch (err) {
@@ -213,16 +215,16 @@ export const AdminDashboardPage: React.FC = () => {
     },
     {
       label: 'Tổng đánh giá',
-      value: loading ? null : totalReviews,
-      sub: loading ? null : reviewStats.length > 0
-        ? `trung bình ${(reviewStats.reduce((s, r) => s + r.avgRating, 0) / reviewStats.length).toFixed(1)}★ toàn hệ thống`
+      value: loading ? null : totalReviews > 0 ? `${avgRating.toFixed(1)} ★` : '—',
+      sub: loading ? null : totalReviews > 0
+        ? `tổng số ${totalReviews} đánh giá`
         : 'chưa có đánh giá',
       icon: '⭐',
       gradient: 'from-yellow-500/15 to-amber-600/10',
       border: 'border-yellow-500/20',
       valueColor: 'text-yellow-100',
     },
-  ], [loading, totalCourts, activeCourts, pendingCourts.length, incomeSummary, revenueTrend, totalReviews, reviewStats]);
+  ], [loading, totalCourts, activeCourts, pendingCourts.length, incomeSummary, revenueTrend, totalReviews, avgRating]);
 
   return (
     <AdminLayout activeKey="dashboard">
