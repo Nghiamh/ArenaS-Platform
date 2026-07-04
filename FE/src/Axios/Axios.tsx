@@ -1765,7 +1765,7 @@ export type CourtReviewStat = {
   avgRating: number;
 };
 
-export async function adminGetReviewStats(): Promise<{ stats: CourtReviewStat[]; totalReviews: number }> {
+export async function adminGetReviewStats(): Promise<{ stats: CourtReviewStat[]; totalReviews: number; avgRating: number }> {
   try {
     const { data } = await axiosClient.get('/admin/moderation/review-stats', {
       headers: withAuthHeaders(),
