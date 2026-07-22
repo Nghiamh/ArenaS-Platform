@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { AdminLayout } from '../../components';
 import {
@@ -397,6 +397,9 @@ export const AdminManageUsersPage: React.FC = () => {
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState('');
 
+  // ── System-wide counts (independent of current page/filters) ───────────
+  const [systemStats, setSystemStats] = useState({ owners: 0, banned: 0, active: 0 });
+
   // ── Filter state ─────────────────────────────────────────────────────────
   const [keyword,      setKeyword]      = useState('');
   const [roleFilter,   setRoleFilter]   = useState<'all' | AdminUserRole>('all');
@@ -446,6 +449,17 @@ export const AdminManageUsersPage: React.FC = () => {
     fetchUsers(1, keyword, roleFilter, statusFilter);
   }, [roleFilter, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // System-wide totals for the stat cards — independent of the table's current filters
+  useEffect(() => {
+    Promise.all([
+      adminGetAllUsers({ page: 1, limit: 1, role: 'owner' }),
+      adminGetAllUsers({ page: 1, limit: 1, status: 'banned' }),
+      adminGetAllUsers({ page: 1, limit: 1, status: 'active' }),
+    ]).then(([ownersRes, bannedRes, activeRes]) => {
+      setSystemStats({ owners: ownersRes.total, banned: bannedRes.total, active: activeRes.total });
+    }).catch(() => {});
+  }, []);
+
   // Debounce search
   const handleKeywordChange = (value: string) => {
     setKeyword(value);
@@ -456,14 +470,6 @@ export const AdminManageUsersPage: React.FC = () => {
   };
 
   const refetch = (p = 1) => fetchUsers(p, keyword, roleFilter, statusFilter);
-
-  // ── Stats ──────────────────────────────────────────────────────────────
-  const stats = useMemo(() => ({
-    total:   users.filter(u => u.role === 'user').length,
-    owners:  users.filter(u => u.role === 'owner').length,
-    admins:  users.filter(u => u.role === 'admin').length,
-    banned:  users.filter(u => u.isBanned).length,
-  }), [users]);
 
   // ── Open Form ──────────────────────────────────────────────────────────
   const openAdd = () => {
@@ -616,13 +622,13 @@ export const AdminManageUsersPage: React.FC = () => {
             </div>
           </div>
 
-          {/* ── Stat Cards (from current page data) ── */}
+          {/* ── Stat Cards (system-wide totals) ── */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
-              { label: 'Tổng (trang này)', value: loading ? '…' : users.length,   grad: 'from-slate-700/40 to-slate-800/20',    border: 'border-white/[0.07]',    text: 'text-white' },
-              { label: 'Tổng hệ thống',   value: loading ? '…' : total,           grad: 'from-blue-500/15 to-indigo-600/10',   border: 'border-blue-500/20',     text: 'text-blue-100' },
-              { label: 'Chủ sân',         value: loading ? '…' : stats.owners,    grad: 'from-violet-500/15 to-purple-600/10', border: 'border-violet-500/20',   text: 'text-violet-100' },
-              { label: 'Đã khóa',         value: loading ? '…' : stats.banned,    grad: 'from-rose-500/15 to-red-600/10',      border: 'border-rose-500/20',     text: 'text-rose-100' },
+              { label: 'Tổng người dùng', value: loading ? '…' : total,             grad: 'from-blue-500/15 to-indigo-600/10',   border: 'border-blue-500/20',     text: 'text-blue-100' },
+              { label: 'Chủ sân',         value: loading ? '…' : systemStats.owners, grad: 'from-violet-500/15 to-purple-600/10', border: 'border-violet-500/20',   text: 'text-violet-100' },
+              { label: 'Đã khóa',         value: loading ? '…' : systemStats.banned, grad: 'from-rose-500/15 to-red-600/10',      border: 'border-rose-500/20',     text: 'text-rose-100' },
+              { label: 'Đang hoạt động',  value: loading ? '…' : systemStats.active, grad: 'from-emerald-500/15 to-teal-600/10',  border: 'border-emerald-500/20',  text: 'text-emerald-100' },
             ].map(s => (
               <div key={s.label} className={`rounded-2xl border ${s.border} bg-gradient-to-br ${s.grad} p-4`}>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">{s.label}</p>

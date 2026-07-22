@@ -95,6 +95,21 @@ type FormModalProps = {
   onClose: () => void;
 };
 
+type FieldProps = {
+  name: keyof VoucherForm;
+  label: string;
+  error?: string;
+  children: React.ReactNode;
+};
+
+const Field: React.FC<FieldProps> = ({ label, error, children }) => (
+  <div>
+    <label className={labelCls}>{label}</label>
+    {children}
+    {error && <p className="mt-1 text-xs text-rose-400">{error}</p>}
+  </div>
+);
+
 const VoucherFormModal: React.FC<FormModalProps> = ({ mode, initial, saving, onSave, onClose }) => {
   const [form, setForm] = useState<VoucherForm>(initial);
   const set = (patch: Partial<VoucherForm>) => setForm(p => ({ ...p, ...patch }));
@@ -114,14 +129,6 @@ const VoucherFormModal: React.FC<FormModalProps> = ({ mode, initial, saving, onS
     setErrors(e);
     return Object.keys(e).length === 0;
   };
-
-  const Field: React.FC<{ name: keyof VoucherForm; label: string; children: React.ReactNode }> = ({ name, label, children }) => (
-    <div>
-      <label className={labelCls}>{label}</label>
-      {children}
-      {errors[name] && <p className="mt-1 text-xs text-rose-400">{errors[name]}</p>}
-    </div>
-  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
@@ -156,16 +163,16 @@ const VoucherFormModal: React.FC<FormModalProps> = ({ mode, initial, saving, onS
             </div>
           </div>
 
-          <Field name="code" label="Mã voucher">
+          <Field name="code" label="Mã voucher" error={errors.code}>
             <input className={inputCls} value={form.code} onChange={e => set({ code: e.target.value.toUpperCase() })} placeholder="VD: ARENA20" />
           </Field>
-          <Field name="name" label="Tên / mô tả">
+          <Field name="name" label="Tên / mô tả" error={errors.name}>
             <input className={inputCls} value={form.name} onChange={e => set({ name: e.target.value })} placeholder="VD: Giảm 20% lần đầu" />
           </Field>
 
           {form.source === 'partner' && (
             <div className="col-span-2">
-              <Field name="partnerName" label="Tên đối tác">
+              <Field name="partnerName" label="Tên đối tác" error={errors.partnerName}>
                 <input className={inputCls} value={form.partnerName} onChange={e => set({ partnerName: e.target.value })} placeholder="VD: Pepsi VN, Nike..." />
               </Field>
             </div>
@@ -183,22 +190,22 @@ const VoucherFormModal: React.FC<FormModalProps> = ({ mode, initial, saving, onS
             </div>
           </div>
 
-          <Field name="discountValue" label={form.discountType === 'percent' ? 'Mức giảm (%)' : 'Số tiền giảm (₫)'}>
+          <Field name="discountValue" label={form.discountType === 'percent' ? 'Mức giảm (%)' : 'Số tiền giảm (₫)'} error={errors.discountValue}>
             <input className={inputCls} type="number" min={0} value={form.discountValue} onChange={e => set({ discountValue: e.target.value })} placeholder={form.discountType === 'percent' ? '20' : '50000'} />
           </Field>
-          <Field name="minOrderValue" label="Đơn tối thiểu (₫)">
+          <Field name="minOrderValue" label="Đơn tối thiểu (₫)" error={errors.minOrderValue}>
             <input className={inputCls} type="number" min={0} value={form.minOrderValue} onChange={e => set({ minOrderValue: e.target.value })} placeholder="0 = không giới hạn" />
           </Field>
-          <Field name="maxUses" label="Số lần dùng tối đa">
+          <Field name="maxUses" label="Số lần dùng tối đa" error={errors.maxUses}>
             <input className={inputCls} type="number" min={1} value={form.maxUses} onChange={e => set({ maxUses: e.target.value })} placeholder="500" />
           </Field>
-          <Field name="pointsCost" label="Chi phí đổi bằng điểm (0 = miễn phí)">
+          <Field name="pointsCost" label="Chi phí đổi bằng điểm (0 = miễn phí)" error={errors.pointsCost}>
             <input className={inputCls} type="number" min={0} value={form.pointsCost} onChange={e => set({ pointsCost: e.target.value })} placeholder="0 = không cần điểm" />
           </Field>
-          <Field name="startDate" label="Ngày bắt đầu">
+          <Field name="startDate" label="Ngày bắt đầu" error={errors.startDate}>
             <input className={inputCls} type="date" value={form.startDate} onChange={e => set({ startDate: e.target.value })} />
           </Field>
-          <Field name="expiryDate" label="Ngày hết hạn">
+          <Field name="expiryDate" label="Ngày hết hạn" error={errors.expiryDate}>
             <input className={inputCls} type="date" value={form.expiryDate} onChange={e => set({ expiryDate: e.target.value })} />
           </Field>
         </div>
