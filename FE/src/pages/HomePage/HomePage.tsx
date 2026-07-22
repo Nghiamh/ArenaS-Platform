@@ -883,7 +883,7 @@ export const HomePage: React.FC = () => {
 
             <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#101011] p-3 shadow-[0_30px_70px_-30px_rgba(var(--accent-primary-rgb),0.15)]">
               <img
-                src="https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=900&auto=format&fit=crop"
+                src="https://res.cloudinary.com/dbtjki0vq/image/upload/v1784705324/snapedit_1784705232181_spdtd3.jpg"
                 alt="ArenaS Mobile App"
                 className="h-[420px] w-full rounded-[1.6rem] object-cover object-center"
               />
