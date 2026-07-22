@@ -11,7 +11,7 @@ import {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const fmt    = (v: number) => new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(v);
-const fmtM   = (v: number) => `${(v / 1_000_000).toFixed(1)}M₫`;
+const fmtVnd = (v: number) => `${fmt(v)}₫`;
 const fmtDate = (iso: string) => {
   const d = new Date(iso);
   return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -178,14 +178,14 @@ export const AdminIncomePage: React.FC = () => {
             {/* Total */}
             <div className="sm:col-span-2 lg:col-span-1 rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/15 to-teal-600/10 p-5">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-400">Tổng doanh thu</p>
-              <p className="mt-2 text-2xl font-black text-emerald-100">{summary ? fmtM(summary.totalRevenue) : '—'}</p>
+              <p className="mt-2 text-2xl font-black text-emerald-100">{summary ? fmtVnd(summary.totalRevenue) : '—'}</p>
               <p className="mt-1 text-[11px] text-slate-500">Tích lũy tất cả thời gian</p>
             </div>
 
             {/* This month */}
             <div className="rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/15 to-blue-600/10 p-5">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-400">{monthLabel(0)}</p>
-              <p className="mt-2 text-2xl font-black text-cyan-100">{summary ? fmtM(summary.thisMonthRevenue) : '—'}</p>
+              <p className="mt-2 text-2xl font-black text-cyan-100">{summary ? fmtVnd(summary.thisMonthRevenue) : '—'}</p>
               {summary && (
                 <p className={`mt-1 inline-flex items-center gap-1 text-[11px] font-semibold ${growth >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                   {growth >= 0 ? <TrendUpIcon /> : <TrendDownIcon />}
@@ -197,14 +197,14 @@ export const AdminIncomePage: React.FC = () => {
             {/* Deposits */}
             <div className="rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-500/15 to-cyan-600/10 p-5">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-400">Nạp tiền ví</p>
-              <p className="mt-2 text-2xl font-black text-sky-100">{summary ? fmtM(summary.depositTotal) : '—'}</p>
+              <p className="mt-2 text-2xl font-black text-sky-100">{summary ? fmtVnd(summary.depositTotal) : '—'}</p>
               <p className="mt-1 text-[11px] text-slate-500">{summary?.depositCount.toLocaleString('vi-VN') ?? '—'} giao dịch</p>
             </div>
 
             {/* Subscriptions */}
             <div className="rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/15 to-purple-600/10 p-5">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-400">Mua gói</p>
-              <p className="mt-2 text-2xl font-black text-violet-100">{summary ? fmtM(summary.subscriptionTotal) : '—'}</p>
+              <p className="mt-2 text-2xl font-black text-violet-100">{summary ? fmtVnd(summary.subscriptionTotal) : '—'}</p>
               <p className="mt-1 text-[11px] text-slate-500">{summary?.subscriptionCount.toLocaleString('vi-VN') ?? '—'} đơn</p>
             </div>
           </div>

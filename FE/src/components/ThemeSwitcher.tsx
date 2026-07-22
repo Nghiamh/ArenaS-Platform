@@ -68,13 +68,11 @@ export const ThemeSwitcher: React.FC = () => {
                 <button
                   key={theme.id}
                   onClick={() => handleThemeChange(theme.id)}
-                  className="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold transition"
-                  style={{
-                    color: currentTheme === theme.id ? 'white' : 'rgba(255,255,255,0.65)',
-                    backgroundColor: currentTheme === theme.id ? 'rgba(var(--accent-primary-rgb),0.12)' : '',
-                  }}
-                  onMouseEnter={e => { if (currentTheme !== theme.id) (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'); }}
-                  onMouseLeave={e => { if (currentTheme !== theme.id) (e.currentTarget.style.backgroundColor = ''); }}
+                  className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                    currentTheme === theme.id 
+                      ? 'text-white bg-white/10' 
+                      : 'text-white/60 hover:bg-white/5'
+                  }`}
                 >
                   <span>{theme.name}</span>
                   <div className="flex -space-x-1">

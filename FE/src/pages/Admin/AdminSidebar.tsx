@@ -137,7 +137,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeKey, collapsed
     <motion.aside
       animate={{ width: collapsed ? COLLAPSED_W : EXPANDED_W }}
       transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-      className="relative flex h-screen shrink-0 flex-col overflow-hidden border-r border-white/[0.06]"
+      className="sticky top-0 relative flex h-screen shrink-0 flex-col overflow-hidden border-r border-white/[0.06]"
       style={{
         background: 'linear-gradient(180deg, #080D1A 0%, #060A14 50%, #070B16 100%)',
       }}

@@ -36,6 +36,7 @@ import { VietQRPaymentPage } from './pages/CheckoutPage/VietQRPaymentPage';
 import { MatchmakingPage } from './pages/MatchmakingPage/MatchmakingPage';
 import { ChatPage } from './pages/ChatPage/ChatPage';
 import { UserVoucherPage } from './pages/VoucherPage/UserVoucherPage';
+import { DownloadAppPage } from './pages/DownloadAppPage/DownloadAppPage';
 import './index.css';
 
 function App() {
@@ -58,6 +59,7 @@ function App() {
         <Route path="/tim-san" element={<Layout><FindFieldPage /></Layout>} />
         <Route path="/bang-gia" element={<Layout><PriceListPage /></Layout>} />
         <Route path="/courts/:courtId" element={<Layout><CourtDetailPage /></Layout>} />
+        <Route path="/download-app" element={<Layout><DownloadAppPage /></Layout>} />
 
         {/* ─── Public (informational) pages ────────────────── */}
         <Route
