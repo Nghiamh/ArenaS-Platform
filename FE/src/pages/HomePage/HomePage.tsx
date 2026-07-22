@@ -831,7 +831,7 @@ export const HomePage: React.FC = () => {
                 <rect x="7" y="2" width="10" height="20" rx="2" />
                 <path d="M11 18h2" />
               </svg>
-              Có mặt trên iOS & Android
+              Có mặt trên Android
             </div>
 
             <h3 className="mt-6 text-4xl font-black leading-tight text-white md:text-6xl font-montserrat tracking-tight">
@@ -844,30 +844,22 @@ export const HomePage: React.FC = () => {
             </p>
 
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-              <button className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#101011] px-6 py-4 text-left transition hover:border-accent-primary/50 hover:bg-[#1A1A1C]">
+              <a
+                href="https://apkpure.com/arenas/com.arenas.mobile"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#101011] px-6 py-4 text-left transition hover:border-accent-secondary/50 hover:bg-[#1A1A1C] w-fit"
+              >
                 <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white text-[#0A0A0B]">
                   <svg viewBox="0 0 24 24" className="h-7 w-7" fill="currentColor">
-                    <path d="M16.2 12.8c0-2.2 1.8-3.3 1.9-3.4-1-1.5-2.6-1.7-3.2-1.8-1.4-.1-2.7.8-3.4.8-.7 0-1.8-.8-2.9-.8-1.5 0-2.9.9-3.7 2.2-1.6 2.8-.4 6.9 1.1 9 .8 1 1.7 2.1 2.9 2 .9 0 1.3-.6 2.5-.6 1.2 0 1.5.6 2.5.5 1-.1 1.7-1 2.4-2 .8-1.1 1.1-2.1 1.1-2.2-.1 0-2.2-.8-2.2-3.6z" />
-                    <path d="M13.8 6.1c.6-.8 1.1-1.8 1-2.9-.9 0-2 .6-2.6 1.3-.6.7-1.1 1.8-1 2.8 1 .1 2-.5 2.6-1.2z" />
+                    <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4483-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993.0004.5511-.4482.9997-.9993.9997zm-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997zm11.4045-6.02l1.9973-3.4592c.1158-.201.0474-.4573-.1535-.5731-.2015-.1162-.4573-.0474-.5731.1534l-2.0207 3.4996c-1.458-.6692-3.1368-1.0452-4.9315-1.0452-1.7947 0-3.4735.376-4.9315 1.0452L5.2478 5.4424c-.1158-.2008-.3716-.2696-.5731-.1534-.2009.1158-.2693.3721-.1535.5731l1.9973 3.4592C2.695 11.4422.3857 15.006.0594 19.1678h23.8812c-.3263-4.1618-2.6356-7.7256-6.0591-9.8464z" />
                   </svg>
                 </span>
                 <span>
-                  <span className="block text-[10px] font-bold uppercase tracking-widest text-slate-500">Tải về trên</span>
-                  <span className="block text-2xl font-black leading-none text-white">App Store</span>
+                  <span className="block text-[10px] font-bold uppercase tracking-widest text-slate-500">Tải về trực tiếp</span>
+                  <span className="block text-2xl font-black leading-none text-white">APK</span>
                 </span>
-              </button>
-
-              <button className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#101011] px-6 py-4 text-left transition hover:border-accent-secondary/50 hover:bg-[#1A1A1C]">
-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white text-[#0A0A0B]">
-                  <svg viewBox="0 0 24 24" className="h-7 w-7" fill="currentColor">
-                    <path d="M3.5 2.3l11.2 9.5-3.2 3.2L3.5 2.3zm0 19.4l8.1-12.2 3.2 3.2-11.3 9zm12.4-7.6l2.8-2.1c1-.8 1-1.9 0-2.7L16 7.2l-3.4 3.4 3.3 3.5z" />
-                  </svg>
-                </span>
-                <span>
-                  <span className="block text-[10px] font-bold uppercase tracking-widest text-slate-500">Tải về tại</span>
-                  <span className="block text-2xl font-black leading-none text-white">Google Play</span>
-                </span>
-              </button>
+              </a>
             </div>
           </div>
 
