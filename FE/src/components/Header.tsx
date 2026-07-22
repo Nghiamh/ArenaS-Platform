@@ -102,9 +102,10 @@ export const Header: React.FC = () => {
             <span className="text-xl font-black font-montserrat uppercase tracking-[0.18em] text-slate-200">ArenaS</span>
           </Link>
 
-          <Link to="/tim-san" className="text-sm font-semibold text-white/75 transition hover:text-accent-primary">
-            Tìm Sân
-          </Link>
+          <nav className="hidden lg:flex items-center gap-6">
+            <Link to="/tim-san" className="text-sm font-semibold text-white/75 transition hover:text-accent-primary">
+              Tìm Sân
+            </Link>
           {isPlayerAccount && (
             <Link to="/matchmaking" className="text-sm font-semibold text-white/75 transition hover:text-accent-primary">
               Tìm Đối Thủ
