@@ -207,8 +207,12 @@ export async function processWithdrawal(req: Request, res: Response) {
 export async function getWithdrawalRequests(req: Request, res: Response) {
 	try {
 		const user = req.user!;
-		const query: any = {};
 
+		if (user.role !== "admin" && user.role !== "owner") {
+			return res.status(403).json({ error: "forbidden" });
+		}
+
+		const query: any = {};
 		if (user.role === "owner") {
 			query.ownerId = user._id;
 		}

@@ -8,6 +8,7 @@ import {
   adminRejectCourt,
   getCurrentUserProfile,
   adminGetReviewStats,
+  adminGetAllUsers,
   type AdminCourt,
   type AdminIncomeSummary,
   type AdminIncomeEntry,
@@ -52,7 +53,7 @@ const TrendDownIcon = () => (
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const fmt = (v: number) => new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(v);
-const fmtM = (v: number) => `${(v / 1_000_000).toFixed(1)}M₫`;
+const fmtVnd = (v: number) => `${fmt(v)}₫`;
 const fmtDate = (iso: string) => {
   try {
     return new Date(iso).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -83,6 +84,7 @@ export const AdminDashboardPage: React.FC = () => {
   const [reviewStats,  setReviewStats]  = useState<CourtReviewStat[]>([]);
   const [totalReviews, setTotalReviews] = useState(0);
   const [avgRating,    setAvgRating]    = useState(0);
+  const [totalUsers,   setTotalUsers]   = useState(0);
   const [adminName,    setAdminName]    = useState('');
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState('');
@@ -98,11 +100,12 @@ export const AdminDashboardPage: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const [courtsRes, incomeRes, profileRes, reviewRes] = await Promise.all([
+      const [courtsRes, incomeRes, profileRes, reviewRes, usersRes] = await Promise.all([
         adminGetAllCourts({ limit: 200 }),
         adminGetIncome({ limit: 5 }),
         getCurrentUserProfile().catch(() => null),
         adminGetReviewStats().catch(() => null),
+        adminGetAllUsers({ limit: 1 }).catch(() => null),
       ]);
       setCourts(courtsRes.courts);
       setTotalCourts(courtsRes.total);
@@ -113,6 +116,7 @@ export const AdminDashboardPage: React.FC = () => {
         setTotalReviews(reviewRes.totalReviews);
         setAvgRating(reviewRes.avgRating);
       }
+      if (usersRes) setTotalUsers(usersRes.total);
       if (profileRes) setAdminName(profileRes.user.name);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Lỗi tải dữ liệu');
@@ -196,16 +200,16 @@ export const AdminDashboardPage: React.FC = () => {
     },
     {
       label: 'Tổng doanh thu',
-      value: loading ? null : incomeSummary ? fmtM(incomeSummary.totalRevenue) : '—',
-      sub: incomeSummary ? `${(incomeSummary.depositCount + incomeSummary.subscriptionCount).toLocaleString()} giao dịch` : '—',
+      value: loading ? null : incomeSummary ? fmtVnd(incomeSummary.totalRevenue) : '—',
+      sub: incomeSummary ? `${fmt(incomeSummary.depositCount + incomeSummary.subscriptionCount)} giao dịch` : '—',
       icon: '💰',
       gradient: 'from-emerald-500/15 to-green-600/10',
       border: 'border-emerald-500/20',
       valueColor: 'text-emerald-100',
     },
     {
-      label: 'Doanh thu tháng này',
-      value: loading ? null : incomeSummary ? fmtM(incomeSummary.thisMonthRevenue) : '—',
+      label: 'Doanh thu tháng',
+      value: loading ? null : incomeSummary ? fmtVnd(incomeSummary.thisMonthRevenue) : '—',
       sub: revenueTrend !== null ? `${revenueTrend >= 0 ? '+' : ''}${revenueTrend}% so tháng trước` : 'Đang tính...',
       trend: revenueTrend,
       icon: '📈',
@@ -217,14 +221,23 @@ export const AdminDashboardPage: React.FC = () => {
       label: 'Tổng đánh giá',
       value: loading ? null : totalReviews > 0 ? `${avgRating.toFixed(1)} ★` : '—',
       sub: loading ? null : totalReviews > 0
-        ? `tổng số ${totalReviews} đánh giá`
+        ? `tổng số ${fmt(totalReviews)} đánh giá`
         : 'chưa có đánh giá',
       icon: '⭐',
       gradient: 'from-yellow-500/15 to-amber-600/10',
       border: 'border-yellow-500/20',
       valueColor: 'text-yellow-100',
     },
-  ], [loading, totalCourts, activeCourts, pendingCourts.length, incomeSummary, revenueTrend, totalReviews, avgRating]);
+    {
+      label: 'Tổng người dùng',
+      value: loading ? null : fmt(totalUsers),
+      sub: 'tài khoản đã đăng ký',
+      icon: '👥',
+      gradient: 'from-sky-500/15 to-indigo-600/10',
+      border: 'border-sky-500/20',
+      valueColor: 'text-sky-100',
+    },
+  ], [loading, totalCourts, activeCourts, pendingCourts.length, incomeSummary, revenueTrend, totalReviews, avgRating, totalUsers]);
 
   return (
     <AdminLayout activeKey="dashboard">
@@ -268,7 +281,7 @@ export const AdminDashboardPage: React.FC = () => {
           )}
 
           {/* ── Stat Cards ── */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             {statCards.map((card, idx) => (
               <div
                 key={idx}
@@ -276,18 +289,18 @@ export const AdminDashboardPage: React.FC = () => {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">{card.label}</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400 truncate">{card.label}</p>
                     <div className="mt-2 min-h-[2rem]">
                       {loading ? (
                         <Skeleton className="h-8 w-24" />
                       ) : (
-                        <p className={`text-2xl font-black tracking-tight ${card.valueColor}`}>{card.value}</p>
+                        <p className={`text-2xl font-black tracking-tight truncate ${card.valueColor}`}>{card.value}</p>
                       )}
                     </div>
                     {!loading && (
-                      <p className="mt-1.5 flex items-center gap-1 text-[11px] text-slate-500">
+                      <p className="mt-1.5 flex items-center gap-1 text-[11px] text-slate-500 truncate">
                         {'trend' in card && card.trend !== null && card.trend !== undefined && (
-                          <span className={card.trend >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                          <span className={`shrink-0 ${card.trend >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                             {card.trend >= 0 ? <TrendUpIcon /> : <TrendDownIcon />}
                           </span>
                         )}
@@ -317,37 +330,42 @@ export const AdminDashboardPage: React.FC = () => {
               </div>
 
               {loading ? (
-                <div className="grid grid-cols-2 gap-3">
-                  {[1,2,3,4].map(i => <Skeleton key={i} className="h-20" />)}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                  {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-20" />)}
                 </div>
               ) : incomeSummary ? (
                 <>
-                  <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
                     <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/10 p-4">
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-cyan-400">Nạp tiền ví</p>
-                      <p className="mt-1.5 text-xl font-black text-cyan-100">{fmtM(incomeSummary.depositTotal)}</p>
+                      <p className="mt-1.5 text-lg font-black text-cyan-100 truncate">{fmtVnd(incomeSummary.depositTotal)}</p>
                       <p className="mt-0.5 text-[11px] text-slate-500">{incomeSummary.depositCount} giao dịch</p>
                     </div>
                     <div className="rounded-xl border border-violet-500/20 bg-violet-500/10 p-4">
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-violet-400">Mua gói</p>
-                      <p className="mt-1.5 text-xl font-black text-violet-100">{fmtM(incomeSummary.subscriptionTotal)}</p>
+                      <p className="mt-1.5 text-lg font-black text-violet-100 truncate">{fmtVnd(incomeSummary.subscriptionTotal)}</p>
                       <p className="mt-0.5 text-[11px] text-slate-500">{incomeSummary.subscriptionCount} gói</p>
                     </div>
+                    <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-400">Tổng giao dịch</p>
+                      <p className="mt-1.5 text-lg font-black text-amber-100">{fmt(incomeSummary.depositCount + incomeSummary.subscriptionCount)}</p>
+                      <p className="mt-0.5 text-[11px] text-slate-500">tất cả thời gian</p>
+                    </div>
                     <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400">Tháng này</p>
                         {revenueTrend !== null && (
-                          <span className={`flex items-center gap-0.5 text-[10px] font-bold ${revenueTrend >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          <span className={`flex items-center gap-0.5 shrink-0 text-[10px] font-bold ${revenueTrend >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                             {revenueTrend >= 0 ? <TrendUpIcon /> : <TrendDownIcon />}
                             {Math.abs(revenueTrend)}%
                           </span>
                         )}
                       </div>
-                      <p className="mt-1.5 text-xl font-black text-emerald-100">{fmtM(incomeSummary.thisMonthRevenue)}</p>
+                      <p className="mt-1.5 text-lg font-black text-emerald-100 truncate">{fmtVnd(incomeSummary.thisMonthRevenue)}</p>
                     </div>
                     <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Tháng trước</p>
-                      <p className="mt-1.5 text-xl font-black text-slate-300">{fmtM(incomeSummary.lastMonthRevenue)}</p>
+                      <p className="mt-1.5 text-lg font-black text-slate-300 truncate">{fmtVnd(incomeSummary.lastMonthRevenue)}</p>
                     </div>
                   </div>
 
