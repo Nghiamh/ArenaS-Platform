@@ -98,10 +98,11 @@ type DetailModalProps = {
   onReject: (id: string, reason: string) => void;
   onRevoke: (id: string) => void;
   loading: boolean;
+  initialRejectMode?: boolean;
 };
 
-const DetailModal: React.FC<DetailModalProps> = ({ app, onClose, onApprove, onReject, onRevoke, loading }) => {
-  const [rejectMode, setRejectMode] = useState(false);
+const DetailModal: React.FC<DetailModalProps> = ({ app, onClose, onApprove, onReject, onRevoke, loading, initialRejectMode = false }) => {
+  const [rejectMode, setRejectMode] = useState(initialRejectMode);
   const [reason, setReason] = useState('');
   const [revokeConfirm, setRevokeConfirm] = useState(false);
   const user = resolveUser(app);
@@ -164,6 +165,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ app, onClose, onApprove, onRe
           <div>
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Hồ sơ đăng ký chủ sân</p>
             <div className="grid grid-cols-2 gap-4 rounded-xl border border-white/8 bg-white/[0.03] p-4">
+              {field('Họ và tên', app.contactName)}
               {field('Tên sân / Doanh nghiệp', app.businessName)}
               {field('Địa chỉ kinh doanh', app.businessAddress)}
               {field('Số điện thoại liên hệ', app.phone)}
@@ -311,6 +313,7 @@ export const AdminManageOwnerApplicationPage: React.FC = () => {
   const [fetchError, setFetchError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [selectedApp, setSelectedApp] = useState<OwnerApplication | null>(null);
+  const [selectedAppRejectMode, setSelectedAppRejectMode] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
@@ -346,6 +349,7 @@ export const AdminManageOwnerApplicationPage: React.FC = () => {
       await adminApproveOwnerApplication(id);
       showToast('Đã duyệt hồ sơ. Tài khoản đã được nâng cấp lên chủ sân.');
       setSelectedApp(null);
+      setSelectedAppRejectMode(false);
       fetchData(page, statusFilter);
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : 'Không thể duyệt hồ sơ.', 'error');
@@ -360,6 +364,7 @@ export const AdminManageOwnerApplicationPage: React.FC = () => {
       await adminRejectOwnerApplication(id, reason);
       showToast('Đã từ chối hồ sơ.');
       setSelectedApp(null);
+      setSelectedAppRejectMode(false);
       fetchData(page, statusFilter);
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : 'Không thể từ chối hồ sơ.', 'error');
@@ -374,6 +379,7 @@ export const AdminManageOwnerApplicationPage: React.FC = () => {
       await adminRevokeOwnerApplication(id);
       showToast('Đã hạ cấp về User. Trạng thái chủ sân đã bị xóa khỏi hồ sơ người dùng.');
       setSelectedApp(null);
+      setSelectedAppRejectMode(false);
       fetchData(page, statusFilter);
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : 'Không thể hạ cấp tài khoản.', 'error');
@@ -555,7 +561,7 @@ export const AdminManageOwnerApplicationPage: React.FC = () => {
                                       Duyệt
                                     </button>
                                     <button
-                                      onClick={() => setSelectedApp(app)}
+                                      onClick={() => { setSelectedApp(app); setSelectedAppRejectMode(true); }}
                                       disabled={actionLoading}
                                       className="inline-flex items-center gap-1.5 rounded-lg bg-rose-500/15 px-3 py-1 text-xs font-semibold text-rose-200 transition hover:bg-rose-500/30 disabled:opacity-50"
                                     >
@@ -605,11 +611,12 @@ export const AdminManageOwnerApplicationPage: React.FC = () => {
       {selectedApp && (
         <DetailModal
           app={selectedApp}
-          onClose={() => setSelectedApp(null)}
+          onClose={() => { setSelectedApp(null); setSelectedAppRejectMode(false); }}
           onApprove={handleApprove}
           onReject={handleReject}
           onRevoke={handleRevoke}
           loading={actionLoading}
+          initialRejectMode={selectedAppRejectMode}
         />
       )}
 

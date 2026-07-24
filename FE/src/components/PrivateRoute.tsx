@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { getCurrentUserProfile } from '../Axios/Axios';
 
 type Props = {
   /** The component/element to render when access is allowed */
@@ -33,6 +34,11 @@ export const PrivateRoute: React.FC<Props> = ({
 }) => {
   const auth = useAuth();
   const location = useLocation();
+  // The cached role in localStorage can go stale if it was changed on the
+  // backend (e.g. promoted to admin) after this session's last login/refresh.
+  // Refetch the live profile once per role-restricted route mount so we
+  // don't bounce the user based on a stale cached role.
+  const [roleChecked, setRoleChecked] = useState(!allowedRoles);
 
   // Push the browser back-stack so the history entry is still there
   // but navigating forward after logout shows /login, not the cached page.
@@ -44,9 +50,42 @@ export const PrivateRoute: React.FC<Props> = ({
     }
   }, [auth.isLoggedIn, redirectTo]);
 
+  useEffect(() => {
+    if (!allowedRoles || !auth.isLoggedIn) {
+      return;
+    }
+    let cancelled = false;
+    setRoleChecked(false);
+    getCurrentUserProfile()
+      .then(({ user }) => {
+        if (cancelled) return;
+        const raw = localStorage.getItem('currentUser');
+        const cached = raw ? (JSON.parse(raw) as { role?: string }) : null;
+        if (cached?.role !== user.role) {
+          localStorage.setItem('currentUser', JSON.stringify(user));
+          window.dispatchEvent(new Event('currentUserUpdated'));
+        }
+      })
+      .catch(() => {
+        // Network/auth errors here are handled by the axios interceptor
+        // (401 clears the session); nothing extra to do on failure.
+      })
+      .finally(() => {
+        if (!cancelled) setRoleChecked(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allowedRoles, auth.isLoggedIn, location.pathname]);
+
   if (!auth.isLoggedIn) {
     // Preserve the intended destination so we can redirect after login
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
+  }
+
+  if (!roleChecked) {
+    return null;
   }
 
   if (allowedRoles && auth.role && !allowedRoles.includes(auth.role)) {

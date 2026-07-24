@@ -3,8 +3,6 @@ import { Link } from 'react-router-dom';
 import { AdminLayout } from '../../components';
 import {
   adminGetAllCourts,
-  adminApproveCourt,
-  adminRejectCourt,
   adminUpdateCourtStatus,
   type AdminCourt,
   type OwnerCourtStatus,
@@ -38,16 +36,6 @@ const RefreshIcon = () => (
 const SearchIcon = () => (
   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
     <circle cx="11" cy="11" r="7" /><path d="m21 21-4.35-4.35" />
-  </svg>
-);
-const CheckIcon = () => (
-  <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.5">
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
-const XIcon = () => (
-  <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.5">
-    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
   </svg>
 );
 const EyeIcon = () => (
@@ -123,28 +111,6 @@ export const AdminManageStadiumPage: React.FC = () => {
 
   useEffect(() => { fetchCourts(); }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleApprove = async (court: AdminCourt) => {
-    setUpdatingId(court.id);
-    try {
-      const updated = await adminApproveCourt(court.id);
-      setCourts(prev => prev.map(c => c.id === court.id ? { ...c, status: updated.status } : c));
-      showToast(`Đã duyệt sân "${court.name}"`);
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Duyệt sân thất bại.', false);
-    } finally { setUpdatingId(null); }
-  };
-
-  const handleReject = async (court: AdminCourt) => {
-    setUpdatingId(court.id);
-    try {
-      const updated = await adminRejectCourt(court.id);
-      setCourts(prev => prev.map(c => c.id === court.id ? { ...c, status: updated.status } : c));
-      showToast(`Đã từ chối sân "${court.name}"`, false);
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Từ chối thất bại.', false);
-    } finally { setUpdatingId(null); }
-  };
-
   const handleToggleStatus = async (court: AdminCourt) => {
     const next: 'available' | 'closed' = court.status === 'closed' ? 'available' : 'closed';
     setUpdatingId(court.id);
@@ -161,7 +127,6 @@ export const AdminManageStadiumPage: React.FC = () => {
     total,
     available: courts.filter(c => c.status === 'available' || c.status === 'open').length,
     closed:    courts.filter(c => c.status === 'closed').length,
-    pending:   courts.filter(c => c.status === 'pending').length,
   }), [courts, total]);
 
   const displayed = useMemo(() => {
@@ -173,8 +138,6 @@ export const AdminManageStadiumPage: React.FC = () => {
     });
   }, [courts, keyword, statusFilter]);
 
-  const pendingList = useMemo(() => courts.filter(c => c.status === 'pending'), [courts]);
-
   return (
     <AdminLayout activeKey="stadiums">
       <div className="min-h-screen bg-gradient-to-br from-[#070B14] via-[#0A0F1E] to-[#080C17] px-4 sm:px-6 lg:px-8 py-8 text-white">
@@ -184,7 +147,7 @@ export const AdminManageStadiumPage: React.FC = () => {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-cyan-400">Admin / Sân</p>
-              <h1 className="mt-2 text-3xl font-black tracking-tight">Quản lý & duyệt sân</h1>
+              <h1 className="mt-2 text-3xl font-black tracking-tight">Quản lý sân</h1>
               <p className="mt-1 text-sm text-slate-400">Toàn bộ sân trong hệ thống — mọi chủ sân, mọi trạng thái</p>
             </div>
             <div className="flex items-center gap-2">
@@ -203,12 +166,11 @@ export const AdminManageStadiumPage: React.FC = () => {
           </div>
 
           {/* ── Stat Cards ── */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             {[
               { label: 'Tổng sân',        value: stats.total,     grad: 'from-slate-700/40 to-slate-800/20',   border: 'border-white/[0.07]',    text: 'text-white' },
               { label: 'Đang hoạt động',  value: stats.available, grad: 'from-emerald-500/15 to-teal-600/10', border: 'border-emerald-500/20',  text: 'text-emerald-100' },
               { label: 'Đã đóng / Ẩn',   value: stats.closed,    grad: 'from-rose-500/15 to-red-600/10',     border: 'border-rose-500/20',     text: 'text-rose-100' },
-              { label: 'Chờ duyệt',       value: stats.pending,   grad: 'from-amber-500/15 to-orange-600/10', border: 'border-amber-500/25',    text: 'text-amber-100' },
             ].map(s => (
               <div key={s.label} className={`rounded-2xl border ${s.border} bg-gradient-to-br ${s.grad} p-5`}>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">{s.label}</p>
@@ -224,68 +186,6 @@ export const AdminManageStadiumPage: React.FC = () => {
               <span className="flex-1">{error}</span>
               <button onClick={fetchCourts} className="rounded-lg bg-rose-500/20 px-3 py-1 text-xs font-semibold hover:bg-rose-500/30 transition">Thử lại</button>
             </div>
-          )}
-
-          {/* ── Pending Queue ── */}
-          {!loading && pendingList.length > 0 && (
-            <section className="rounded-2xl border border-amber-500/25 bg-amber-500/[0.04] overflow-hidden">
-              <div className="flex items-center gap-3 px-6 py-4 border-b border-amber-500/15">
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/20 text-amber-300"><AlertIcon /></span>
-                <h2 className="font-black text-amber-100">Hàng chờ duyệt</h2>
-                <span className="rounded-full bg-amber-500/20 px-2.5 py-0.5 text-xs font-bold text-amber-300 ring-1 ring-amber-400/25">{pendingList.length}</span>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px] text-sm">
-                  <thead>
-                    <tr className="border-b border-amber-500/10 text-left text-[11px] font-semibold uppercase tracking-wider text-amber-500/50">
-                      <th className="px-5 py-3">Sân</th>
-                      <th className="px-5 py-3">Chủ sân (ID)</th>
-                      <th className="px-5 py-3">Môn</th>
-                      <th className="px-5 py-3">Địa điểm</th>
-                      <th className="px-5 py-3 text-right">Giá/giờ</th>
-                      <th className="px-5 py-3 text-center">Hành động</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pendingList.map(court => {
-                      const busy = updatingId === court.id;
-                      return (
-                        <tr key={court.id} className={`border-b border-amber-500/[0.08] hover:bg-amber-500/[0.04] transition-colors ${busy ? 'opacity-50' : ''}`}>
-                          <td className="px-5 py-3.5">
-                            <p className="font-semibold text-white">{court.name}</p>
-                            <p className="text-[10px] font-mono text-slate-600 mt-0.5">{court.id.slice(-8)}</p>
-                          </td>
-                          <td className="px-5 py-3.5">
-                            <span className="rounded-md bg-white/[0.05] px-2 py-0.5 font-mono text-xs text-slate-400">{court.owner_id.slice(-8)}</span>
-                          </td>
-                          <td className="px-5 py-3.5">
-                            <div className="flex flex-wrap gap-1">
-                              {court.sports.map(s => (
-                                <span key={s} className="rounded-md bg-blue-500/15 px-2 py-0.5 text-[11px] font-semibold text-blue-300 ring-1 ring-blue-400/20">{s}</span>
-                              ))}
-                            </div>
-                          </td>
-                          <td className="px-5 py-3.5 text-slate-400 max-w-[160px] truncate text-xs" title={court.location}>{court.location}</td>
-                          <td className="px-5 py-3.5 text-right font-semibold text-emerald-300">{fmt(court.price_per_hour)}₫</td>
-                          <td className="px-5 py-3.5 text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              <button disabled={busy} onClick={() => handleApprove(court)}
-                                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs font-bold text-emerald-200 transition hover:bg-emerald-500/30 disabled:cursor-not-allowed">
-                                <CheckIcon />{busy ? '...' : 'Duyệt'}
-                              </button>
-                              <button disabled={busy} onClick={() => handleReject(court)}
-                                className="inline-flex items-center gap-1.5 rounded-lg bg-rose-500/15 px-3 py-1.5 text-xs font-bold text-rose-200 transition hover:bg-rose-500/30 disabled:cursor-not-allowed">
-                                <XIcon />{busy ? '...' : 'Từ chối'}
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </section>
           )}
 
           {/* ── Court Table ── */}
@@ -317,7 +217,6 @@ export const AdminManageStadiumPage: React.FC = () => {
                   className="rounded-xl border border-white/10 bg-[#0A0F1E] px-3 py-2 text-sm text-white outline-none"
                 >
                   <option value="all">Tất cả trạng thái</option>
-                  <option value="pending">Chờ duyệt</option>
                   <option value="available">Đang hoạt động</option>
                   <option value="open">Đang mở</option>
                   <option value="closed">Đã đóng</option>
@@ -383,18 +282,7 @@ export const AdminManageStadiumPage: React.FC = () => {
                               </span>
                             </td>
                             <td className="px-4 py-4 text-center">
-                              {court.status === 'pending' ? (
-                                <div className="flex items-center justify-center gap-1.5">
-                                  <button disabled={busy} onClick={() => handleApprove(court)}
-                                    className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/15 px-2.5 py-1 text-xs font-bold text-emerald-200 transition hover:bg-emerald-500/30 disabled:cursor-not-allowed">
-                                    <CheckIcon />{busy ? '...' : 'Duyệt'}
-                                  </button>
-                                  <button disabled={busy} onClick={() => handleReject(court)}
-                                    className="inline-flex items-center gap-1 rounded-lg bg-rose-500/15 px-2.5 py-1 text-xs font-bold text-rose-200 transition hover:bg-rose-500/30 disabled:cursor-not-allowed">
-                                    <XIcon />{busy ? '...' : 'Từ chối'}
-                                  </button>
-                                </div>
-                              ) : court.status === 'closed' ? (
+                              {court.status === 'closed' ? (
                                 <button disabled={busy} onClick={() => handleToggleStatus(court)}
                                   className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-200 transition hover:bg-emerald-500/30 disabled:cursor-not-allowed">
                                   <EyeIcon />{busy ? '...' : 'Hiện'}

@@ -129,7 +129,7 @@ const courtSchema = new Schema<ICourt, ICourtModel>(
 		status: {
 			type: String,
 			required: true,
-			default: "pending",
+			default: "available",
 			enum: ["available", "closed", "open", "pending"],
 		},
 		number_of_courts: {
