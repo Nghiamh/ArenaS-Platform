@@ -176,7 +176,7 @@ export function OwnerContactPage() {
       return;
     }
 
-    if (!form.venueName.trim() || !form.address.trim() || !form.phone.trim() || !form.identityCard.trim()) {
+    if (!form.name.trim() || !form.venueName.trim() || !form.address.trim() || !form.phone.trim() || !form.identityCard.trim()) {
       setSubmitError('Vui lòng điền đầy đủ các trường bắt buộc (*).');
       return;
     }
@@ -186,6 +186,7 @@ export function OwnerContactPage() {
       const sportDesc = form.sport ? `Môn thể thao: ${form.sport}.` : '';
       const msgDesc = form.message.trim() ? ` ${form.message.trim()}` : '';
       await submitOwnerApplication({
+        contactName: form.name.trim(),
         businessName: form.venueName.trim(),
         businessAddress: form.address.trim(),
         phone: form.phone.trim(),

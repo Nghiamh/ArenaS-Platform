@@ -4,6 +4,7 @@ export type OwnerApplicationStatus = "pending" | "approved" | "rejected";
 
 export interface IOwnerApplication extends Document {
 	userId: mongoose.Types.ObjectId;
+	contactName: string;
 	businessName: string;
 	businessAddress: string;
 	phone: string;
@@ -24,6 +25,11 @@ const ownerApplicationSchema = new Schema<IOwnerApplication>(
 			type: Schema.Types.ObjectId,
 			ref: "User",
 			required: true,
+		},
+		contactName: {
+			type: String,
+			required: true,
+			trim: true,
 		},
 		businessName: {
 			type: String,

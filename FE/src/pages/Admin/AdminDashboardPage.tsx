@@ -4,8 +4,6 @@ import { AdminLayout } from '../../components';
 import {
   adminGetAllCourts,
   adminGetIncome,
-  adminApproveCourt,
-  adminRejectCourt,
   getCurrentUserProfile,
   adminGetReviewStats,
   adminGetAllUsers,
@@ -21,16 +19,6 @@ const RefreshIcon = () => (
   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
     <path d="M23 4v6h-6" /><path d="M1 20v-6h6" />
     <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-  </svg>
-);
-const CheckIcon = () => (
-  <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.5">
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
-const XIcon = () => (
-  <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.5">
-    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
   </svg>
 );
 const AlertIcon = () => (
@@ -88,13 +76,6 @@ export const AdminDashboardPage: React.FC = () => {
   const [adminName,    setAdminName]    = useState('');
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState('');
-  const [approving,    setApproving]    = useState<string | null>(null);
-  const [toast,        setToast]        = useState<{ msg: string; ok: boolean } | null>(null);
-
-  const showToast = (msg: string, ok = true) => {
-    setToast({ msg, ok });
-    setTimeout(() => setToast(null), 2800);
-  };
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -127,31 +108,8 @@ export const AdminDashboardPage: React.FC = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const handleApprove = async (court: AdminCourt) => {
-    setApproving(court.id);
-    try {
-      const updated = await adminApproveCourt(court.id);
-      setCourts(prev => prev.map(c => c.id === court.id ? { ...c, status: updated.status } : c));
-      showToast(`Đã duyệt sân "${court.name}"`);
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Duyệt thất bại', false);
-    } finally { setApproving(null); }
-  };
-
-  const handleReject = async (court: AdminCourt) => {
-    setApproving(court.id);
-    try {
-      const updated = await adminRejectCourt(court.id);
-      setCourts(prev => prev.map(c => c.id === court.id ? { ...c, status: updated.status } : c));
-      showToast(`Đã từ chối sân "${court.name}"`, false);
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Từ chối thất bại', false);
-    } finally { setApproving(null); }
-  };
-
   // ── Derived data ──────────────────────────────────────────────────────────
 
-  const pendingCourts = useMemo(() => courts.filter(c => c.status === 'pending'), [courts]);
   const activeCourts  = useMemo(() => courts.filter(c => c.status === 'available' || c.status === 'open').length, [courts]);
 
   const courtTypeStats = useMemo(() => {
@@ -188,15 +146,6 @@ export const AdminDashboardPage: React.FC = () => {
       gradient: 'from-cyan-500/15 to-blue-600/10',
       border: 'border-cyan-500/20',
       valueColor: 'text-cyan-100',
-    },
-    {
-      label: 'Sân chờ duyệt',
-      value: loading ? null : pendingCourts.length,
-      sub: pendingCourts.length > 0 ? 'cần xét duyệt ngay' : 'không có sân chờ',
-      icon: pendingCourts.length > 0 ? '⏳' : '✅',
-      gradient: pendingCourts.length > 0 ? 'from-amber-500/15 to-orange-600/10' : 'from-emerald-500/10 to-teal-600/5',
-      border: pendingCourts.length > 0 ? 'border-amber-500/25' : 'border-emerald-500/20',
-      valueColor: pendingCourts.length > 0 ? 'text-amber-100' : 'text-emerald-100',
     },
     {
       label: 'Tổng doanh thu',
@@ -237,7 +186,7 @@ export const AdminDashboardPage: React.FC = () => {
       border: 'border-sky-500/20',
       valueColor: 'text-sky-100',
     },
-  ], [loading, totalCourts, activeCourts, pendingCourts.length, incomeSummary, revenueTrend, totalReviews, avgRating, totalUsers]);
+  ], [loading, totalCourts, activeCourts, incomeSummary, revenueTrend, totalReviews, avgRating, totalUsers]);
 
   return (
     <AdminLayout activeKey="dashboard">
@@ -442,78 +391,6 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* ── Pending Courts ── */}
-          {!loading && pendingCourts.length > 0 && (
-            <section className="rounded-2xl border border-amber-500/25 bg-amber-500/[0.04] overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-amber-500/15">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/20 text-amber-300">
-                    <AlertIcon />
-                  </span>
-                  <div>
-                    <h2 className="font-black text-amber-100">Sân chờ phê duyệt</h2>
-                    <p className="text-xs text-slate-500">{pendingCourts.length} sân đang chờ xét duyệt</p>
-                  </div>
-                </div>
-                <Link to="/admin/manage-stadiums" className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition">
-                  Xem tất cả →
-                </Link>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[640px] text-sm">
-                  <thead>
-                    <tr className="border-b border-amber-500/10 text-left">
-                      {['Tên sân', 'Môn thể thao', 'Địa chỉ', 'Giá/giờ', 'Thao tác'].map((h, i) => (
-                        <th key={h} className={`px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-amber-500/60 ${i >= 3 ? 'text-right' : ''} ${i === 4 ? 'text-center' : ''}`}>
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pendingCourts.slice(0, 5).map(court => (
-                      <tr key={court.id} className={`border-b border-amber-500/[0.08] hover:bg-amber-500/[0.04] transition-colors ${approving === court.id ? 'opacity-50' : ''}`}>
-                        <td className="px-5 py-3.5">
-                          <p className="font-semibold text-white">{court.name}</p>
-                          <p className="text-[10px] font-mono text-slate-600 mt-0.5">{court.id.slice(-8)}</p>
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <div className="flex flex-wrap gap-1">
-                            {court.sports.map(s => (
-                              <span key={s} className="rounded-md bg-blue-500/15 px-2 py-0.5 text-[11px] font-semibold text-blue-300 ring-1 ring-blue-400/20">
-                                {s}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-5 py-3.5 text-slate-400 text-xs max-w-[180px] truncate">{court.location}</td>
-                        <td className="px-5 py-3.5 text-right font-semibold text-emerald-300">{fmt(court.price_per_hour)}₫</td>
-                        <td className="px-5 py-3.5 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              disabled={approving === court.id}
-                              onClick={() => handleApprove(court)}
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs font-bold text-emerald-200 transition hover:bg-emerald-500/30 disabled:cursor-not-allowed"
-                            >
-                              <CheckIcon />{approving === court.id ? '...' : 'Duyệt'}
-                            </button>
-                            <button
-                              disabled={approving === court.id}
-                              onClick={() => handleReject(court)}
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-rose-500/15 px-3 py-1.5 text-xs font-bold text-rose-200 transition hover:bg-rose-500/30 disabled:cursor-not-allowed"
-                            >
-                              <XIcon />{approving === court.id ? '...' : 'Từ chối'}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
-
           {/* ── Recent Transactions ── */}
           <section className="rounded-2xl border border-white/[0.07] bg-white/[0.025] overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
@@ -665,17 +542,6 @@ export const AdminDashboardPage: React.FC = () => {
 
         </div>
       </div>
-
-      {/* ── Toast ── */}
-      {toast && (
-        <div className={`fixed bottom-6 right-6 z-[60] rounded-xl border px-4 py-3 text-sm font-semibold shadow-xl backdrop-blur-sm transition-all ${
-          toast.ok
-            ? 'border-emerald-400/30 bg-emerald-500/20 text-emerald-200'
-            : 'border-rose-400/30 bg-rose-500/20 text-rose-200'
-        }`}>
-          {toast.ok ? '✓' : '✕'} {toast.msg}
-        </div>
-      )}
     </AdminLayout>
   );
 };

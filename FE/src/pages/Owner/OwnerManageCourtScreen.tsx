@@ -474,6 +474,7 @@ const CourtCard: React.FC<{
 }> = ({ court, index, onEditCourt, onDeleteCourt, onToggleCourtStatus, onOpenMaintenance }) => {
   const primaryImage = court.images[0] ?? defaultCourtImage;
   const isOpen = court.status === 'available' || court.status === 'open';
+  const isPending = court.status === 'pending';
 
   const [dashboards, setDashboards] = useState<Record<string, CourtDashboard>>({});
 
@@ -532,18 +533,22 @@ const CourtCard: React.FC<{
 
             <div className="flex flex-wrap items-center gap-2">
               <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={() => onToggleCourtStatus(court)}
+                whileTap={isPending ? undefined : { scale: 0.97 }}
+                onClick={() => { if (!isPending) onToggleCourtStatus(court); }}
+                disabled={isPending}
                 className={`group inline-flex items-center gap-2 rounded-full border px-2 py-1 text-sm font-semibold transition ${
-                  isOpen
+                  isPending
+                    ? 'cursor-not-allowed border-amber-300/35 bg-amber-500/10 text-amber-300 opacity-70'
+                    : isOpen
                     ? 'border-emerald-300/65 bg-emerald-500/15 text-emerald-300'
                     : 'border-slate-300/35 bg-slate-500/15 text-slate-300'
                 }`}
                 aria-label="Bật tắt trạng thái sân"
+                title={isPending ? 'Chỉ có thể bật/tắt sau khi admin duyệt' : undefined}
               >
                 <span
                   className={`relative inline-flex h-5 w-9 items-center rounded-full transition ${
-                    isOpen ? 'bg-emerald-500/45' : 'bg-slate-500/45'
+                    isPending ? 'bg-amber-500/35' : isOpen ? 'bg-emerald-500/45' : 'bg-slate-500/45'
                   }`}
                 >
                   <span
@@ -831,6 +836,9 @@ export const OwnerManageCourtScreen: React.FC = () => {
   };
 
   const handleToggleCourtStatus = async (court: OwnerCourt) => {
+    if (court.status === 'pending') {
+      return;
+    }
     const nextStatus: OwnerCourtStatus = court.status === 'closed' ? 'available' : 'closed';
 
     try {

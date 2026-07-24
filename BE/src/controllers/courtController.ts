@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import mongoose from "mongoose";
 import Court, { CourtStatus, ICourtCoordinates, ISubCourt, SubCourtType, SubCourtStatus } from "../models/courtModel.js";
 import Subscription from "../models/subscriptionModel.js";
-import { createNotification } from "./notificationController.js";
 
 
 function normalizeOptionalText(value: unknown): string | undefined {
@@ -557,7 +556,6 @@ export async function createOwnerCourt(req: Request, res: Response): Promise<voi
 			}
 		}
 
-		// New courts always start as "pending" — admin must approve before going public
 		const createdCourt = await Court.create({
 			owner_id: user._id,
 			name: normalizedName,
@@ -570,19 +568,9 @@ export async function createOwnerCourt(req: Request, res: Response): Promise<voi
 			open_time: normalizedOpenTime,
 			close_time: normalizedCloseTime,
 			avg_rating: 0,
-			status: "pending",
+			status: "available",
 			number_of_courts: parsedSubCourts.length,
 			sub_courts: parsedSubCourts,
-		});
-
-		// Notify admin: new court pending review
-		void createNotification({
-			recipientRole: "admin",
-			type: "court_submitted",
-			title: "Sân mới chờ duyệt",
-			message: `Chủ sân đã gửi sân "${createdCourt.name}" để xét duyệt.`,
-			link: "/admin/manage-stadiums",
-			metadata: { courtId: String(createdCourt._id) },
 		});
 
 		res.status(201).json({

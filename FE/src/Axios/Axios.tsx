@@ -1508,6 +1508,7 @@ export type OwnerApplicationUser = {
 export type OwnerApplication = {
 	_id: string;
 	userId: OwnerApplicationUser | string;
+	contactName: string;
 	businessName: string;
 	businessAddress: string;
 	phone: string;
@@ -1523,6 +1524,7 @@ export type OwnerApplication = {
 };
 
 export type OwnerApplicationPayload = {
+	contactName: string;
 	businessName: string;
 	businessAddress: string;
 	phone: string;

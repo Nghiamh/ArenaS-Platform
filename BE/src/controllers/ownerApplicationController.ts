@@ -25,8 +25,9 @@ export async function submitOwnerApplication(req: Request, res: Response): Promi
 			await OwnerApplication.findByIdAndDelete(existing._id);
 		}
 
-		const { businessName, businessAddress, phone, identityCard, bankAccount, description, largeCourts, smallCourts } =
+		const { contactName, businessName, businessAddress, phone, identityCard, bankAccount, description, largeCourts, smallCourts } =
 			req.body as {
+				contactName?: string;
 				businessName?: string;
 				businessAddress?: string;
 				phone?: string;
@@ -37,14 +38,15 @@ export async function submitOwnerApplication(req: Request, res: Response): Promi
 				smallCourts?: number;
 			};
 
-		if (!businessName || !businessAddress || !phone || !identityCard) {
+		if (!contactName || !businessName || !businessAddress || !phone || !identityCard) {
 			res.status(400).json({
-				message: "businessName, businessAddress, phone và identityCard là bắt buộc.",
+				message: "contactName, businessName, businessAddress, phone và identityCard là bắt buộc.",
 			});
 			return;
 		}
 
 		if (existing && existing.status === "rejected") {
+			existing.contactName = contactName.trim();
 			existing.businessName = businessName.trim();
 			existing.businessAddress = businessAddress.trim();
 			existing.phone = phone.trim();
@@ -76,6 +78,7 @@ export async function submitOwnerApplication(req: Request, res: Response): Promi
 
 		const application = await OwnerApplication.create({
 			userId: user._id,
+			contactName: contactName.trim(),
 			businessName: businessName.trim(),
 			businessAddress: businessAddress.trim(),
 			phone: phone.trim(),
