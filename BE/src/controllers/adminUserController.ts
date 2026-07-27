@@ -2,6 +2,105 @@ import { Request, Response } from "express";
 import mongoose from "mongoose";
 import User from "../models/userModel.js";
 import OwnerApplication from "../models/ownerApplicationModel.js";
+import Wallet from "../models/walletModel.js";
+import WalletTransaction from "../models/walletTransactionModel.js";
+import PaymentWebhookLog from "../models/paymentWebhookLogModel.js";
+import Notification from "../models/notificationModel.js";
+import UserSkill from "../models/userSkillModel.js";
+import Voucher from "../models/voucherModel.js";
+import WithdrawalRequest from "../models/withdrawalRequestModel.js";
+import SubscriptionCheckout from "../models/subscriptionCheckoutModel.js";
+import Subscription from "../models/subscriptionModel.js";
+import Court from "../models/courtModel.js";
+import { CourtSlotModel } from "../models/courtSlotModel.js";
+import { CourtDashboardModel } from "../models/courtDashboardModel.js";
+import { BookingModel } from "../models/bookingModel.js";
+import { ReviewModel } from "../models/reviewModel.js";
+import Match from "../models/matchModel.js";
+import MatchFeedback from "../models/matchFeedbackModel.js";
+import MatchmakingTicket from "../models/matchmakingTicketModel.js";
+import ChatMessage from "../models/chatMessageModel.js";
+import Report from "../models/reportModel.js";
+
+// Deletes every record that references a user, directly or via courts they
+// own, so no orphaned data survives an admin hard-delete.
+async function cascadeDeleteUserData(
+	userId: mongoose.Types.ObjectId,
+	session: mongoose.ClientSession
+): Promise<void> {
+	const owned = await Court.find({ owner_id: userId }).select("_id").session(session);
+	const courtIds = owned.map((court) => court._id);
+
+	if (courtIds.length > 0) {
+		const ownedMatches = await Match.find({ court_id: { $in: courtIds } })
+			.select("_id")
+			.session(session);
+		const ownedMatchIds = ownedMatches.map((match) => match._id);
+
+		if (ownedMatchIds.length > 0) {
+			await ChatMessage.deleteMany({ match_id: { $in: ownedMatchIds } }).session(session);
+			await MatchFeedback.deleteMany({ match_id: { $in: ownedMatchIds } }).session(session);
+			await MatchmakingTicket.deleteMany({ match_id: { $in: ownedMatchIds } }).session(session);
+		}
+
+		await Match.deleteMany({ court_id: { $in: courtIds } }).session(session);
+		await MatchmakingTicket.deleteMany({ court_id: { $in: courtIds } }).session(session);
+		await BookingModel.deleteMany({ court_id: { $in: courtIds } }).session(session);
+		await ReviewModel.deleteMany({ court_id: { $in: courtIds } }).session(session);
+		await CourtSlotModel.deleteMany({ court_id: { $in: courtIds } }).session(session);
+		await CourtDashboardModel.deleteMany({ court_id: { $in: courtIds } }).session(session);
+		await Subscription.deleteMany({ ownerId: userId }).session(session);
+		await SubscriptionCheckout.deleteMany({ ownerId: userId }).session(session);
+		await Court.deleteMany({ _id: { $in: courtIds } }).session(session);
+	}
+
+	const wallet = await Wallet.findOne({ userId }).session(session);
+	if (wallet) {
+		const transactions = await WalletTransaction.find({ walletId: wallet._id })
+			.select("transferCode")
+			.session(session);
+		const transferCodes = transactions
+			.map((tx) => tx.transferCode)
+			.filter((code): code is string => !!code);
+
+		if (transferCodes.length > 0) {
+			await PaymentWebhookLog.deleteMany({ transferCode: { $in: transferCodes } }).session(session);
+		}
+		await WalletTransaction.deleteMany({ walletId: wallet._id }).session(session);
+		await Wallet.deleteOne({ _id: wallet._id }).session(session);
+	}
+
+	const directMatches = await Match.find({
+		$or: [{ participants: userId }, { owner_id: userId }, { accepted_by: userId }, { checked_in_players: userId }],
+	})
+		.select("_id")
+		.session(session);
+	const directMatchIds = directMatches.map((match) => match._id);
+	if (directMatchIds.length > 0) {
+		await ChatMessage.deleteMany({ match_id: { $in: directMatchIds } }).session(session);
+		await MatchFeedback.deleteMany({ match_id: { $in: directMatchIds } }).session(session);
+		await MatchmakingTicket.deleteMany({ match_id: { $in: directMatchIds } }).session(session);
+	}
+	await Match.deleteMany({
+		$or: [{ participants: userId }, { owner_id: userId }, { accepted_by: userId }, { checked_in_players: userId }],
+	}).session(session);
+
+	await ChatMessage.deleteMany({ sender_id: userId }).session(session);
+	await MatchFeedback.deleteMany({ $or: [{ reporter_id: userId }, { target_id: userId }] }).session(session);
+	await MatchmakingTicket.deleteMany({ user_id: userId }).session(session);
+	await BookingModel.deleteMany({
+		$or: [{ user_id: userId }, { "participants.userId": userId }],
+	}).session(session);
+	await ReviewModel.deleteMany({ user_id: userId }).session(session);
+	await Report.deleteMany({
+		$or: [{ reporter_id: userId }, { target_id: userId }, { "chat_logs.sender_id": userId }],
+	}).session(session);
+	await WithdrawalRequest.deleteMany({ ownerId: userId }).session(session);
+	await OwnerApplication.deleteMany({ userId }).session(session);
+	await UserSkill.deleteMany({ user_id: userId }).session(session);
+	await Notification.deleteMany({ recipientId: userId }).session(session);
+	await Voucher.updateMany({ usedBy: userId }, { $pull: { usedBy: userId } }).session(session);
+}
 
 // Safe projection — never expose sensitive fields
 const SAFE_SELECT = "-password -resetPasswordTokenHash -resetPasswordExpiresAt -googleId";
@@ -229,13 +328,23 @@ export async function adminDeleteUser(req: Request, res: Response): Promise<void
 			return;
 		}
 
-		const user = await User.findByIdAndDelete(id);
+		const user = await User.findById(id);
 		if (!user) {
 			res.status(404).json({ message: "Không tìm thấy người dùng." });
 			return;
 		}
 
-		res.status(200).json({ message: `Đã xóa tài khoản "${user.name ?? user.userName}".` });
+		const session = await mongoose.startSession();
+		try {
+			await session.withTransaction(async () => {
+				await cascadeDeleteUserData(user._id as mongoose.Types.ObjectId, session);
+				await User.deleteOne({ _id: user._id }).session(session);
+			});
+		} finally {
+			await session.endSession();
+		}
+
+		res.status(200).json({ message: `Đã xóa tài khoản "${user.name ?? user.userName}" và toàn bộ dữ liệu liên quan.` });
 	} catch (error: unknown) {
 		res.status(500).json({
 			message: "Không thể xóa người dùng.",

@@ -15,13 +15,13 @@ import {
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const ROLE_LABEL: Record<AdminUserRole, string> = {
-  user:  'Khách hàng',
+  user: 'Khách hàng',
   owner: 'Chủ sân',
   admin: 'Quản trị viên',
 };
 const ROLE_ICON: Record<AdminUserRole, string> = { user: '👤', owner: '🏠', admin: '🛡️' };
-const ROLE_CLS:  Record<AdminUserRole, string> = {
-  user:  'bg-blue-500/15 text-blue-300 ring-1 ring-blue-400/30',
+const ROLE_CLS: Record<AdminUserRole, string> = {
+  user: 'bg-blue-500/15 text-blue-300 ring-1 ring-blue-400/30',
   owner: 'bg-violet-500/15 text-violet-300 ring-1 ring-violet-400/30',
   admin: 'bg-cyan-500/15 text-cyan-200 ring-1 ring-cyan-400/30',
 };
@@ -142,15 +142,15 @@ const blankForm = (): FormState => ({
 });
 
 const fromUser = (u: AdminUser): FormState => ({
-  name:       u.name ?? '',
-  userName:   u.userName,
-  email:      u.email,
-  phone:      u.phone ?? '',
-  role:       u.role,
-  isBanned:   u.isBanned ?? false,
-  password:   '',
+  name: u.name ?? '',
+  userName: u.userName,
+  email: u.email,
+  phone: u.phone ?? '',
+  role: u.role,
+  isBanned: u.isBanned ?? false,
+  password: '',
   confirmPwd: '',
-  showPwd:    false,
+  showPwd: false,
   showConfirm: false,
   showPasswordSection: false, // hidden by default in edit mode
 });
@@ -181,7 +181,7 @@ const FormField: React.FC<{ label: string; error?: string; children: React.React
 const UserFormModal: React.FC<FormModalProps> = ({ mode, form, saving, errors, onChange, onSave, onClose }) => {
   const set = (patch: Partial<FormState>) => onChange(patch);
   const strengthLevel = form.password.length >= 12 ? 4 : form.password.length >= 8 ? 3 : form.password.length >= 6 ? 2 : form.password.length > 0 ? 1 : 0;
-  const strengthLabel  = ['', 'Yếu', 'Trung bình', 'Mạnh', 'Rất mạnh'][strengthLevel];
+  const strengthLabel = ['', 'Yếu', 'Trung bình', 'Mạnh', 'Rất mạnh'][strengthLevel];
   const strengthColors = ['', 'bg-rose-500', 'bg-amber-500', 'bg-blue-500', 'bg-emerald-500'];
 
   return (
@@ -242,13 +242,12 @@ const UserFormModal: React.FC<FormModalProps> = ({ mode, form, saving, errors, o
             <div className="grid grid-cols-3 gap-3">
               {(['user', 'owner', 'admin'] as AdminUserRole[]).map(r => (
                 <button key={r} type="button" onClick={() => set({ role: r })}
-                  className={`flex flex-col items-center gap-2 rounded-xl border py-4 text-xs font-semibold transition ${
-                    form.role === r
-                      ? r === 'user'  ? 'border-blue-500/50 bg-blue-500/15 text-blue-200 shadow-lg shadow-blue-500/10'
+                  className={`flex flex-col items-center gap-2 rounded-xl border py-4 text-xs font-semibold transition ${form.role === r
+                      ? r === 'user' ? 'border-blue-500/50 bg-blue-500/15 text-blue-200 shadow-lg shadow-blue-500/10'
                         : r === 'owner' ? 'border-violet-500/50 bg-violet-500/15 text-violet-200 shadow-lg shadow-violet-500/10'
-                        : 'border-cyan-500/50 bg-cyan-500/15 text-cyan-200 shadow-lg shadow-cyan-500/10'
+                          : 'border-cyan-500/50 bg-cyan-500/15 text-cyan-200 shadow-lg shadow-cyan-500/10'
                       : 'border-white/10 bg-white/[0.02] text-slate-400 hover:border-white/20 hover:text-slate-200'
-                  }`}>
+                    }`}>
                   <span className="text-xl">{ROLE_ICON[r]}</span>
                   {ROLE_LABEL[r]}
                 </button>
@@ -262,12 +261,11 @@ const UserFormModal: React.FC<FormModalProps> = ({ mode, form, saving, errors, o
             <div className="grid grid-cols-2 gap-3">
               {[
                 { val: false, label: 'Hoạt động', cls: 'border-emerald-500/50 bg-emerald-500/15 text-emerald-200', dot: 'bg-emerald-400' },
-                { val: true,  label: 'Đã khóa',   cls: 'border-rose-500/50 bg-rose-500/15 text-rose-200',         dot: 'bg-rose-400'    },
+                { val: true, label: 'Đã khóa', cls: 'border-rose-500/50 bg-rose-500/15 text-rose-200', dot: 'bg-rose-400' },
               ].map(s => (
                 <button key={String(s.val)} type="button" onClick={() => set({ isBanned: s.val })}
-                  className={`flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm font-semibold transition ${
-                    form.isBanned === s.val ? s.cls : 'border-white/10 bg-white/[0.02] text-slate-400 hover:border-white/20 hover:text-slate-200'
-                  }`}>
+                  className={`flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm font-semibold transition ${form.isBanned === s.val ? s.cls : 'border-white/10 bg-white/[0.02] text-slate-400 hover:border-white/20 hover:text-slate-200'
+                    }`}>
                   <span className={`h-2.5 w-2.5 rounded-full ${s.dot}`} />
                   {s.label}
                 </button>
@@ -323,7 +321,7 @@ const UserFormModal: React.FC<FormModalProps> = ({ mode, form, saving, errors, o
               {form.password.length > 0 && (
                 <div>
                   <div className="flex gap-1">
-                    {[1,2,3,4].map(i => (
+                    {[1, 2, 3, 4].map(i => (
                       <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${i <= strengthLevel ? strengthColors[strengthLevel] : 'bg-white/10'}`} />
                     ))}
                   </div>
@@ -390,29 +388,29 @@ const DeleteConfirm: React.FC<{
 
 export const AdminManageUsersPage: React.FC = () => {
   // ── Data state ──────────────────────────────────────────────────────────
-  const [users,      setUsers]      = useState<AdminUser[]>([]);
-  const [total,      setTotal]      = useState(0);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [page,       setPage]       = useState(1);
-  const [loading,    setLoading]    = useState(true);
-  const [error,      setError]      = useState('');
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   // ── System-wide counts (independent of current page/filters) ───────────
   const [systemStats, setSystemStats] = useState({ owners: 0, banned: 0, active: 0 });
 
   // ── Filter state ─────────────────────────────────────────────────────────
-  const [keyword,      setKeyword]      = useState('');
-  const [roleFilter,   setRoleFilter]   = useState<'all' | AdminUserRole>('all');
+  const [keyword, setKeyword] = useState('');
+  const [roleFilter, setRoleFilter] = useState<'all' | AdminUserRole>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'banned'>('all');
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Modal state ───────────────────────────────────────────────────────────
-  const [formMode,   setFormMode]   = useState<FormMode>('add');
+  const [formMode, setFormMode] = useState<FormMode>('add');
   const [editTarget, setEditTarget] = useState<AdminUser | null>(null);
-  const [formOpen,   setFormOpen]   = useState(false);
-  const [formState,  setFormState]  = useState<FormState>(blankForm());
+  const [formOpen, setFormOpen] = useState(false);
+  const [formState, setFormState] = useState<FormState>(blankForm());
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof FormState, string>>>({});
-  const [saving,     setSaving]     = useState(false);
+  const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
 
   // ── Toast ──────────────────────────────────────────────────────────────
@@ -428,11 +426,11 @@ export const AdminManageUsersPage: React.FC = () => {
     setError('');
     try {
       const res = await adminGetAllUsers({
-        page:    p,
-        limit:   15,
+        page: p,
+        limit: 15,
         keyword: kw.trim() || undefined,
-        role:    role === 'all' ? undefined : role as AdminUserRole,
-        status:  status === 'all' ? undefined : status as 'active' | 'banned',
+        role: role === 'all' ? undefined : role as AdminUserRole,
+        status: status === 'all' ? undefined : status as 'active' | 'banned',
       });
       setUsers(res.users);
       setTotal(res.total);
@@ -457,7 +455,7 @@ export const AdminManageUsersPage: React.FC = () => {
       adminGetAllUsers({ page: 1, limit: 1, status: 'active' }),
     ]).then(([ownersRes, bannedRes, activeRes]) => {
       setSystemStats({ owners: ownersRes.total, banned: bannedRes.total, active: activeRes.total });
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   // Debounce search
@@ -493,11 +491,11 @@ export const AdminManageUsersPage: React.FC = () => {
 
     if (mode === 'add') {
       // Thêm mới: bắt buộc các trường cơ bản
-      if (!f.name.trim())     e.name     = 'Vui lòng nhập họ tên.';
+      if (!f.name.trim()) e.name = 'Vui lòng nhập họ tên.';
       if (!f.userName.trim()) e.userName = 'Vui lòng nhập tên đăng nhập.';
-      if (!f.email.trim())    e.email    = 'Vui lòng nhập email.';
+      if (!f.email.trim()) e.email = 'Vui lòng nhập email.';
       if (f.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)) e.email = 'Email không hợp lệ.';
-      if (!f.password)        e.password = 'Vui lòng nhập mật khẩu.';
+      if (!f.password) e.password = 'Vui lòng nhập mật khẩu.';
     }
 
     // Kiểm tra mật khẩu chỉ khi người dùng đang nhập (hoặc bắt buộc ở add mode)
@@ -520,12 +518,12 @@ export const AdminManageUsersPage: React.FC = () => {
     try {
       if (formMode === 'add') {
         const payload: AdminCreateUserPayload = {
-          name:     formState.name.trim(),
-          email:    formState.email.trim(),
+          name: formState.name.trim(),
+          email: formState.email.trim(),
           userName: formState.userName.trim(),
           password: formState.password,
-          phone:    formState.phone.trim() || undefined,
-          role:     formState.role,
+          phone: formState.phone.trim() || undefined,
+          role: formState.role,
         };
         const created = await adminCreateUserAccount(payload);
         setUsers(prev => [created, ...prev]);
@@ -533,9 +531,9 @@ export const AdminManageUsersPage: React.FC = () => {
         showToast(`Đã tạo tài khoản "${created.name || created.userName}".`);
       } else if (editTarget) {
         const payload: AdminUpdateUserPayload = {
-          name:     formState.name.trim() || undefined,
-          phone:    formState.phone.trim() || undefined,
-          role:     formState.role,
+          name: formState.name.trim() || undefined,
+          phone: formState.phone.trim() || undefined,
+          role: formState.role,
           isBanned: formState.isBanned,
           password: formState.password || undefined,
         };
@@ -604,7 +602,7 @@ export const AdminManageUsersPage: React.FC = () => {
               <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-cyan-400">Admin / Người dùng</p>
               <h1 className="mt-2 text-3xl font-black tracking-tight">Quản lý người dùng</h1>
               <p className="mt-1 text-sm text-slate-400">
-                Thêm, sửa, xóa tài khoản và phân quyền vai trò — <span className="text-emerald-400 font-semibold">dữ liệu thực từ API</span>
+                Thêm, sửa, xóa tài khoản và phân quyền vai trò
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -625,10 +623,10 @@ export const AdminManageUsersPage: React.FC = () => {
           {/* ── Stat Cards (system-wide totals) ── */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
-              { label: 'Tổng người dùng', value: loading ? '…' : total,             grad: 'from-blue-500/15 to-indigo-600/10',   border: 'border-blue-500/20',     text: 'text-blue-100' },
-              { label: 'Chủ sân',         value: loading ? '…' : systemStats.owners, grad: 'from-violet-500/15 to-purple-600/10', border: 'border-violet-500/20',   text: 'text-violet-100' },
-              { label: 'Đã khóa',         value: loading ? '…' : systemStats.banned, grad: 'from-rose-500/15 to-red-600/10',      border: 'border-rose-500/20',     text: 'text-rose-100' },
-              { label: 'Đang hoạt động',  value: loading ? '…' : systemStats.active, grad: 'from-emerald-500/15 to-teal-600/10',  border: 'border-emerald-500/20',  text: 'text-emerald-100' },
+              { label: 'Tổng người dùng', value: loading ? '…' : total, grad: 'from-blue-500/15 to-indigo-600/10', border: 'border-blue-500/20', text: 'text-blue-100' },
+              { label: 'Chủ sân', value: loading ? '…' : systemStats.owners, grad: 'from-violet-500/15 to-purple-600/10', border: 'border-violet-500/20', text: 'text-violet-100' },
+              { label: 'Đã khóa', value: loading ? '…' : systemStats.banned, grad: 'from-rose-500/15 to-red-600/10', border: 'border-rose-500/20', text: 'text-rose-100' },
+              { label: 'Đang hoạt động', value: loading ? '…' : systemStats.active, grad: 'from-emerald-500/15 to-teal-600/10', border: 'border-emerald-500/20', text: 'text-emerald-100' },
             ].map(s => (
               <div key={s.label} className={`rounded-2xl border ${s.border} bg-gradient-to-br ${s.grad} p-4`}>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">{s.label}</p>
@@ -762,11 +760,10 @@ export const AdminManageUsersPage: React.FC = () => {
                               type="button"
                               onClick={() => handleToggleBan(user)}
                               title="Click để khóa/mở khóa"
-                              className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold transition hover:scale-105 ${
-                                user.isBanned
+                              className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold transition hover:scale-105 ${user.isBanned
                                   ? 'bg-rose-500/15 text-rose-200 ring-1 ring-rose-400/30'
                                   : 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/30'
-                              }`}
+                                }`}
                             >
                               {user.isBanned ? 'Đã khóa' : 'Hoạt động'}
                             </button>
@@ -857,9 +854,8 @@ export const AdminManageUsersPage: React.FC = () => {
 
       {/* ── Toast ── */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 z-[60] rounded-xl border px-4 py-3 text-sm font-semibold shadow-xl backdrop-blur-sm ${
-          toast.ok ? 'border-emerald-400/30 bg-emerald-500/20 text-emerald-200' : 'border-rose-400/30 bg-rose-500/20 text-rose-200'
-        }`}>
+        <div className={`fixed bottom-6 right-6 z-[60] rounded-xl border px-4 py-3 text-sm font-semibold shadow-xl backdrop-blur-sm ${toast.ok ? 'border-emerald-400/30 bg-emerald-500/20 text-emerald-200' : 'border-rose-400/30 bg-rose-500/20 text-rose-200'
+          }`}>
           {toast.ok ? '✓' : '✕'} {toast.msg}
         </div>
       )}

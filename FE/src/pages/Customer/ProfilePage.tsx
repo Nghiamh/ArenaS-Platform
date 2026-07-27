@@ -440,7 +440,7 @@ export const ProfilePage: React.FC = () => {
   const [ownerAppLoading, setOwnerAppLoading] = useState(false);
   const [showOwnerAppForm, setShowOwnerAppForm] = useState(false);
   const [ownerAppForm, setOwnerAppForm] = useState<OwnerApplicationPayload>({
-    businessName: '', businessAddress: '', phone: '', identityCard: '', bankAccount: '', description: '',
+    contactName: '', businessName: '', businessAddress: '', phone: '', identityCard: '', bankAccount: '', description: '',
   });
   const [ownerAppSubmitting, setOwnerAppSubmitting] = useState(false);
 
@@ -481,8 +481,8 @@ export const ProfilePage: React.FC = () => {
   };
 
   const handleOwnerAppSubmit = async () => {
-    const { businessName, businessAddress, phone, identityCard } = ownerAppForm;
-    if (!businessName.trim() || !businessAddress.trim() || !phone.trim() || !identityCard.trim()) {
+    const { contactName, businessName, businessAddress, phone, identityCard } = ownerAppForm;
+    if (!contactName.trim() || !businessName.trim() || !businessAddress.trim() || !phone.trim() || !identityCard.trim()) {
       showErrorPopup('Vui lòng điền đầy đủ các trường bắt buộc.');
       return;
     }
@@ -2308,6 +2308,7 @@ export const ProfilePage: React.FC = () => {
 
               <div className="space-y-4">
                 {([
+                  { key: 'contactName', label: 'Họ và tên', placeholder: 'VD: Nguyễn Văn A', required: true },
                   { key: 'businessName', label: 'Tên sân / Doanh nghiệp', placeholder: 'VD: Sân bóng Thành Công', required: true },
                   { key: 'businessAddress', label: 'Địa chỉ kinh doanh', placeholder: 'VD: 123 Nguyễn Văn Linh, Q7, TP.HCM', required: true },
                   { key: 'phone', label: 'Số điện thoại liên hệ', placeholder: 'VD: 0901234567', required: true },
