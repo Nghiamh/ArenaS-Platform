@@ -1,0 +1,31 @@
+{
+  "cli": {
+    "version": ">= 14.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "preview": {
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://arenas-miby.onrender.com",
+        "EXPO_PUBLIC_MAPBOX_TOKEN": "YOUR_MAPBOX_TOKEN_HERE",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "YOUR_GOOGLE_CLIENT_ID_HERE",
+        "EXPO_PUBLIC_SOCKET_URL": "https://arenas-miby.onrender.com"
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://arenas-miby.onrender.com",
+        "EXPO_PUBLIC_MAPBOX_TOKEN": "YOUR_MAPBOX_TOKEN_HERE",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "YOUR_GOOGLE_CLIENT_ID_HERE",
+        "EXPO_PUBLIC_SOCKET_URL": "https://arenas-miby.onrender.com"
+      }
+    }
+  }
+}

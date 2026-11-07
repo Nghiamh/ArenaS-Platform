@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "ArenaS",
+    "slug": "arenas-mobile",
+    "version": "1.1.2",
+    "orientation": "portrait",
+    "scheme": "arenas",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "jsEngine": "hermes",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.arenas.mobile",
+      "versionCode": 3,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/Img/logo.png",
+        "backgroundColor": "#007F3F"
+      },
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-font",
+      "expo-asset",
+      "@react-native-community/datetimepicker",
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Cho phép ArenaS truy cập vị trí của bạn để tìm sân gần nhất.",
+          "locationAlwaysPermission": "Cho phép ArenaS truy cập vị trí của bạn để tìm sân gần nhất.",
+          "locationWhenInUsePermission": "Cho phép ArenaS truy cập vị trí của bạn để tìm sân gần nhất."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "88643c8f-7a3f-4aac-97b7-2388531c7ced"
+      }
+    }
+  }
+}

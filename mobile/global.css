@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --app-bg: 245 247 250;
+        --app-surface: 255 255 255;
+        --app-text: 15 23 42;
+        --app-primary: 14 165 233;
+        --app-accent: 249 115 22;
+    }
+
+    .dark:root {
+        --app-bg: 8 16 31;
+        --app-surface: 17 24 39;
+        --app-text: 245 247 250;
+        --app-primary: 255 183 3;
+        --app-accent: 34 197 94;
+    }
+}

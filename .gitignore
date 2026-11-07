@@ -12,6 +12,11 @@ yarn-error.log
 dist/
 build/
 out/
+.expo/
+.expo-shared/
+web-build/
+*.keystore
+*.jks
 
 # IDE
 .vscode/

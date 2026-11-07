@@ -1,53 +1,40 @@
-# Arena Project
+# ArenaS – Sports Arena Booking & Management Platform
 
-Kiến trúc dự án toàn bộ với Backend (Node.js + Express + MongoDB) và Frontend (React + TypeScript + TailwindCSS).
+A full-stack sports arena booking and tournament management solution featuring a Web Portal, Mobile Application, and a RESTful Backend API.
 
-## 📁 Cấu trúc dự án
+## 📁 Repository Structure
 
-```
-arena/
-├── backend/                 # Backend API
-│   ├── src/
-│   │   ├── controllers/    # Logic xử lý request
-│   │   ├── models/         # Database models (MongoDB)
-│   │   ├── routes/         # API routes
-│   │   ├── middleware/     # Custom middleware
-│   │   ├── config/         # Configuration files
-│   │   ├── utils/          # Utility functions
-│   │   └── server.ts       # Entry point
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── .env.example        # Environment variables template
-│
-├── frontend/                # Frontend Application
-│   ├── src/
-│   │   ├── pages/          # Page components (by feature)
-│   │   ├── components/     # Reusable components
-│   │   ├── services/       # API services (axios)
-│   │   ├── types/          # TypeScript interfaces
-│   │   ├── hooks/          # Custom React hooks
-│   │   ├── utils/          # Utility functions
-│   │   ├── styles/         # Global styles
-│   │   └── main.tsx        # Entry point
-│   ├── index.html
-│   ├── package.json
-│   ├── vite.config.ts
-│   ├── tsconfig.json
-│   ├── tailwind.config.js
-│   ├── postcss.config.js
-│   └── .env.example        # Environment variables template
-│
-├── .gitignore              # Git ignore rules
-└── README.md              # This file
+```text
+ArenaS/
+├── BE/                 # Backend REST API (Node.js, Express, MongoDB/MySQL, TypeScript)
+├── FE/                 # Web Application / Dashboard (React 18, Vite, TypeScript, TailwindCSS)
+├── mobile/             # Mobile App for Users (React Native, Expo, Redux Toolkit, TailwindCSS)
+└── README.md           # Project Documentation
 ```
 
-## 🚀 Hướng dẫn cài đặt
+## 🚀 Quick Start Guide
 
-### Backend Setup
+### 1. Backend (BE)
+```bash
+cd BE
+npm install
+cp .env.example .env    # Configure your DB and environment variables
+npm run dev
+```
 
-1. **Cài đặt dependencies:**
-   ```bash
-   cd backend
+### 2. Frontend Web (FE)
+```bash
+cd FE
+npm install
+npm run dev
+```
+
+### 3. Mobile App (mobile)
+```bash
+cd mobile
+npm install
+npx expo start
+```
    npm install
    ```
 
